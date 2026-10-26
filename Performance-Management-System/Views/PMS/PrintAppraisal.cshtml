@@ -1,0 +1,2477 @@
+﻿@using vgl.Models
+@model EmpKpiMappingModel
+@{
+    Layout = null;
+
+    bool isAnnualCycle = (Model.AppraisalCycle ?? "").Trim().Equals("Annual", StringComparison.OrdinalIgnoreCase);
+
+    decimal? GetFinalRating(EmpKpiRow r)
+    {
+        var vals = new List<decimal>();
+        if (r.EmpRating.HasValue) vals.Add(r.EmpRating.Value);
+        if (r.RmRating.HasValue) vals.Add(r.RmRating.Value);
+        if (r.HodRating.HasValue) vals.Add(r.HodRating.Value);
+        if (r.UnitHeadRating.HasValue) vals.Add(r.UnitHeadRating.Value);
+        return vals.Any() ? (decimal?)Math.Round(vals.Average(), 2) : null;
+    }
+
+    decimal GetWeightedRating(EmpKpiRow r)
+    {
+        var rt = GetFinalRating(r);
+        return rt.HasValue ? Math.Round(r.IndividualWeightage / 100m * rt.Value, 2) : 0m;
+    }
+    decimal CalcWeighted(EmpKpiRow r, decimal? rating) =>
+        rating.HasValue ? Math.Round(r.IndividualWeightage / 100m * rating.Value, 2) : 0m;
+
+    decimal? RowAvgRmHodUh(EmpKpiRow r)
+    {
+        var vals = new List<decimal>();
+        if (r.EmpRating.HasValue) vals.Add(r.EmpRating.Value);
+        if (r.RmRating.HasValue) vals.Add(r.RmRating.Value);
+        if (r.HodRating.HasValue) vals.Add(r.HodRating.Value);
+        if (r.UnitHeadRating.HasValue) vals.Add(r.UnitHeadRating.Value);
+        return vals.Any() ? (decimal?)Math.Round(vals.Average(), 2) : null;
+    }
+
+    var pmpGroups = Model.KpiRows
+        .GroupBy(k => k.PmpId)
+        .Select(g => new
+        {
+            PmpName = g.First().PmpName,
+            OvWt = g.First().OverallWeightage,
+            Rows = g.ToList()
+        }).ToList();
+
+    var _empRows = Model.KpiRows.Where(x => x.EmpRating.HasValue).ToList();
+    decimal empScore = _empRows.Any() ? Math.Round(_empRows.Average(x => x.EmpRating!.Value), 2) : 0m;
+
+    var _rmRows = Model.KpiRows.Where(x => x.RmRating.HasValue).ToList();
+    decimal rmScore = _rmRows.Any() ? Math.Round(_rmRows.Average(x => x.RmRating!.Value), 2) : 0m;
+
+    var _hodRows = Model.KpiRows.Where(x => x.HodRating.HasValue).ToList();
+    decimal hodScore = _hodRows.Any() ? Math.Round(_hodRows.Average(x => x.HodRating!.Value), 2) : 0m;
+
+    var _uhRows = Model.KpiRows.Where(x => x.UnitHeadRating.HasValue).ToList();
+    decimal uhScore = _uhRows.Any() ? Math.Round(_uhRows.Average(x => x.UnitHeadRating!.Value), 2) : 0m;
+
+    var filledReviewerScores = new List<decimal>();
+    bool empHasAny = Model.KpiRows.Any(r => r.EmpRating.HasValue);
+    bool rmHasAny = Model.KpiRows.Any(r => r.RmRating.HasValue);
+    bool hodHasAny = Model.KpiRows.Any(r => r.HodRating.HasValue);
+    bool uhHasAny = Model.KpiRows.Any(r => r.UnitHeadRating.HasValue);
+    if (empHasAny) filledReviewerScores.Add(empScore);
+    if (rmHasAny) filledReviewerScores.Add(rmScore);
+    if (hodHasAny) filledReviewerScores.Add(hodScore);
+    if (uhHasAny) filledReviewerScores.Add(uhScore);
+
+    decimal _totalKpiWt = Model.KpiRows.Sum(r => r.IndividualWeightage);
+    decimal bscScore = (_totalKpiWt > 0)
+        ? Math.Round(Model.KpiRows.Sum(r =>
+        {
+            var _rt = GetFinalRating(r);
+            if (!_rt.HasValue) return 0m;
+            return Math.Round((r.IndividualWeightage / _totalKpiWt) * _rt.Value, 4);
+        }), 2)
+        : 0m;
+
+    decimal? GetPreMcRating(EmpKpiRow r) =>
+        r.UnitHeadRating ?? r.HodRating ?? r.RmRating ?? r.EmpRating;
+    decimal preModScore = Math.Round(Model.KpiRows.Sum(r => CalcWeighted(r, GetPreMcRating(r))), 2);
+
+    decimal? mcOverallRating = ViewBag.McOverallRating as decimal?;
+    decimal? jmdOverallRating = ViewBag.JmdOverallRating as decimal?;
+    string mcOverallRemarks = ViewBag.McOverallRemarks as string ?? "";
+    string jmdOverallRemarks = ViewBag.JmdOverallRemarks as string ?? "";
+
+    bool behAuditExists = ViewBag.BehaviouralAuditExists != null && (bool)ViewBag.BehaviouralAuditExists;
+    bool behAuditCompleted = ViewBag.BehaviouralAuditCompleted != null && (bool)ViewBag.BehaviouralAuditCompleted;
+    decimal behScore = ViewBag.BehaviouralScore != null ? (decimal)ViewBag.BehaviouralScore : 0m;
+
+    // ── TRUE weighted rating using the formula ──
+    decimal weightedRating = behAuditCompleted && behScore > 0
+        ? Math.Round(0.8m * bscScore + 0.2m * behScore, 2)
+        : Math.Round(bscScore, 2);
+
+    decimal pmsWeightedComponent = Math.Round(bscScore * 0.8m, 2);
+    decimal baWeightedComponent = behAuditCompleted ? Math.Round(behScore * 0.2m, 2) : 0m;
+
+    decimal finalScore = weightedRating;
+
+    var yearlyPAT = ViewBag.YearlyPAT as PasYearlyPATEntryRow;
+    var activeVersion = ViewBag.ActiveRatingVersion as PasRatingVersionRow;
+
+    decimal? printMcRating = ViewBag.McOverallRating as decimal?;
+    decimal? printJmdRating = ViewBag.JmdOverallRating as decimal?;
+
+    decimal basePercent = yearlyPAT?.BasePercentage ?? 0m;
+    decimal patPercent = yearlyPAT?.PATRevenuePercentDirect ?? yearlyPAT?.PATRevenuePercent ?? 0m;
+
+    string fyRaw = yearlyPAT?.FinancialYear ?? $"{Model.AppraisalYear}-{((Model.AppraisalYear + 1) % 100):D2}";
+    string fyLabel = $"FY {fyRaw}";
+    int nextYear = Model.AppraisalYear + 1;
+
+    DateTime? defaultIncrDate = Model.CycleToDate;
+    string incrDateStr = defaultIncrDate.HasValue
+        ? defaultIncrDate.Value.ToString("dd-MMM-yyyy")
+        : $"01-Apr-{nextYear}";
+    string incrDateIso = defaultIncrDate.HasValue
+        ? defaultIncrDate.Value.ToString("yyyy-MM-dd")
+        : $"{nextYear}-04-01";
+
+    decimal effectiveRatingForHike = printJmdRating.HasValue ? printJmdRating.Value
+                                   : printMcRating.HasValue ? printMcRating.Value
+                                   : finalScore;
+
+    int calcRating = (int)Math.Min(5, Math.Max(1, Math.Round(effectiveRatingForHike)));
+    decimal hikeOverBase = 0m;
+    string ratingLabel = $"Rating {calcRating}";
+
+    if (activeVersion?.DetailRows != null)
+    {
+        var dr2 = activeVersion.DetailRows.FirstOrDefault(d => d.Rating == calcRating);
+        if (dr2 != null) { hikeOverBase = dr2.HikeOverBasePercent; ratingLabel = dr2.RatingLabel; }
+    }
+
+    decimal finalIncrPct = basePercent > 0
+        ? Math.Round(basePercent * (1m + hikeOverBase / 100m), 4)
+        : 0m;
+
+    string cycleInfo = "";
+    if (!string.IsNullOrWhiteSpace(Model.AppraisalCycle))
+    {
+        cycleInfo = Model.AppraisalCycle;
+        if (Model.CycleFromDate.HasValue)
+            cycleInfo += $" ({Model.CycleFromDate.Value:dd-MMM-yyyy} – {(Model.CycleToDate.HasValue ? Model.CycleToDate.Value.ToString("dd-MMM-yyyy") : "—")})";
+    }
+
+    string Fmt(decimal? v, string def = "—") => v.HasValue ? v.Value.ToString("0.##") : def;
+    string FmtW(decimal v) => v == 0m ? "—" : v.ToString("0.##");
+
+    string finalAuthority = jmdOverallRating.HasValue ? "JMD Overall"
+                              : mcOverallRating.HasValue ? "MC Overall"
+                              : "BSC Cascade";
+    decimal finalDisplayValue = jmdOverallRating.HasValue ? jmdOverallRating.Value
+                              : mcOverallRating.HasValue ? mcOverallRating.Value
+                              : finalScore;
+
+    string subDeptDisplay = string.IsNullOrWhiteSpace(Model.SubDepartment) ? "—" : Model.SubDepartment;
+
+    // Total KPI row count for BA rowspan
+    int totalKpiRowCount = Model.KpiRows.Count;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Appraisal – @Model.EmpName</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Verdana, Helvetica, sans-serif;
+            background: #f8f9fc;
+            color: #1a1a2e;
+            font-size: 12px;
+        }
+
+        .page {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        /* ── TOOLBAR ── */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 10px 16px;
+            background: #0f1c3f;
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: .03em;
+            flex: 1;
+        }
+
+        .view-badge-bar {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .vb {
+            padding: 4px 14px;
+            border-radius: 14px;
+            font-size: 10.5px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            font-family: Verdana;
+            letter-spacing: .04em;
+            transition: all .15s;
+        }
+
+        .vb-1 {
+            background: #f59e0b;
+            color: #fff;
+        }
+
+            .vb-1.active {
+                box-shadow: 0 0 0 3px rgba(245,158,11,.4);
+            }
+
+        .vb-2 {
+            background: #1e4ed8;
+            color: #fff;
+        }
+
+            .vb-2.active {
+                box-shadow: 0 0 0 3px rgba(30,78,216,.4);
+            }
+
+        .vb-3 {
+            background: #0d9488;
+            color: #fff;
+        }
+
+            .vb-3.active {
+                box-shadow: 0 0 0 3px rgba(13,148,136,.4);
+            }
+
+        .btn-t {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 32px;
+            padding: 0 14px;
+            border-radius: 7px;
+            font-family: Verdana;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all .15s;
+        }
+
+        .btn-close-t {
+            background: rgba(255,255,255,.12);
+            color: rgba(255,255,255,.85);
+        }
+
+            .btn-close-t:hover {
+                background: rgba(255,255,255,.2);
+                color: #fff;
+            }
+
+        .btn-print-t {
+            background: #f59e0b;
+            color: #fff;
+        }
+
+            .btn-print-t:hover {
+                background: #d97706;
+            }
+
+        /* ── VIEW PANELS ── */
+        .view-panel {
+            display: none;
+        }
+
+            .view-panel.active {
+                display: block;
+            }
+
+        /* ── LETTERHEAD ── */
+        .vgl-letterhead {
+            background: linear-gradient(135deg,#0f1c3f 0%,#1a3a6e 100%);
+            border-radius: 12px;
+            padding: 20px 28px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .vgl-lh-badge {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: linear-gradient(135deg,#3b82f6,#4f46e5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 900;
+            color: #fff;
+            flex-shrink: 0;
+            font-family: Georgia,serif;
+            font-style: italic;
+        }
+
+        .vgl-lh-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+
+        .vgl-lh-sub {
+            font-size: 11px;
+            color: rgba(255,255,255,.55);
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+
+        .vgl-lh-right {
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .vgl-doc-type {
+            font-size: 15px;
+            font-weight: 700;
+            color: #f59e0b;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+
+        .vgl-fy-info {
+            font-size: 11px;
+            color: rgba(255,255,255,.6);
+            font-family: 'Courier New',monospace;
+            margin-top: 4px;
+        }
+
+        /* ── EMP STRIP ── */
+        .emp-strip {
+            background: #fff;
+            border: 1.5px solid #dde2ed;
+            border-radius: 10px;
+            padding: 14px 20px;
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(15,28,63,.06);
+        }
+
+        .emp-strip-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .esp-lbl {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+
+        .esp-val {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        /* ── BA BANNERS ── */
+        .ba-banner-warn {
+            background: #fff1f2;
+            border: 1.5px solid #fecdd3;
+            border-left: 4px solid #e11d48;
+            border-radius: 10px;
+            padding: 12px 18px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .ba-banner-ok {
+            background: #f0fdf4;
+            border: 1.5px solid #a7f3d0;
+            border-left: 4px solid #059669;
+            border-radius: 10px;
+            padding: 12px 18px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .ba-banner-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .ba-banner-title-warn {
+            font-size: 12px;
+            font-weight: 700;
+            color: #e11d48;
+            margin-bottom: 2px;
+        }
+
+        .ba-banner-title-ok {
+            font-size: 12px;
+            font-weight: 700;
+            color: #059669;
+            margin-bottom: 2px;
+        }
+
+        .ba-banner-sub {
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .ba-banner-chip {
+            margin-left: auto;
+            border-radius: 8px;
+            padding: 8px 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .ba-banner-chip-warn {
+            background: #fff1f2;
+            border: 1.5px solid #fecdd3;
+        }
+
+        .ba-banner-chip-ok {
+            background: #f0fdf4;
+            border: 1.5px solid #a7f3d0;
+        }
+
+        .ba-chip-lbl {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+
+        .ba-chip-val-warn {
+            font-size: 14px;
+            font-weight: 700;
+            color: #e11d48;
+        }
+
+        .ba-chip-val-ok {
+            font-size: 14px;
+            font-weight: 700;
+            color: #059669;
+        }
+
+        /* ── SECTION HEADING ── */
+        .s-head {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: #1e3a6e;
+            border-left: 3px solid #1e4ed8;
+            padding-left: 8px;
+            margin: 16px 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+            .s-head::after {
+                content: '';
+                flex: 1;
+                height: 1px;
+                background: #dde2ed;
+            }
+
+        /* ── PERF CARDS ── */
+        .perf-cards {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .perf-card {
+            background: #fff;
+            border: 1.5px solid #dde2ed;
+            border-radius: 10px;
+            padding: 12px 18px;
+            min-width: 140px;
+            flex: 1;
+            box-shadow: 0 2px 8px rgba(15,28,63,.05);
+        }
+
+        .pc-lbl {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+
+        .pc-val {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1;
+        }
+
+        .pc-sub {
+            font-size: 10.5px;
+            color: #64748b;
+            margin-top: 3px;
+        }
+
+        .pc-blue {
+            border-top: 3px solid #1e4ed8;
+        }
+
+        .pc-gold {
+            border-top: 3px solid #f59e0b;
+        }
+
+        .pc-green {
+            border-top: 3px solid #059669;
+        }
+
+        .pc-rose {
+            border-top: 3px solid #e11d48;
+        }
+
+        .pc-navy {
+            border-top: 3px solid #0f1c3f;
+        }
+
+        /* ── OVERALL STRIP ── */
+        .overall-strip {
+            background: #fff;
+            border: 1.5px solid #dde2ed;
+            border-radius: 10px;
+            padding: 12px 18px;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(15,28,63,.05);
+        }
+
+        .os-item {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 140px;
+        }
+
+        .os-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+
+        .os-val {
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'Courier New',monospace;
+        }
+
+        .os-rem {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 1px;
+            font-style: italic;
+        }
+
+        /* ── INCREMENT TABLE ── */
+        .incr-wrap {
+            background: #fff;
+            border: 1.5px solid #dde2ed;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(15,28,63,.08);
+            margin-bottom: 18px;
+        }
+
+        .incr-tbl-head {
+            background: linear-gradient(90deg,#0f1c3f 0%,#1a3a6e 100%);
+            padding: 11px 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .incr-tbl-head-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,.9);
+            text-transform: uppercase;
+            letter-spacing: .07em;
+        }
+
+        .incr-notice {
+            background: #fef9ec;
+            border-bottom: 1px solid #fde68a;
+            padding: 8px 16px;
+            font-size: 11px;
+            color: #92400e;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .incr-scrl {
+            overflow-x: auto;
+        }
+
+        table.incr-tbl {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            table.incr-tbl thead tr {
+                background: #f1f4f9;
+            }
+
+            table.incr-tbl thead th {
+                padding: 10px 14px;
+                text-align: left;
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                color: #475569;
+                border-bottom: 1.5px solid #dde2ed;
+                border-right: 1px solid #eaeef7;
+                white-space: nowrap;
+            }
+
+                table.incr-tbl thead th:last-child {
+                    border-right: none;
+                }
+
+            table.incr-tbl tbody td {
+                padding: 14px 14px;
+                border-bottom: 1px solid #eaeef7;
+                border-right: 1px solid #eaeef7;
+                vertical-align: middle;
+            }
+
+                table.incr-tbl tbody td:last-child {
+                    border-right: none;
+                }
+
+        .date-input {
+            height: 34px;
+            border: 1.5px solid #c7d7fd;
+            border-radius: 7px;
+            padding: 0 8px;
+            font-family: 'Courier New',monospace;
+            font-size: 11px;
+            color: #0f172a;
+            outline: none;
+            background: #eff4ff;
+            transition: all .15s;
+            width: 148px;
+            cursor: pointer;
+        }
+
+            .date-input:focus {
+                border-color: #1e4ed8;
+                background: #fff;
+                box-shadow: 0 0 0 3px rgba(30,78,216,.1);
+            }
+
+        .print-input {
+            height: 34px;
+            border: 1.5px solid #c7d7fd;
+            border-radius: 7px;
+            padding: 0 10px;
+            font-family: 'Courier New',monospace;
+            font-size: 12px;
+            color: #0f172a;
+            outline: none;
+            background: #eff4ff;
+            transition: all .15s;
+        }
+
+            .print-input:focus {
+                border-color: #1e4ed8;
+                background: #fff;
+                box-shadow: 0 0 0 3px rgba(30,78,216,.1);
+            }
+
+        .mono {
+            font-family: 'Courier New',monospace;
+            font-weight: 700;
+        }
+
+        .c-blue {
+            color: #1e4ed8;
+        }
+
+        .c-green {
+            color: #059669;
+        }
+
+        .c-navy {
+            color: #0f1c3f;
+        }
+
+        /* ── SIGNATURE ── */
+        .sig-section {
+            display: flex;
+            gap: 20px;
+            margin-top: 28px;
+            padding-top: 18px;
+            border-top: 1.5px solid #dde2ed;
+            flex-wrap: wrap;
+        }
+
+        .sig-box {
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .sig-line {
+            height: 1px;
+            background: #334155;
+            margin-bottom: 7px;
+        }
+
+        .sig-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #475569;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+        }
+
+        /* ── COMMON TABLE STYLES ── */
+        .v-card {
+            background: #fff;
+            border: 1.5px solid #dde2ed;
+            border-radius: 10px;
+            overflow: visible;
+            box-shadow: 0 4px 16px rgba(15,28,63,.08);
+            margin-bottom: 16px;
+        }
+
+        .v-card-head {
+            background: #0f1c3f;
+            padding: 11px 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .v-card-head-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,.9);
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+
+        .v-scroll {
+            overflow-x: auto;
+            overflow-y: visible;
+            width: 100%;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 0 0 10px 10px;
+            border: 1px solid #dde2ed;
+            border-top: none;
+        }
+
+        table.main-tbl, table.rev-tbl {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+        }
+
+            table.main-tbl thead tr, table.rev-tbl thead tr {
+                background: #f1f4f9;
+            }
+
+            table.main-tbl thead th, table.rev-tbl thead th {
+                background: #253d75;
+                color: #fff;
+                padding: 9px 12px;
+                text-align: center;
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                border-right: 1px solid rgba(255,255,255,.15);
+                white-space: nowrap;
+            }
+
+                table.main-tbl thead th:last-child, table.rev-tbl thead th:last-child {
+                    border-right: none;
+                }
+
+            table.main-tbl tbody tr, table.rev-tbl tbody tr {
+                border-bottom: 1px solid #eaeef7;
+            }
+
+                table.main-tbl tbody tr:hover, table.rev-tbl tbody tr:hover {
+                    background: #f8faff;
+                }
+
+            table.main-tbl tbody td, table.rev-tbl tbody td {
+                padding: 10px 12px;
+                color: #334155;
+                border-right: 1px solid #eaeef7;
+                vertical-align: middle;
+            }
+
+                table.main-tbl tbody td:last-child, table.rev-tbl tbody td:last-child {
+                    border-right: none;
+                }
+
+            table.rev-tbl th, table.rev-tbl td {
+                white-space: nowrap;
+            }
+
+        table.rev-tbl {
+            font-size: 10px;
+            min-width: max-content;
+        }
+
+        td.pmp-cell {
+            background: #dce4f0 !important;
+            text-align: center !important;
+            font-weight: 700 !important;
+        }
+
+        td.ow-cell {
+            background: #efefef !important;
+            text-align: center !important;
+            font-weight: 700 !important;
+        }
+
+        .tc {
+            text-align: center;
+        }
+
+        .fw {
+            font-weight: 700;
+        }
+
+        /* ── REVIEWER HEADER COLOURS ── */
+        .th-emp {
+            background: #065f46 !important;
+        }
+
+        .th-rm {
+            background: #1e40af !important;
+        }
+
+        .th-hod {
+            background: #5b21b6 !important;
+        }
+
+        .th-uh {
+            background: #0f766e !important;
+        }
+
+        .th-mc {
+            background: #9a3412 !important;
+        }
+
+        .th-jmd {
+            background: #831843 !important;
+        }
+
+        .th-fin {
+            background: #1e3a6e !important;
+        }
+
+        .th-avg {
+            background: #0369a1 !important;
+        }
+
+        .th-pms-wt {
+            background: #047857 !important;
+        }
+
+        .th-ba {
+            background: #1d4ed8 !important;
+        }
+
+        td.td-emp {
+            background: #f0fdf4;
+        }
+
+        td.td-rm {
+            background: #eff4ff;
+        }
+
+        td.td-hod {
+            background: #ede9fe;
+        }
+
+        td.td-uh {
+            background: #f0fdfa;
+        }
+
+        td.td-mc {
+            background: #fff7ed;
+        }
+
+        td.td-jmd {
+            background: #fdf2f8;
+        }
+
+        td.td-fin {
+            background: #e8eef8;
+            font-weight: 700;
+        }
+
+        td.td-avg {
+            background: #f0f9ff;
+            font-weight: 700;
+            color: #0369a1;
+        }
+
+        td.td-pms-wt {
+            background: #d1fae5;
+            font-weight: 700;
+            color: #065f46;
+        }
+
+        /* ── BA SINGLE-SCORE CELL ── */
+        td.td-ba-single {
+            background: #dbeafe;
+            font-weight: 700;
+            color: #1e40af;
+            text-align: center;
+            vertical-align: middle;
+            border-left: 2px solid #93c5fd;
+        }
+
+        .overall-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 10px;
+            border-radius: 7px;
+            font-family: 'Courier New',monospace;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .overall-badge-mc {
+            background: #fff7ed;
+            color: #c2410c;
+            border: 1.5px solid #fdba74;
+        }
+
+        .overall-badge-jmd {
+            background: #fdf2f8;
+            color: #9d174d;
+            border: 1.5px solid #f9a8d4;
+        }
+
+        .scores-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .score-mini-tbl {
+            min-width: 300px;
+        }
+
+            .score-mini-tbl table {
+                border-collapse: collapse;
+                width: 100%;
+            }
+
+                .score-mini-tbl table td {
+                    border: 1px solid #dde2ed;
+                    padding: 7px 12px;
+                    font-size: 11.5px;
+                }
+
+                .score-mini-tbl table tr.row-bsc td {
+                    background: #f0f9ff;
+                }
+
+                .score-mini-tbl table tr.row-mc td {
+                    background: #fff7ed;
+                }
+
+                .score-mini-tbl table tr.row-jmd td {
+                    background: #fdf2f8;
+                }
+
+                .score-mini-tbl table tr.row-beh td {
+                    background: #f0fdf4;
+                }
+
+                .score-mini-tbl table tr.row-final td {
+                    background: #0f1c3f;
+                    color: #fff;
+                    font-weight: 700;
+                }
+
+        .score-sub-lbl {
+            display: block;
+            font-size: 9px;
+            font-weight: 400;
+            color: #94a3b8;
+            margin-top: 2px;
+            letter-spacing: .04em;
+        }
+
+            .score-sub-lbl.mc-color {
+                color: #c2410c;
+            }
+
+            .score-sub-lbl.jmd-color {
+                color: #9d174d;
+            }
+
+            .score-sub-lbl.final-color {
+                color: #f59e0b;
+            }
+
+        .score-not-done {
+            background: #fff1f2;
+            color: #e11d48;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-left: 4px;
+        }
+
+        .rev-score-wrap {
+            flex: 1;
+            min-width: 360px;
+            overflow-x: auto;
+        }
+
+        table.rev-sum-tbl {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 11px;
+        }
+
+            table.rev-sum-tbl thead th {
+                background: #253d75;
+                color: #fff;
+                padding: 7px 10px;
+                font-size: 9.5px;
+                font-weight: 700;
+                letter-spacing: .07em;
+                text-transform: uppercase;
+            }
+
+            table.rev-sum-tbl tbody td {
+                border: 1px solid #eaeef7;
+                padding: 7px 10px;
+                vertical-align: middle;
+            }
+
+            table.rev-sum-tbl tbody tr:last-child td {
+                background: #e8eef8;
+                font-weight: 700;
+            }
+
+        .formula-line {
+            margin-top: 14px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f1c3f;
+        }
+
+        .note-line {
+            margin-top: 5px;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .ba-not-done-note {
+            background: #fff1f2;
+            border: 1.5px solid #fecdd3;
+            border-left: 3px solid #e11d48;
+            border-radius: 7px;
+            padding: 9px 14px;
+            margin-top: 8px;
+            font-size: 11.5px;
+            color: #e11d48;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .score-mini-tbl table thead tr {
+            background: #1e293b;
+            color: #fff;
+        }
+
+        .score-mini-tbl table thead th {
+            padding: 9px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-align: right;
+            border: 1px solid #dde2ed;
+        }
+
+            .score-mini-tbl table thead th.col-label {
+                text-align: left;
+                width: 60%;
+            }
+
+            .score-mini-tbl table thead th.col-pms {
+                color: #93c5fd;
+            }
+
+            .score-mini-tbl table thead th.col-ba {
+                color: #6ee7b7;
+            }
+
+        .lbl-cell {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        .score-cell {
+            padding: 12px 16px;
+            text-align: right;
+            font-weight: 700;
+            font-family: 'Courier New',monospace;
+            font-size: 14px;
+            white-space: nowrap;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+            border-left: 1px solid #e2e8f0;
+        }
+
+        .ba-val {
+            font-size: 14px;
+            background: #f0fdf4;
+        }
+
+        /* ── PRINT ── */
+        @@media print {
+            body {
+                background: #fff;
+                margin: 0;
+                font-size: 10px;
+            }
+
+            #grossSrcLabel {
+                display: none !important;
+            }
+
+            .toolbar {
+                display: none !important;
+            }
+
+            .page {
+                padding: 0;
+                max-width: none;
+            }
+
+            .view-panel {
+                display: none !important;
+            }
+
+                .view-panel.print-active {
+                    display: block !important;
+                }
+
+            .incr-wrap {
+                overflow: visible !important;
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+            }
+
+            .incr-scrl {
+                overflow: visible !important;
+            }
+
+            table.incr-tbl {
+                width: 100% !important;
+                table-layout: fixed !important;
+                font-size: 7.5px !important;
+            }
+
+                table.incr-tbl thead th {
+                    padding: 5px 4px !important;
+                    font-size: 7px !important;
+                    white-space: normal !important;
+                    word-break: break-word !important;
+                }
+
+                table.incr-tbl tbody td {
+                    padding: 5px 4px !important;
+                    font-size: 8px !important;
+                    white-space: normal !important;
+                    word-break: break-word !important;
+                }
+
+            .date-input {
+                border: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                font-size: 8px !important;
+                width: 100% !important;
+                padding: 0 !important;
+            }
+
+            .v-card {
+                overflow: visible !important;
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+            }
+
+            .v-scroll {
+                overflow: visible !important;
+                border: none !important;
+            }
+
+            table.rev-tbl {
+                width: 100% !important;
+                table-layout: fixed !important;
+                font-size: 6.5px !important;
+                min-width: 0 !important;
+            }
+
+                table.rev-tbl thead th {
+                    padding: 3px 2px !important;
+                    font-size: 6px !important;
+                    white-space: normal !important;
+                    word-break: break-word !important;
+                    line-height: 1.2 !important;
+                }
+
+                table.rev-tbl tbody td {
+                    padding: 3px 2px !important;
+                    font-size: 6.5px !important;
+                    white-space: normal !important;
+                    word-break: break-word !important;
+                }
+
+                table.rev-tbl th, table.rev-tbl td {
+                    white-space: normal !important;
+                }
+
+            table.main-tbl {
+                width: 100% !important;
+                table-layout: fixed !important;
+                font-size: 7.5px !important;
+                min-width: 0 !important;
+            }
+
+                table.main-tbl thead th {
+                    padding: 4px 3px !important;
+                    font-size: 7px !important;
+                    white-space: normal !important;
+                    word-break: break-word !important;
+                }
+
+                table.main-tbl tbody td {
+                    padding: 4px 3px !important;
+                    font-size: 7.5px !important;
+                    white-space: normal !important;
+                    word-break: break-word !important;
+                }
+
+            .scores-row {
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+            }
+
+            .rev-score-wrap {
+                min-width: 0 !important;
+                overflow: visible !important;
+            }
+
+            table.rev-sum-tbl {
+                font-size: 8px !important;
+                width: 100% !important;
+            }
+
+                table.rev-sum-tbl thead th, table.rev-sum-tbl tbody td {
+                    padding: 4px 6px !important;
+                    font-size: 8px !important;
+                }
+
+            .print-input {
+                border: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                font-size: 8px !important;
+                width: 100% !important;
+                padding: 0 !important;
+            }
+
+            .perf-cards {
+                flex-wrap: nowrap !important;
+                gap: 5px !important;
+            }
+
+            .perf-card {
+                padding: 6px 8px !important;
+                min-width: 0 !important;
+                flex: 1 !important;
+            }
+
+            .pc-val {
+                font-size: 14px !important;
+            }
+
+            .pc-lbl {
+                font-size: 7px !important;
+            }
+
+            .pc-sub {
+                font-size: 8px !important;
+            }
+
+            .emp-strip {
+                padding: 8px 12px !important;
+                gap: 14px !important;
+            }
+
+            .esp-val {
+                font-size: 10px !important;
+            }
+
+            .vgl-letterhead {
+                padding: 12px 16px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .vgl-lh-name {
+                font-size: 13px !important;
+            }
+
+            .sig-section {
+                margin-top: 16px !important;
+            }
+
+            .ba-banner-warn, .ba-banner-ok {
+                padding: 8px 10px !important;
+                margin-bottom: 8px !important;
+            }
+
+            .ba-banner-icon {
+                font-size: 1rem !important;
+            }
+
+            .overall-strip {
+                padding: 8px 12px !important;
+                gap: 10px !important;
+            }
+
+            .score-mini-tbl {
+                min-width: 0 !important;
+            }
+
+                .score-mini-tbl table td {
+                    padding: 4px 8px !important;
+                    font-size: 9px !important;
+                }
+
+            .score-sub-lbl {
+                font-size: 7px !important;
+            }
+
+            td.td-ba-single {
+                font-size: 7px !important;
+            }
+        }
+
+        @@page {
+            size: landscape;
+            margin: 8mm;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+
+        <!-- ══ TOOLBAR ══ -->
+        <div class="toolbar">
+            <div class="toolbar-title">📋 Appraisal Print — @Model.EmpName (@Model.EmpCode)</div>
+            <div class="view-badge-bar">
+                <button class="vb vb-1 active" id="vbtn-1" onclick="switchView(1)">💰 Increment Sheet</button>
+                <button class="vb vb-2" id="vbtn-2" onclick="switchView(2)">📊 Final Summary</button>
+                <button class="vb vb-3" id="vbtn-3" onclick="switchView(3)">🔍 All Reviewer Scores</button>
+            </div>
+            <button class="btn-t btn-close-t" onclick="window.close()">✕ Close</button>
+            <button class="btn-t btn-print-t" onclick="triggerPrint()">🖨 Print / PDF</button>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════
+             VIEW 1 — INCREMENT SHEET
+        ══════════════════════════════════════════════════ -->
+        <div class="view-panel active" id="view1">
+
+            <div class="vgl-letterhead">
+                <div class="vgl-lh-badge">V</div>
+                <div>
+                    <div class="vgl-lh-name">Vandana Global Limited</div>
+                    <div class="vgl-lh-sub">Performance Appraisal &amp; Salary Increment</div>
+                </div>
+                <div class="vgl-lh-right">
+                    <div class="vgl-doc-type">💰 Increment Sheet</div>
+                    <div class="vgl-fy-info">@fyLabel &nbsp;|&nbsp; Default Increment Date: @incrDateStr</div>
+                    @if (!string.IsNullOrWhiteSpace(cycleInfo))
+                    {
+                        <div class="vgl-fy-info">Cycle: @cycleInfo</div>
+                    }
+                    <div class="vgl-fy-info" style="margin-top:4px;opacity:.6">Printed: @DateTime.Now.ToString("dd-MMM-yyyy HH:mm")</div>
+                </div>
+            </div>
+
+            <div class="emp-strip">
+                <div class="emp-strip-item"><span class="esp-lbl">EMP Code</span><span class="esp-val">@Model.EmpCode</span></div>
+                <div class="emp-strip-item"><span class="esp-lbl">Employee Name</span><span class="esp-val">@Model.EmpName</span></div>
+                <div class="emp-strip-item"><span class="esp-lbl">Designation</span><span class="esp-val">@(string.IsNullOrWhiteSpace(Model.Designation) ? "—" : Model.Designation)</span></div>
+                <div class="emp-strip-item"><span class="esp-lbl">Department</span><span class="esp-val">@(string.IsNullOrWhiteSpace(Model.Department) ? "—" : Model.Department)</span></div>
+                <div class="emp-strip-item"><span class="esp-lbl">Sub Department</span><span class="esp-val">@subDeptDisplay</span></div>
+                <div class="emp-strip-item"><span class="esp-lbl">Appraisal Year</span><span class="esp-val">@fyLabel</span></div>
+                <div class="emp-strip-item"><span class="esp-lbl">Increment Date</span><span class="esp-val" style="color:#059669">@incrDateStr</span></div>
+                @if (!string.IsNullOrWhiteSpace(Model.RmName))
+                {
+                    <div class="emp-strip-item"><span class="esp-lbl">Reporting Manager</span><span class="esp-val" style="font-size:12px">@Model.RmName</span></div>
+                }
+            </div>
+
+            <!-- ── BA Status Banner ── -->
+            @if (!behAuditCompleted)
+            {
+                <div class="ba-banner-warn">
+                    <span class="ba-banner-icon">⚠️</span>
+                    <div>
+                        <div class="ba-banner-title-warn">Behavioural Audit Not Completed</div>
+                        <div class="ba-banner-sub">
+                            @if (!behAuditExists)
+                            {
+                                <text>No Behavioural Audit initiated. Final score is based on PMS (BSC) only.</text>
+                            }
+                            else
+                            {
+                                <text>Behavioural Audit in progress but not finalized. Final score is based on PMS (BSC) only.</text>
+                            }
+                            @if (jmdOverallRating.HasValue)
+                            {
+                                <text> &nbsp;→&nbsp; <strong style="color:#e11d48">JMD Override: @jmdOverallRating.Value.ToString("0.##")</strong> (Final Authority)</text>
+                            }
+                            else if (mcOverallRating.HasValue)
+                            {
+                                <text> &nbsp;→&nbsp; <strong style="color:#e11d48">MC Override: @mcOverallRating.Value.ToString("0.##")</strong></text>
+                            }
+                        </div>
+                    </div>
+                    <div class="ba-banner-chip ba-banner-chip-warn">
+                        <div class="ba-chip-lbl">Weighted Rating</div>
+                        <div class="ba-chip-val-warn">@weightedRating.ToString("0.##")</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="ba-banner-ok">
+                    <span class="ba-banner-icon">✅</span>
+                    <div>
+                        <div class="ba-banner-title-ok">Both Assessments Completed</div>
+                        <div class="ba-banner-sub">
+                            BSC @bscScore.ToString("0.##") × 80% (@pmsWeightedComponent.ToString("0.##")) + Behavioural @behScore.ToString("0.##") × 20% (@baWeightedComponent.ToString("0.##"))
+                            = <strong style="color:#059669">@weightedRating.ToString("0.##")</strong>
+                            @if (jmdOverallRating.HasValue)
+                            {
+                                <text>&nbsp;→&nbsp;<strong style="color:#9d174d">👑 JMD Override: @jmdOverallRating.Value.ToString("0.##")</strong> <span style="color:#64748b;font-size:10px">(Final Authority)</span></text>
+                            }
+                            else if (mcOverallRating.HasValue)
+                            {
+                                <text>&nbsp;→&nbsp;<strong style="color:#c2410c">⚖️ MC Override: @mcOverallRating.Value.ToString("0.##")</strong></text>
+                            }
+                        </div>
+                    </div>
+                    <div class="ba-banner-chip ba-banner-chip-ok">
+                        <div class="ba-chip-lbl">Weighted Rating</div>
+                        <div class="ba-chip-val-ok">@weightedRating.ToString("0.##")</div>
+                    </div>
+                </div>
+            }
+
+            <!-- ── Performance Analysis Cards ── -->
+            <div class="s-head">📊 Performance Analysis</div>
+            <div class="perf-cards">
+                <div class="perf-card pc-blue">
+                    <div class="pc-lbl">BSC Score (PMS)</div>
+                    <div class="pc-val">@bscScore.ToString("0.##")</div>
+                    <div class="pc-sub">Raw PMS score</div>
+                </div>
+                @if (behAuditCompleted)
+                {
+                    <div class="perf-card" style="border-top:3px solid #1d4ed8;background:#eff6ff">
+                        <div class="pc-lbl">BA Score</div>
+                        <div class="pc-val" style="color:#1d4ed8">@behScore.ToString("0.##")</div>
+                        <div class="pc-sub">Behavioural Audit avg</div>
+                    </div>
+                }
+                <div class="perf-card" style="border-top:3px solid #ca8a04;background:#fefce8">
+                    <div class="pc-lbl">Weighted Rating<br /><span style="font-size:9px;color:#94a3b8">(PMS×0.8 + BA×0.2)</span></div>
+                    <div class="pc-val" style="color:#ca8a04">@weightedRating.ToString("0.##")</div>
+                    <div class="pc-sub">@(behAuditCompleted ? $"{pmsWeightedComponent.ToString("0.##")} + {baWeightedComponent.ToString("0.##")}" : "BSC only (BA pending)")</div>
+                </div>
+                @if (mcOverallRating.HasValue)
+                {
+                    <div class="perf-card" style="border-top:3px solid #c2410c">
+                        <div class="pc-lbl">MC Overall Rating</div>
+                        <div class="pc-val" style="color:#c2410c">@mcOverallRating.Value.ToString("0.##")</div>
+                        <div class="pc-sub">Single overall / 5.00</div>
+                    </div>
+                }
+                @if (jmdOverallRating.HasValue)
+                {
+                    <div class="perf-card" style="border-top:3px solid #9d174d">
+                        <div class="pc-lbl">JMD Overall Rating</div>
+                        <div class="pc-val" style="color:#9d174d">@jmdOverallRating.Value.ToString("0.##")</div>
+                        <div class="pc-sub">Single overall / 5.00</div>
+                    </div>
+                }
+                @if (patPercent > 0)
+                {
+                    <div class="perf-card pc-navy">
+                        <div class="pc-lbl">PAT / Revenue %</div>
+                        <div class="pc-val">@patPercent.ToString("0.####")%</div>
+                        <div class="pc-sub">@fyLabel</div>
+                    </div>
+                }
+                <div class="perf-card pc-green">
+                    <div class="pc-lbl">Base Percentage</div>
+                    <div class="pc-val" style="color:#059669">@basePercent.ToString("0.##")%</div>
+                    <div class="pc-sub">From PAT Range Master</div>
+                </div>
+                <div class="perf-card" style="border-top:3px solid #7c3aed">
+                    <div class="pc-lbl">Hike over Base %</div>
+                    <div class="pc-val" style="color:#7c3aed">@(hikeOverBase >= 0 ? "+" : "")@hikeOverBase.ToString("0.##")%</div>
+                    <div class="pc-sub">Rating @calcRating adjustment</div>
+                </div>
+                <div class="perf-card" style="border-top:3px solid #1e4ed8;background:#eff4ff">
+                    <div class="pc-lbl">Final Increment %</div>
+                    <div class="pc-val" style="color:#1e4ed8;font-size:24px">@finalIncrPct.ToString("0.####")%</div>
+                    <div class="pc-sub">Base × (1 + Hike/100)</div>
+                </div>
+            </div>
+
+            <!-- ── Increment Summary Table ── -->
+            <div class="incr-wrap">
+                <div class="incr-tbl-head">
+                    <span style="font-size:1rem">💰</span>
+                    <span class="incr-tbl-head-title">Salary Increment Summary — @fyLabel</span>
+                    <span style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.5);font-family:'Courier New',monospace">
+                        Weighted Rating: @weightedRating.ToString("0.##") &nbsp;|&nbsp; Final Increment: @(finalIncrPct > 0 ? finalIncrPct.ToString("0.####") + "%" : "—")
+                    </span>
+                </div>
+                <div class="incr-notice">
+                    @if (isAnnualCycle)
+                    {
+                        <text>✏️ <strong>Current Gross Salary</strong> is fetched from system records. Enter <strong>Last Year Increment</strong> and select the <strong>Increment Date</strong> to complete the calculation before printing.</text>
+                    }
+                    else
+                    {
+                        <text>ℹ️ Salary increment details are only available for <strong>Annual</strong> appraisal cycles. Current cycle: <strong>@Model.AppraisalCycle</strong></text>
+                    }
+                </div>
+                <div class="incr-scrl">
+                    <table class="incr-tbl">
+                        <thead>
+                            <tr>
+                                <th>EMP Code</th>
+                                <th>Employee Name</th>
+                                <th>Designation</th>
+                                <th>Department</th>
+                                <th>Sub Department</th>
+                                <th>Increment Date</th>
+                                @if (isAnnualCycle)
+                                {
+                                    <th>Current Gross<br />Salary (₹)</th>
+                                    <th>Increment<br />Amount (₹)</th>
+                                    <th>New Gross<br />Salary (₹)</th>
+                                    <th>Last Year<br />Increment</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="mono">@Model.EmpCode</td>
+                                <td style="font-weight:700;font-size:12px;min-width:130px">@Model.EmpName</td>
+                                <td style="min-width:110px">@(string.IsNullOrWhiteSpace(Model.Designation) ? "—" : Model.Designation)</td>
+                                <td style="min-width:100px">@(string.IsNullOrWhiteSpace(Model.Department) ? "—" : Model.Department)</td>
+                                <td style="min-width:110px">@subDeptDisplay</td>
+                                <td style="min-width:160px">
+                                    <input type="date" id="incrDateInput" class="date-input" value="@incrDateIso" onchange="onIncrDateChange()" />
+                                    <div id="incrDateDisplay" style="font-size:10px;color:#059669;font-weight:600;margin-top:4px;font-family:'Courier New',monospace">@incrDateStr</div>
+                                </td>
+                                @if (isAnnualCycle)
+                                {
+                                    <td style="min-width:150px">
+                                        <div id="grossInput" class="mono fw c-navy" style="font-size:13px">Loading…</div>
+                                        <div id="grossSrcLabel" style="font-size:9px;color:#94a3b8;margin-top:3px"></div>
+                                    </td>
+                                    <td id="incrAmtCell" class="tc mono fw c-green" style="font-size:13px;min-width:120px;background:#f0fdf4">—</td>
+                                    <td id="newGrossCell" class="tc mono fw" style="font-size:13px;min-width:120px;background:#eff4ff;color:#1e4ed8">—</td>
+                                    <td style="min-width:140px">
+                                        <input type="text" id="lastYearInput" class="print-input" placeholder="e.g. ₹15,000" style="width:130px" />
+                                    </td>
+                                }
+                                else
+                                {
+                                    <td colspan="4" style="text-align:center;color:#94a3b8;font-style:italic;font-size:11px;background:#f8fafc">
+                                        Salary increment details are only shown for Annual appraisal cycles.
+                                    </td>
+                                }
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sig-section">
+                <div class="sig-box"><div class="sig-line"></div><div class="sig-label">HR Manager</div><div style="font-size:9px;color:#94a3b8;margin-top:2px">Date: ____________</div></div>
+                <div class="sig-box"><div class="sig-line"></div><div class="sig-label">Reporting Manager</div><div style="font-size:9px;color:#94a3b8;margin-top:2px">@(string.IsNullOrWhiteSpace(Model.RmName) ? "Name: ____________" : Model.RmName)</div></div>
+                <div class="sig-box"><div class="sig-line"></div><div class="sig-label">HOD / Unit Head</div><div style="font-size:9px;color:#94a3b8;margin-top:2px">@(string.IsNullOrWhiteSpace(Model.HodName) ? "Name: ____________" : Model.HodName)</div></div>
+                <div class="sig-box"><div class="sig-line"></div><div class="sig-label">JMD Approval</div><div style="font-size:9px;color:#94a3b8;margin-top:2px">@(string.IsNullOrWhiteSpace(Model.JmdName) ? "Name: ____________" : Model.JmdName)</div></div>
+                <div class="sig-box"><div class="sig-line"></div><div class="sig-label">Employee Acknowledgement</div><div style="font-size:9px;color:#94a3b8;margin-top:2px">Date: ____________</div></div>
+            </div>
+
+        </div><!-- /view1 -->
+        <!-- ══════════════════════════════════════════════════
+             VIEW 2 — FINAL APPRAISAL SUMMARY
+        ══════════════════════════════════════════════════ -->
+        <div class="view-panel" id="view2">
+
+            <div style="font-size:18px;font-weight:700;color:#0f1c3f;margin-bottom:4px">Final Appraisal — @Model.EmpName</div>
+            @if (!string.IsNullOrWhiteSpace(cycleInfo))
+            {
+                <div style="font-size:11px;color:#64748b;margin-bottom:12px">@cycleInfo | @fyLabel</div>
+            }
+
+            @if (!behAuditCompleted)
+            {
+                <div class="ba-banner-warn" style="margin-bottom:14px">
+                    <span class="ba-banner-icon">⚠️</span>
+                    <div>
+                        <div class="ba-banner-title-warn">Behavioural Audit Not Completed</div>
+                        <div class="ba-banner-sub">Final score reflects PMS (BSC) only. Behavioural component will be added once the audit is finalized.</div>
+                    </div>
+                </div>
+            }
+
+            @if (mcOverallRating.HasValue || jmdOverallRating.HasValue)
+            {
+                <div class="overall-strip" style="margin-bottom:16px">
+                    @if (mcOverallRating.HasValue)
+                    {
+                        <div class="os-item">
+                            <span class="os-label">⚖️ MC Overall Rating</span>
+                            <span class="os-val" style="color:#c2410c">@mcOverallRating.Value.ToString("0.##") <span style="font-size:11px;color:#94a3b8">/ 5</span></span>
+                            @if (!string.IsNullOrWhiteSpace(mcOverallRemarks))
+                            {
+                                <span class="os-rem">"@mcOverallRemarks"</span>
+                            }
+                        </div>
+                    }
+                    @if (jmdOverallRating.HasValue)
+                    {
+                        <div class="os-item">
+                            <span class="os-label">👑 JMD Overall Rating</span>
+                            <span class="os-val" style="color:#9d174d">@jmdOverallRating.Value.ToString("0.##") <span style="font-size:11px;color:#94a3b8">/ 5</span></span>
+                            @if (!string.IsNullOrWhiteSpace(jmdOverallRemarks))
+                            {
+                                <span class="os-rem">"@jmdOverallRemarks"</span>
+                            }
+                        </div>
+                    }
+                    <div style="font-size:10px;color:#64748b;align-self:center">MC &amp; JMD ratings are single overall scores, not per-KPI.</div>
+                </div>
+            }
+
+            <div class="v-card">
+                <div class="v-card-head">
+                    <span style="font-size:1rem">📊</span>
+                    <span class="v-card-head-title">KPI Performance — Final Cascade Ratings with Weighted Breakdown</span>
+                    <span style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.5);font-family:'Courier New',monospace">
+                        BSC: @bscScore.ToString("0.##") &nbsp;|&nbsp; PMS×0.8: @pmsWeightedComponent.ToString("0.##") &nbsp;|&nbsp;
+                        BA Score: @(behAuditCompleted? behScore.ToString("0.##") : "—") &nbsp;|&nbsp;
+                        BA×0.2: @(behAuditCompleted? baWeightedComponent.ToString("0.##") : "—") &nbsp;|&nbsp;
+                        Weighted: @weightedRating.ToString("0.##")
+                    </span>
+                </div>
+                <div class="v-scroll">
+                    <table class="main-tbl">
+                        <colgroup>
+                            <col style="width:12%" />
+                            <col style="width:13%" />
+                            <col style="width:20%" />
+                            <col style="width:5%" />
+                            <col style="width:6%" />
+                            <col style="width:5%" />
+                            <col style="width:5%" />
+                            <col style="width:5%" />
+                            <col style="width:6%" />
+                            <col style="width:7%" />
+                            <col style="width:7%" />
+                            <col style="width:9%" />
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Performance Management<br />Perspectives (PMP)</th>
+                                <th>Key Result Areas (KRAs)</th>
+                                <th>Key Performance Indicators (KPIs)</th>
+                                <th>Unit</th>
+                                <th>Indiv. Wt%</th>
+                                <th>Ovr Wt%</th>
+                                <th>Target</th>
+                                <th>Actual</th>
+                                <th>Rating</th>
+                                <th style="background:#047857 !important">KPI Wt. Rating<br /><span style="font-size:8px;opacity:.8;font-weight:400">(Wt% × Rating)</span></th>
+                                <th class="th-pms-wt">PMS Wt.<br /><span style="font-size:8px;opacity:.8;font-weight:400">(× 0.8)</span></th>
+                                <th class="th-ba">BA Score<br /><span style="font-size:8px;opacity:.8;font-weight:400">(single avg /5)</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.KpiRows.Any())
+                            {
+                                <tr><td colspan="12" style="text-align:center;padding:28px;color:#94a3b8">No KPI data found.</td></tr>
+                            }
+                            else
+                            {
+                                bool baRowspanRendered = false;
+                                int totalRows2 = Model.KpiRows.Count;
+
+                                foreach (var grp in pmpGroups)
+                                {
+                                    int span = grp.Rows.Count;
+                                    bool first = true;
+                                    foreach (var row in grp.Rows)
+                                    {
+                                        decimal? fr = GetFinalRating(row);
+                                        decimal wr = GetWeightedRating(row);
+                                        decimal pmsWt = Math.Round(wr * 0.8m, 3);
+                                        decimal? actual = row.EmpActual ?? row.RmActual ?? row.HodActual ?? row.UnitHeadActual;
+                                        <tr>
+                                            @if (first)
+                                            {
+                                                <td class="pmp-cell" rowspan="@span">@grp.PmpName</td>
+                                            }
+                                            <td style="font-weight:600">@row.KraName</td>
+                                            <td>@row.KpiName</td>
+                                            <td class="tc">@row.UnitOfMeasure</td>
+                                            <td class="tc">@row.IndividualWeightage.ToString("0.##")%</td>
+                                            @if (first)
+                                            {
+                                                <td class="ow-cell" rowspan="@span">@grp.OvWt.ToString("0.##")%</td>
+                                            }
+                                            <td class="tc">@row.Target.ToString("0.##")</td>
+                                            <td class="tc">@(actual.HasValue? actual.Value.ToString("0.##") : "—")</td>
+                                            <td class="tc fw">@(fr.HasValue? fr.Value.ToString("0.##") : "—")</td>
+                                            <td class="tc fw c-blue">@(fr.HasValue? wr.ToString("0.###") : "—")</td>
+                                            <td class="tc td-pms-wt">@(fr.HasValue? pmsWt.ToString("0.###") : "—")</td>
+
+                                            @* BA column — rowspan across ALL KPI rows, shown only once *@
+                                            @if (!baRowspanRendered)
+                                            {
+                                                baRowspanRendered = true;
+                                                <td class="td-ba-single" rowspan="@totalRows2">
+                                                    @if (behAuditCompleted && behScore > 0)
+                                                    {
+                                                        <div style="font-size:18px;font-weight:700;color:#1e40af;font-family:'Courier New',monospace">@behScore.ToString("0.##")</div>
+                                                        <div style="font-size:9px;color:#1e40af;margin-top:3px">avg /5</div>
+                                                        <div style="font-size:9px;color:#475569;margin-top:4px;border-top:1px solid #bfdbfe;padding-top:4px">
+                                                            ×0.2 = <strong style="color:#1e40af">@baWeightedComponent.ToString("0.##")</strong>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div style="font-size:12px;color:#94a3b8;font-style:italic">—</div>
+                                                        <div style="font-size:9px;color:#94a3b8;margin-top:3px">Not completed</div>
+                                                    }
+                                                </td>
+                                            }
+                                        </tr>
+                                        first = false;
+                                    }
+                                }
+
+                                <!-- Totals row -->
+                                <tr>
+                                    <td colspan="9" style="text-align:right;font-weight:700;background:#0f1c3f;color:#fff;padding:10px 14px">Total Weighted Rating</td>
+                                    <td class="tc fw" style="background:#0f1c3f;color:#f59e0b;font-size:14px;padding:10px 12px">
+                                        @bscScore.ToString("0.##")
+                                        <div style="font-size:9px;color:#94a3b8;font-weight:400">BSC total</div>
+                                    </td>
+                                    <td class="tc fw" style="background:#d1fae5;color:#065f46;font-size:14px;padding:10px 12px">
+                                        @pmsWeightedComponent.ToString("0.##")
+                                        <div style="font-size:9px;color:#047857;font-weight:400">PMS × 0.8</div>
+                                    </td>
+                                    <td class="tc fw" style="background:#dbeafe;color:#1e40af;font-size:14px;padding:10px 12px">
+                                        @(behAuditCompleted? behScore.ToString("0.##") : "—")
+                                        <div style="font-size:9px;color:#1e40af;font-weight:400">BA avg score</div>
+                                        @if (behAuditCompleted)
+                                        {
+                                            <div style="font-size:9px;color:#1e40af;font-weight:400">×0.2 = @baWeightedComponent.ToString("0.##")</div>
+                                        }
+                                    </td>
+                                </tr>
+                                <!-- Weighted Rating summary row -->
+                                <tr>
+                                    <td colspan="10" style="text-align:right;font-weight:700;background:#ca8a04;color:#fff;padding:8px 14px">
+                                        ⚖️ Final Weighted Rating = PMS×0.8 + BA×0.2
+                                    </td>
+                                    <td colspan="2" style="text-align:center;font-weight:700;background:#fefce8;color:#92400e;font-size:16px;padding:10px 12px;border:2px solid #fde047">
+                                        @pmsWeightedComponent.ToString("0.##") + @(behAuditCompleted? baWeightedComponent.ToString("0.##") : "0")
+                                        = <span style="font-size:18px;color:#ca8a04">@weightedRating.ToString("0.##")</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Score Summary -->
+            <div class="scores-row">
+                <div class="score-mini-tbl">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="col-label"></th>
+                                <th class="col-pms">PMS</th>
+                                <th class="col-ba">B A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="row-bsc">
+                                <td class="lbl-cell" style="color:#0369a1;font-weight:600;">
+                                    Appraisal Score (BSC / PMS)
+                                    <span class="score-sub-lbl">Weighted avg of KPI ratings = @bscScore.ToString("0.##")</span>
+                                </td>
+                                <td class="score-cell" style="color:#0369a1;">@bscScore.ToString("0.##")</td>
+                                <td class="score-cell ba-val" style="color:@(behAuditCompleted ? "#059669" : "#e11d48");">
+                                    @(behAuditCompleted? behScore.ToString("0.##") : "—")
+                                </td>
+                            </tr>
+                            <tr style="background:#fefce8">
+                                <td class="lbl-cell" style="color:#92400e;font-weight:600;">
+                                    ⚖️ Weighted Components
+                                    <span class="score-sub-lbl">PMS×0.8 = @pmsWeightedComponent.ToString("0.##") &nbsp;|&nbsp; BA×0.2 = @(behAuditCompleted? baWeightedComponent.ToString("0.##") : "—")</span>
+                                </td>
+                                <td class="score-cell" style="background:#d1fae5;color:#065f46;">@pmsWeightedComponent.ToString("0.##")</td>
+                                <td class="score-cell" style="background:#dbeafe;color:#1e40af;">@(behAuditCompleted? baWeightedComponent.ToString("0.##") : "—")</td>
+                            </tr>
+                            <tr style="background:#fefce8;border:2px solid #fde047">
+                                <td class="lbl-cell" style="color:#ca8a04;font-weight:700;">
+                                    ⚖️ Weighted Rating
+                                    <span class="score-sub-lbl" style="color:#ca8a04">PMS×0.8 + BA×0.2 = @weightedRating.ToString("0.##")</span>
+                                </td>
+                                <td colspan="2" class="score-cell" style="color:#ca8a04;font-size:18px;background:#fefce8;">
+                                    @weightedRating.ToString("0.##")
+                                </td>
+                            </tr>
+                            @if (mcOverallRating.HasValue)
+                            {
+                                <tr class="row-mc">
+                                    <td class="lbl-cell" style="color:#c2410c;font-weight:600;">
+                                        ⚖️ Appraisal Score (MC)
+                                        <span class="score-sub-lbl mc-color">Moderation Committee — single overall rating@(!string.IsNullOrWhiteSpace(mcOverallRemarks) ? $" · \"{mcOverallRemarks}\"" : "")</span>
+                                    </td>
+                                    <td class="score-cell" style="color:#c2410c;">@mcOverallRating.Value.ToString("0.##")</td>
+                                    <td class="score-cell" style="color:#94a3b8;">—</td>
+                                </tr>
+                            }
+                            @if (jmdOverallRating.HasValue)
+                            {
+                                <tr class="row-jmd">
+                                    <td class="lbl-cell" style="color:#9d174d;font-weight:600;">
+                                        👑 Appraisal Score (JMD)
+                                        <span class="score-sub-lbl jmd-color">JMD — single overall rating (highest authority)@(!string.IsNullOrWhiteSpace(jmdOverallRemarks) ? $" · \"{jmdOverallRemarks}\"" : "")</span>
+                                    </td>
+                                    <td class="score-cell" style="color:#9d174d;">@jmdOverallRating.Value.ToString("0.##")</td>
+                                    <td class="score-cell" style="color:#94a3b8;">—</td>
+                                </tr>
+                            }
+                            <tr class="row-final">
+                                <td class="lbl-cell">
+                                    <strong>Appraisal Score (Final)</strong>
+                                    <span class="score-sub-lbl final-color">
+                                        @if (jmdOverallRating.HasValue)
+                                        {
+                                            <text>Based on JMD Overall Rating → Rating @calcRating — @ratingLabel</text>
+                                        }
+                                        else if (mcOverallRating.HasValue)
+                                        {
+                                            <text>Based on MC Overall Rating → Rating @calcRating — @ratingLabel</text>
+                                        }
+                                        else
+                                        {
+                                            <text>Based on Weighted Rating (@weightedRating.ToString("0.##")) → Rating @calcRating — @ratingLabel</text>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="score-cell" style="font-size:15px;">@finalDisplayValue.ToString("0.##")</td>
+                                <td class="score-cell" style="color:#94a3b8;">—</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:8px 0">
+                <div style="background:#fefce8;border:2px solid #fde047;border-radius:8px;padding:10px 18px;text-align:center">
+                    <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#92400e;margin-bottom:4px">⚖️ Weighted Rating</div>
+                    <div style="font-size:22px;font-weight:700;color:#ca8a04;font-family:'Courier New',monospace">@weightedRating.ToString("0.##")</div>
+                    <div style="font-size:9.5px;color:#92400e;margin-top:2px">@pmsWeightedComponent.ToString("0.##") + @(behAuditCompleted? baWeightedComponent.ToString("0.##") : "0")</div>
+                </div>
+                <div style="background:#eff4ff;border:1.5px solid #c7d7fd;border-radius:8px;padding:10px 18px;text-align:center">
+                    <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b;margin-bottom:4px">Final Increment %</div>
+                    <div style="font-size:22px;font-weight:700;color:#1e4ed8;font-family:'Courier New',monospace">@finalIncrPct.ToString("0.####")%</div>
+                    <div style="font-size:9.5px;color:#64748b;margin-top:2px">Rating @calcRating — @ratingLabel</div>
+                </div>
+                @if (mcOverallRating.HasValue)
+                {
+                    <div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:8px;padding:10px 18px;text-align:center">
+                        <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9a3412;margin-bottom:4px">⚖️ MC Overall</div>
+                        <div style="font-size:22px;font-weight:700;color:#c2410c;font-family:'Courier New',monospace">@mcOverallRating.Value.ToString("0.##")</div>
+                        <div style="font-size:9px;color:#64748b;margin-top:2px">/ 5.00</div>
+                    </div>
+                }
+                @if (jmdOverallRating.HasValue)
+                {
+                    <div style="background:#fdf2f8;border:1.5px solid #f9a8d4;border-radius:8px;padding:10px 18px;text-align:center">
+                        <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9d174d;margin-bottom:4px">👑 JMD Overall</div>
+                        <div style="font-size:22px;font-weight:700;color:#9d174d;font-family:'Courier New',monospace">@jmdOverallRating.Value.ToString("0.##")</div>
+                        <div style="font-size:9px;color:#64748b;margin-top:2px">/ 5.00</div>
+                    </div>
+                }
+            </div>
+
+            @if (!behAuditCompleted)
+            {
+                <div class="ba-not-done-note">⚠️ Behavioural Audit Not Completed — Final score reflects PMS (BSC) only.</div>
+            }
+            <div class="formula-line">Individual Appraisal = ((0.8 × BSC Score) + (0.2 × Behavioural Score))</div>
+            <div class="note-line">Note: Function &amp; Department Appraisal for @Model.EmpName would be same as Individual BSC Score (100% Weightage)</div>
+
+        </div><!-- /view2 -->
+        <!-- ══════════════════════════════════════════════════
+             VIEW 3 — ALL REVIEWER SCORES
+        ══════════════════════════════════════════════════ -->
+        <div class="view-panel" id="view3">
+
+            <div style="font-size:18px;font-weight:700;color:#0f1c3f;margin-bottom:4px">All Reviewer Scores — @Model.EmpName</div>
+            @if (!string.IsNullOrWhiteSpace(cycleInfo))
+            {
+                <div style="font-size:11px;color:#64748b;margin-bottom:12px">@cycleInfo | @fyLabel</div>
+            }
+
+            @if (!behAuditCompleted)
+            {
+                <div class="ba-banner-warn" style="margin-bottom:14px">
+                    <span class="ba-banner-icon">⚠️</span>
+                    <div>
+                        <div class="ba-banner-title-warn">Behavioural Audit Not Completed</div>
+                        <div class="ba-banner-sub">Final score reflects PMS (BSC) only. Behavioural component (20%) will be included once the audit is finalized.</div>
+                    </div>
+                </div>
+            }
+
+            @if (mcOverallRating.HasValue || jmdOverallRating.HasValue)
+            {
+                <div class="overall-strip" style="margin-bottom:16px">
+                    @if (mcOverallRating.HasValue)
+                    {
+                        <div class="os-item">
+                            <span class="os-label">⚖️ MC Overall Rating</span>
+                            <span class="os-val" style="color:#c2410c">@mcOverallRating.Value.ToString("0.##") <span style="font-size:11px;color:#94a3b8">/ 5</span></span>
+                            @if (!string.IsNullOrWhiteSpace(mcOverallRemarks))
+                            {
+                                <span class="os-rem">"@mcOverallRemarks"</span>
+                            }
+                        </div>
+                    }
+                    @if (jmdOverallRating.HasValue)
+                    {
+                        <div class="os-item">
+                            <span class="os-label">👑 JMD Overall Rating</span>
+                            <span class="os-val" style="color:#9d174d">@jmdOverallRating.Value.ToString("0.##") <span style="font-size:11px;color:#94a3b8">/ 5</span></span>
+                            @if (!string.IsNullOrWhiteSpace(jmdOverallRemarks))
+                            {
+                                <span class="os-rem">"@jmdOverallRemarks"</span>
+                            }
+                        </div>
+                    }
+                    <div style="font-size:10px;color:#64748b;align-self:center">MC &amp; JMD provide a single overall rating — not per individual KPI row.</div>
+                </div>
+            }
+
+            <div class="v-card">
+                <div class="v-card-head">
+                    <span style="font-size:1rem">🔍</span>
+                    <span class="v-card-head-title">All Reviewer Scores — Stage-by-Stage with Weighted Breakdown</span>
+                    <span style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.5);font-family:'Courier New',monospace">
+                        Weighted: @weightedRating.ToString("0.##") (PMS @pmsWeightedComponent.ToString("0.##") + BA×0.2 @(behAuditCompleted? baWeightedComponent.ToString("0.##") : "—"))
+                    </span>
+                </div>
+                <div class="v-scroll">
+                    <table class="rev-tbl">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" style="width:7%">PMP</th>
+                                <th rowspan="2" style="width:8%">KRA</th>
+                                <th rowspan="2" style="width:14%">KPI</th>
+                                <th rowspan="2" style="width:4%">Unit</th>
+                                <th rowspan="2" style="width:4%">Wt%</th>
+                                <th rowspan="2" style="width:4%">Ovr Wt%</th>
+                                <th rowspan="2" style="width:5%">Target</th>
+                                <th colspan="2" class="th-emp">Employee</th>
+                                <th colspan="2" class="th-rm">Reporting Manager</th>
+                                <th colspan="2" class="th-hod">HOD</th>
+                                <th colspan="2" class="th-uh">Unit Head</th>
+                                <th class="th-avg">Avg</th>
+                                <th class="th-fin">Rating</th>
+                                <th class="th-fin">Wt.Rating</th>
+                                <th class="th-pms-wt">PMS Wt.<br /><span style="font-size:8px;font-weight:400;opacity:.8">×0.8</span></th>
+                                <th class="th-ba" rowspan="2" style="min-width:90px">
+                                    BA Score<br />
+                                    <span style="font-size:8px;font-weight:400;opacity:.8">(single avg /5)</span>
+                                </th>
+                            </tr>
+                            <tr>
+                                <th class="th-emp">Actual</th>
+                                <th class="th-emp">Rating</th>
+                                <th class="th-rm">Actual</th>
+                                <th class="th-rm">Rating</th>
+                                <th class="th-hod">Actual</th>
+                                <th class="th-hod">Rating</th>
+                                <th class="th-uh">Actual</th>
+                                <th class="th-uh">Rating</th>
+                                <th class="th-avg">/5</th>
+                                <th class="th-fin">/5</th>
+                                <th class="th-fin">score</th>
+                                <th class="th-pms-wt">score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.KpiRows.Any())
+                            {
+                                <tr><td colspan="20" style="text-align:center;padding:24px;color:#94a3b8">No KPI data found.</td></tr>
+                            }
+                            else
+                            {
+                                bool baRendered3 = false;
+                                int totalRows3 = Model.KpiRows.Count;
+
+                                foreach (var grp in pmpGroups)
+                                {
+                                    int span2 = grp.Rows.Count;
+                                    bool first2 = true;
+                                    foreach (var row in grp.Rows)
+                                    {
+                                        decimal? fr2 = GetFinalRating(row);
+                                        decimal wr2 = GetWeightedRating(row);
+                                        decimal pmsWt2 = Math.Round(wr2 * 0.8m, 3);
+                                        decimal? ravg = RowAvgRmHodUh(row);
+                                        <tr>
+                                            @if (first2)
+                                            {
+                                                <td class="pmp-cell" rowspan="@span2">@grp.PmpName</td>
+                                            }
+                                            <td style="font-weight:600;font-size:10px">@row.KraName</td>
+                                            <td style="font-size:10px">@row.KpiName</td>
+                                            <td class="tc">@row.UnitOfMeasure</td>
+                                            <td class="tc">@row.IndividualWeightage.ToString("0.##")%</td>
+                                            @if (first2)
+                                            {
+                                                <td class="ow-cell" rowspan="@span2">@grp.OvWt.ToString("0.##")%</td>
+                                            }
+                                            <td class="tc">@row.Target.ToString("0.##")</td>
+                                            <td class="tc td-emp">@Fmt(row.EmpActual)</td>
+                                            <td class="tc td-emp fw">@Fmt(row.EmpRating)</td>
+                                            <td class="tc td-rm">@Fmt(row.RmActual)</td>
+                                            <td class="tc td-rm fw">@Fmt(row.RmRating)</td>
+                                            <td class="tc td-hod">@Fmt(row.HodActual)</td>
+                                            <td class="tc td-hod fw">@Fmt(row.HodRating)</td>
+                                            <td class="tc td-uh">@Fmt(row.UnitHeadActual)</td>
+                                            <td class="tc td-uh fw">@Fmt(row.UnitHeadRating)</td>
+                                            <td class="tc td-avg">@(ravg.HasValue? ravg.Value.ToString("0.00") : "—")</td>
+                                            <td class="tc td-fin fw">@(fr2.HasValue? fr2.Value.ToString("0.##") : "—")</td>
+                                            <td class="tc td-fin fw c-blue">@(fr2.HasValue? wr2.ToString("0.###") : "—")</td>
+                                            <td class="tc td-pms-wt">@(fr2.HasValue? pmsWt2.ToString("0.###") : "—")</td>
+
+                                            @* BA — single rowspan cell across all KPI rows *@
+                                            @if (!baRendered3)
+                                            {
+                                                baRendered3 = true;
+                                                <td class="td-ba-single" rowspan="@totalRows3">
+                                                    @if (behAuditCompleted && behScore > 0)
+                                                    {
+                                                        <div style="font-size:16px;font-weight:700;color:#1e40af;font-family:'Courier New',monospace">@behScore.ToString("0.##")</div>
+                                                        <div style="font-size:9px;color:#1e40af;margin-top:2px">avg /5</div>
+                                                        <div style="font-size:9px;color:#475569;margin-top:4px;border-top:1px solid #bfdbfe;padding-top:4px">
+                                                            ×0.2 = <strong style="color:#1e40af">@baWeightedComponent.ToString("0.##")</strong>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div style="font-size:12px;color:#94a3b8;font-style:italic">—</div>
+                                                        <div style="font-size:9px;color:#94a3b8;margin-top:2px">Not completed</div>
+                                                    }
+                                                </td>
+                                            }
+                                        </tr>
+                                        first2 = false;
+                                    }
+                                }
+
+                                <tr>
+                                    <td colspan="7" style="text-align:right;font-weight:700;background:#0f1c3f;color:#fff;padding:9px 12px">Totals</td>
+                                    <td style="background:#0f1c3f"></td>
+                                    <td class="tc fw" style="background:#065f46;color:#6ee7b7">@FmtW(empScore)</td>
+                                    <td style="background:#0f1c3f"></td>
+                                    <td class="tc fw" style="background:#1e40af;color:#bfdbfe">@FmtW(rmScore)</td>
+                                    <td style="background:#0f1c3f"></td>
+                                    <td class="tc fw" style="background:#5b21b6;color:#ddd6fe">@FmtW(hodScore)</td>
+                                    <td style="background:#0f1c3f"></td>
+                                    <td class="tc fw" style="background:#0f766e;color:#99f6e4">@FmtW(uhScore)</td>
+                                    <td style="background:#0f1c3f"></td>
+                                    <td style="background:#0f1c3f"></td>
+                                    <td class="tc fw" style="background:#f59e0b;color:#fff;font-size:13px">@bscScore.ToString("0.##")</td>
+                                    <td class="tc fw" style="background:#d1fae5;color:#065f46;font-size:13px">@pmsWeightedComponent.ToString("0.##")</td>
+                                    <td class="tc fw" style="background:#dbeafe;color:#1e40af;font-size:13px">
+                                        @(behAuditCompleted? behScore.ToString("0.##") : "—")
+                                        @if (behAuditCompleted)
+                                        {
+                                            <div style="font-size:9px;font-weight:400">×0.2=@baWeightedComponent.ToString("0.##")</div>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="18" style="text-align:right;font-weight:700;background:#ca8a04;color:#fff;padding:8px 14px">
+                                        ⚖️ Weighted Rating = PMS×0.8 + BA×0.2
+                                    </td>
+                                    <td colspan="2" style="text-align:center;font-weight:700;background:#fefce8;color:#92400e;font-size:15px;padding:10px 12px;border:2px solid #fde047">
+                                        @pmsWeightedComponent.ToString("0.##") + @(behAuditCompleted? baWeightedComponent.ToString("0.##") : "0")
+                                        = <span style="font-size:17px;color:#ca8a04">@weightedRating.ToString("0.##")</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="scores-row">
+                <div class="score-mini-tbl">
+                    <table>
+                        <tr>
+                            <td>Appraisal Score (BSC — Final)</td>
+                            <td style="text-align:right;font-weight:700">@bscScore.ToString("0.##")</td>
+                        </tr>
+                        <tr style="background:#d1fae5">
+                            <td style="color:#065f46;font-weight:600">PMS Component (BSC × 0.8)</td>
+                            <td style="text-align:right;font-weight:700;color:#065f46">@pmsWeightedComponent.ToString("0.##")</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Appraisal Score (Behavioural — single avg)
+                                @if (!behAuditCompleted)
+                                {
+                                    <span class="score-not-done">NOT DONE</span>
+                                }
+                            </td>
+                            <td style="text-align:right;font-weight:700;color:@(behAuditCompleted ? "#059669" : "#e11d48")">
+                                @(behAuditCompleted? behScore.ToString("0.##") : "—")
+                            </td>
+                        </tr>
+                        @if (behAuditCompleted)
+                        {
+                            <tr style="background:#dbeafe">
+                                <td style="color:#1e40af;font-weight:600">BA Component (BA avg × 0.2)</td>
+                                <td style="text-align:right;font-weight:700;color:#1e40af">@baWeightedComponent.ToString("0.##")</td>
+                            </tr>
+                        }
+                        <tr style="background:#fefce8;border:2px solid #fde047">
+                            <td style="color:#92400e;font-weight:700">⚖️ Weighted Rating (PMS×0.8 + BA×0.2)</td>
+                            <td style="text-align:right;font-weight:700;color:#ca8a04;font-size:15px">@weightedRating.ToString("0.##")</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Appraisal Score (Final)
+                                <span class="score-sub-lbl final-color">
+                                    @if (jmdOverallRating.HasValue)
+                                    {
+                                        <text>Based on JMD Overall Rating</text>
+                                    }
+                                    else if (mcOverallRating.HasValue)
+                                    {
+                                        <text>Based on MC Overall Rating</text>
+                                    }
+                                    else
+                                    {
+                                        <text>Based on Weighted Rating</text>
+                                    }
+                                </span>
+                            </td>
+                            <td style="text-align:right;font-weight:700;color:#0f1c3f;font-size:14px">@finalDisplayValue.ToString("0.##")</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="rev-score-wrap">
+                    <div class="s-head" style="margin-top:0">Reviewer Score Comparison</div>
+                    <table class="rev-sum-tbl">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;width:22%">Reviewer</th>
+                                <th style="width:22%">Name</th>
+                                <th style="width:18%">Score / Rating</th>
+                                <th>Note</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="font-weight:700;background:#f0fdf4;color:#065f46">Employee</td>
+                                <td style="background:#f0fdf4">@Model.EmpName</td>
+                                <td style="text-align:center;font-weight:700;background:#f0fdf4">@FmtW(empScore)</td>
+                                <td style="background:#f0fdf4;font-size:10px">Self-assessment → Draft</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:700;background:#eff4ff;color:#1e40af">Reporting Manager</td>
+                                <td style="background:#eff4ff">@(string.IsNullOrWhiteSpace(Model.RmName) ? "—" : Model.RmName)</td>
+                                <td style="text-align:center;font-weight:700;background:#eff4ff">@FmtW(rmScore)</td>
+                                <td style="background:#eff4ff;font-size:10px">EmployeeFilled → RMReview</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:700;background:#ede9fe;color:#5b21b6">Head of Department</td>
+                                <td style="background:#ede9fe">@(string.IsNullOrWhiteSpace(Model.HodName) ? "—" : Model.HodName)</td>
+                                <td style="text-align:center;font-weight:700;background:#ede9fe">@FmtW(hodScore)</td>
+                                <td style="background:#ede9fe;font-size:10px">RMReview → HODReview</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:700;background:#f0fdfa;color:#0f766e">Unit Head</td>
+                                <td style="background:#f0fdfa">@(string.IsNullOrWhiteSpace(Model.UnitHeadName) ? "—" : Model.UnitHeadName)</td>
+                                <td style="text-align:center;font-weight:700;background:#f0fdfa">@FmtW(uhScore)</td>
+                                <td style="background:#f0fdfa;font-size:10px">HODReview → UnitHeadReview</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:700;background:#fff7ed;color:#9a3412">Mod. Committee</td>
+                                <td style="background:#fff7ed">@(string.IsNullOrWhiteSpace(Model.ModCommitteeNames) ? "—" : Model.ModCommitteeNames)</td>
+                                <td style="text-align:center;font-weight:700;background:#fff7ed">
+                                    @if (mcOverallRating.HasValue)
+                                    {
+                                        <span class="overall-badge overall-badge-mc">@mcOverallRating.Value.ToString("0.##")</span>
+                                    }
+                                    else
+                                    {
+                                        <text>—</text>
+                                    }
+                                </td>
+                                <td style="background:#fff7ed;font-size:10px">Single overall rating / 5.00</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:700;background:#fdf2f8;color:#831843">JMD</td>
+                                <td style="background:#fdf2f8">@(string.IsNullOrWhiteSpace(Model.JmdName) ? "—" : Model.JmdName)</td>
+                                <td style="text-align:center;font-weight:700;background:#fdf2f8">
+                                    @if (jmdOverallRating.HasValue)
+                                    {
+                                        <span class="overall-badge overall-badge-jmd">@jmdOverallRating.Value.ToString("0.##")</span>
+                                    }
+                                    else
+                                    {
+                                        <text>—</text>
+                                    }
+                                </td>
+                                <td style="background:#fdf2f8;font-size:10px">Single overall rating / 5.00</td>
+                            </tr>
+                            <tr style="background:#f0fdf4">
+                                <td style="font-weight:700;color:#065f46">🔵 BA Score</td>
+                                <td style="color:#64748b;font-size:10px">Behavioural Audit (RM + HOD avg)</td>
+                                <td style="text-align:center;font-weight:700;font-size:15px;color:@(behAuditCompleted ? "#1e40af" : "#94a3b8")">
+                                    @(behAuditCompleted? behScore.ToString("0.##") : "—")
+                                    @if (behAuditCompleted)
+                                    {
+                                        <div style="font-size:9px;font-weight:400;color:#64748b">×0.2 = @baWeightedComponent.ToString("0.##")</div>
+                                    }
+                                </td>
+                                <td style="font-size:10px;color:#64748b">Single score applied across all KPIs proportionally</td>
+                            </tr>
+                            <tr style="background:#fefce8;border:2px solid #fde047">
+                                <td style="font-weight:700;color:#92400e">⚖️ Weighted Rating</td>
+                                <td style="color:#64748b;font-size:10px">PMS×0.8 + BA×0.2</td>
+                                <td style="text-align:center;font-weight:700;font-size:15px;color:#ca8a04">@weightedRating.ToString("0.##")</td>
+                                <td style="font-size:10px;color:#92400e">@pmsWeightedComponent.ToString("0.##") + @(behAuditCompleted? baWeightedComponent.ToString("0.##") : "0") = @weightedRating.ToString("0.##")</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:700;color:#1e3a6e">Final (Cascade)</td>
+                                <td>
+                                    @if (jmdOverallRating.HasValue)
+                                    {
+                                        <span style="font-size:10px;color:#831843;font-weight:600">JMD Overall</span>
+                                    }
+                                    else if (mcOverallRating.HasValue)
+                                    {
+                                        <span style="font-size:10px;color:#9a3412;font-weight:600">MC Overall</span>
+                                    }
+                                    else
+                                    {
+                                        <text>HR Finalized</text>
+                                    }
+                                </td>
+                                <td style="text-align:center;font-weight:700;font-size:14px;color:#1e3a6e">@finalDisplayValue.ToString("0.##")</td>
+                                <td style="font-size:10px;color:#64748b">
+                                    @if (jmdOverallRating.HasValue)
+                                    {
+                                        <text>JMD overall rating is final authority</text>
+                                    }
+                                    else if (mcOverallRating.HasValue)
+                                    {
+                                        <text>MC overall rating used (no JMD)</text>
+                                    }
+                                    else
+                                    {
+                                        <text>Based on weighted rating cascade</text>
+                                    }
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @if (!behAuditCompleted)
+            {
+                <div class="ba-not-done-note">⚠️ Behavioural Audit Not Completed — Final score reflects PMS (BSC) only.</div>
+            }
+            <div class="formula-line" style="margin-top:14px">Individual Appraisal = ((0.8 × BSC Score) + (0.2 × Behavioural Score))</div>
+            <div class="note-line">Note: Function &amp; Department Appraisal for @Model.EmpName would be same as Individual BSC Score (100% Weightage)</div>
+
+        </div><!-- /view3 -->
+
+    </div><!-- /.page -->
+
+    <script>
+        var _view         = 1;
+        var _finalIncrPct = parseFloat('@(finalIncrPct.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture))') || 0;
+        var _isAnnual     = @(isAnnualCycle ? "true" : "false");
+        var _monthNames   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+        function formatDateDisplay(isoValue) {
+            if (!isoValue) return '';
+            var parts = isoValue.split('-');
+            if (parts.length !== 3) return isoValue;
+            return parseInt(parts[2]) + '-' + _monthNames[parseInt(parts[1]) - 1] + '-' + parts[0];
+        }
+
+        function onIncrDateChange() {
+            var el   = document.getElementById('incrDateInput');
+            var disp = document.getElementById('incrDateDisplay');
+            if (el && disp) disp.textContent = el.value ? formatDateDisplay(el.value) : '';
+        }
+
+        function switchView(n) {
+            _view = n;
+            for (var i = 1; i <= 3; i++) {
+                var p = document.getElementById('view' + i);
+                var b = document.getElementById('vbtn-' + i);
+                if (p) p.classList.toggle('active', i === n);
+                if (b) b.classList.toggle('active', i === n);
+            }
+        }
+
+        var _currentGross = 0;
+
+        function calcIncrement() {
+            if (!_isAnnual) return;
+            var incrCell = document.getElementById('incrAmtCell');
+            var newGCell = document.getElementById('newGrossCell');
+            if (!incrCell || !newGCell) return;
+            var gross = _currentGross;
+            if (gross <= 0 || _finalIncrPct <= 0) {
+                incrCell.textContent = (gross > 0 && _finalIncrPct <= 0) ? 'No Base% — set PAT entry' : '—';
+                incrCell.style.color = (_finalIncrPct <= 0 && gross > 0) ? '#e11d48' : '';
+                newGCell.textContent = '—';
+                return;
+            }
+            var incrAmt  = parseFloat((gross * _finalIncrPct / 100).toFixed(2));
+            var newGross = parseFloat((gross + incrAmt).toFixed(2));
+            incrCell.style.color = '';
+            incrCell.textContent = 'Rs ' + incrAmt.toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+            newGCell.textContent = 'Rs ' + newGross.toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+        }
+
+        function loadGrossSalary() {
+            var empId   = @Model.EmpId;
+            var grossEl = document.getElementById('grossInput');
+            if (!empId || empId <= 0) { if (grossEl) grossEl.textContent = '—'; return; }
+            fetch('/Pms/GetEmployeeGrossSalary?empId=' + empId)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var srcLabel = document.getElementById('grossSrcLabel');
+                    if (!grossEl) return;
+                    if (data.success && data.gross > 0) {
+                        _currentGross = data.gross;
+                        grossEl.textContent = 'Rs ' + data.gross.toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+                        if (srcLabel) {
+                            srcLabel.textContent = data.source === 'increment' ? '✓ From last increment' : '✓ From salary record';
+                            srcLabel.style.color = data.source === 'increment' ? '#059669' : '#1e4ed8';
+                        }
+                        calcIncrement();
+                    } else {
+                        grossEl.textContent = '—';
+                        if (srcLabel) srcLabel.textContent = '';
+                    }
+                })
+                .catch(function() { if (grossEl) grossEl.textContent = '—'; });
+        }
+
+        function triggerPrint() {
+            for (var i = 1; i <= 3; i++) {
+                var p = document.getElementById('view' + i);
+                if (p) p.classList.remove('print-active');
+            }
+            var active = document.getElementById('view' + _view);
+            if (active) active.classList.add('print-active');
+            window.print();
+        }
+
+        onIncrDateChange();
+        switchView(1);
+        loadGrossSalary();
+    </script>
+</body>
+</html>

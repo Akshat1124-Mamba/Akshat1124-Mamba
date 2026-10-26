@@ -1,0 +1,578 @@
+﻿@model vgl.Models.AppraisalDashboardVM
+@{
+    Layout = null;
+    var mapping = Model.ActiveMapping;
+    bool hasCycle = mapping != null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Appraisal Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --navy:  #0f1c3f;
+            --navy2: #1a2d5a;
+            --emp:   #d97706;
+            --emp-lt:#fef9ee;
+            --emp-bd:#fde68a;
+            --ink:   #0f172a;
+            --ink2:  #334155;
+            --ink3:  #64748b;
+            --ink4:  #94a3b8;
+            --bg:    #f8f9fc;
+            --white: #fff;
+            --border:#e2e8f0;
+            --emerald:   #059669;
+            --emerald-lt:#d1fae5;
+            --cobalt:    #1e4ed8;
+            --cobalt-lt: #eff4ff;
+            --font: 'DM Sans', sans-serif;
+            --mono: 'DM Mono', monospace;
+            --rad:   12px;
+            --rad-lg:18px;
+            --sh: 0 1px 3px rgba(15,28,63,.06), 0 4px 16px rgba(15,28,63,.06);
+        }
+
+        body { font-family:var(--font); background:var(--bg); color:var(--ink); font-size:13px; min-height:100vh; -webkit-font-smoothing:antialiased; }
+
+        /* ── NAV ── */
+        .nav { height:58px; background:var(--navy); display:flex; align-items:center; justify-content:space-between; padding:0 28px; position:sticky; top:0; z-index:500; }
+        .nav-brand { display:flex; align-items:center; gap:10px; }
+        .nav-logo { width:34px; height:34px; background:linear-gradient(135deg,#3b82f6,#6366f1); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:#fff; font-family:Georgia,serif; font-style:italic; flex-shrink:0; }
+        .nav-title { font-size:.85rem; font-weight:600; color:#fff; }
+        .nav-title span { display:block; font-size:.60rem; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:.1em; margin-top:1px; }
+        .nav-right { display:flex; align-items:center; gap:8px; }
+        .role-chip { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:.70rem; font-weight:600; font-family:var(--mono); background:var(--emp-lt); color:var(--emp); border:1px solid var(--emp-bd); }
+        .btn-nav { height:30px; padding:0 12px; border-radius:7px; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.08); color:rgba(255,255,255,.75); font-size:.72rem; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; font-family:var(--font); transition:.15s; }
+        .btn-nav:hover { background:rgba(255,255,255,.16); color:#fff; }
+        .btn-nav-logout { height:30px; padding:0 12px; border-radius:7px; border:1px solid rgba(239,68,68,.45); background:rgba(239,68,68,.12); color:rgba(255,180,180,.9); font-size:.72rem; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:5px; font-family:var(--font); transition:.15s; }
+        .btn-nav-logout:hover { background:rgba(239,68,68,.28); color:#fff; border-color:rgba(239,68,68,.7); }
+
+        /* ── HERO ── */
+        .hero { background:linear-gradient(120deg,var(--navy) 0%,var(--navy2) 100%); padding:28px 32px 24px; }
+        .hero-greeting { font-size:.72rem; font-weight:500; color:rgba(255,255,255,.45); letter-spacing:.08em; text-transform:uppercase; margin-bottom:6px; }
+        .hero-name { font-size:1.6rem; font-weight:600; color:#fff; letter-spacing:-.01em; }
+        .hero-meta { display:flex; flex-wrap:wrap; gap:6px 20px; margin-top:10px; }
+        .hero-tag { font-size:.68rem; color:rgba(255,255,255,.5); font-family:var(--mono); display:flex; align-items:center; gap:4px; }
+        .hero-tag strong { color:rgba(255,255,255,.82); font-weight:500; }
+
+        /* ── LAYOUT ── */
+        .content { max-width:1100px; margin:0 auto; padding:28px 28px 80px; }
+
+        /* ── STATS ── */
+        .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:24px; }
+        .stat-card { background:var(--white); border:1px solid var(--border); border-radius:var(--rad); padding:16px 20px; box-shadow:var(--sh); }
+        .stat-label { font-size:.60rem; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:var(--ink4); margin-bottom:6px; }
+        .stat-val { font-size:1.5rem; font-weight:600; font-family:var(--mono); color:var(--ink); line-height:1; }
+        .stat-sub { font-size:.70rem; color:var(--ink3); margin-top:4px; }
+        .stat-card.accent-emp   { border-top:2.5px solid var(--emp); }
+        .stat-card.accent-green { border-top:2.5px solid var(--emerald); }
+        .stat-card.accent-blue  { border-top:2.5px solid var(--cobalt); }
+
+        /* ── SECTION LABEL ── */
+        .section-lbl { font-size:.60rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:var(--ink3); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+        .section-lbl::after { content:''; flex:1; height:1px; background:var(--border); }
+
+        /* ── NOTIFICATIONS TABLE CARD ── */
+        .pms-card { background:var(--white); border:1px solid var(--border); border-radius:var(--rad-lg); padding:20px 22px; margin-bottom:22px; box-shadow:var(--sh); }
+
+        /* ── FILTER TOOLBAR ── */
+        .filter-toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:16px; }
+        .ftb-group { display:flex; flex-direction:column; gap:5px; }
+        .ftb-group label { font-size:.60rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink3); }
+        .ftb-input, .ftb-select { height:36px; border:1px solid var(--border); border-radius:8px; padding:0 12px; font-size:.78rem; font-family:var(--font); background:var(--white); outline:none; min-width:150px; }
+        .ftb-input:focus, .ftb-select:focus { border-color:var(--emp); }
+
+        /* ── STATUS TABS ── */
+        .status-tabs { display:flex; gap:6px; }
+        .stab { height:36px; padding:0 16px; border-radius:8px; border:1px solid var(--border); background:var(--white); font-size:.76rem; font-weight:600; color:var(--ink3); cursor:pointer; font-family:var(--font); display:inline-flex; align-items:center; gap:6px; transition:.15s; }
+        .stab:hover { border-color:var(--emp); color:var(--emp); }
+        .stab.active { border-color:var(--emp); color:var(--emp); background:var(--emp-lt); }
+        .stab.active.is-done { border-color:var(--emerald); color:var(--emerald); background:var(--emerald-lt); }
+        .stab-count { font-family:var(--mono); font-size:.62rem; background:var(--border); padding:1px 6px; border-radius:8px; }
+        .stab.active .stab-count { background:var(--emp); color:#fff; }
+        .stab.active.is-done .stab-count { background:var(--emerald); color:#fff; }
+
+        /* ── SEARCH ── */
+        .reviewer-search { position:relative; flex:1; max-width:280px; }
+        .reviewer-search input { padding-left:32px; width:100%; }
+        .reviewer-search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--ink4); font-size:.78rem; pointer-events:none; }
+
+        /* ── TABLE ── */
+        table.rev-tbl { width:100%; border-collapse:collapse; font-size:.78rem; }
+        table.rev-tbl thead th { background:#fffbeb; color:var(--ink3); padding:9px 12px; text-align:left; font-size:.60rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; border-bottom:1.5px solid var(--emp-bd); white-space:nowrap; }
+        table.rev-tbl tbody tr { border-bottom:1px solid #eaeef7; transition:background .12s; }
+        table.rev-tbl tbody tr:hover { background:#fffbeb; }
+        table.rev-tbl tbody td { padding:10px 12px; color:var(--ink2); vertical-align:middle; }
+        .rev-empty { text-align:center; padding:40px 20px; color:var(--ink4); }
+        .rev-empty-icon { font-size:2rem; display:block; margin-bottom:8px; opacity:.3; }
+        .rev-loading { text-align:center; padding:36px; color:var(--ink4); font-size:.82rem; }
+
+        /* ── ACTION BUTTONS ── */
+        .link-btns { display:flex; gap:6px; flex-wrap:wrap; }
+        .btn-link-pms { display:inline-flex; align-items:center; gap:5px; height:30px; padding:0 12px; border-radius:7px; font-size:.72rem; font-weight:600; text-decoration:none; font-family:var(--font); border:1px solid transparent; white-space:nowrap; transition:.15s; background:var(--emp); color:#fff; box-shadow:0 1px 6px rgba(217,119,6,.22); }
+        .btn-link-pms:hover { background:#b45309; }
+        .btn-link-edit { display:inline-flex; align-items:center; gap:5px; height:30px; padding:0 12px; border-radius:7px; font-size:.72rem; font-weight:600; text-decoration:none; font-family:var(--font); border:1px solid var(--emp-bd); white-space:nowrap; transition:.15s; background:var(--emp-lt); color:var(--emp); }
+        .btn-link-edit:hover { background:var(--emp-bd); }
+        .btn-link-locked { display:inline-flex; align-items:center; gap:5px; height:30px; padding:0 12px; border-radius:7px; font-size:.72rem; font-weight:600; font-family:var(--font); white-space:nowrap; background:#f1f5f9; color:var(--ink4); border:1px solid var(--border); cursor:default; pointer-events:none; }
+
+        /* ── PILLS ── */
+        .pill-pending  { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:12px; font-size:.65rem; font-weight:700; font-family:var(--mono); background:var(--emp-lt); color:var(--emp); border:1px solid var(--emp-bd); white-space:nowrap; }
+        .pill-editable { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:12px; font-size:.65rem; font-weight:700; font-family:var(--mono); background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; white-space:nowrap; }
+        .pill-done     { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:12px; font-size:.65rem; font-weight:700; font-family:var(--mono); background:var(--emerald-lt); color:var(--emerald); border:1px solid #a7f3d0; white-space:nowrap; }
+        .cycle-chip-sm { display:inline-flex; align-items:center; padding:3px 9px; border-radius:10px; font-size:.65rem; font-weight:600; font-family:var(--mono); background:var(--emp-lt); color:var(--emp); border:1px solid var(--emp-bd); white-space:nowrap; }
+
+        /* ── ACTIVE CYCLE KPI TABLE ── */
+        .cycle-card { background:var(--white); border:1px solid var(--border); border-radius:var(--rad-lg); padding:22px 26px; margin-bottom:20px; box-shadow:var(--sh); }
+        .cycle-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+        .cycle-title { font-size:1rem; font-weight:600; color:var(--ink); }
+        .status-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:.65rem; font-weight:700; font-family:var(--mono); }
+        .sb-draft  { background:#f1f5f9; color:var(--ink3); border:1px solid var(--border); }
+        .sb-filled { background:var(--emp-lt); color:var(--emp); border:1px solid var(--emp-bd); }
+        .sb-review { background:var(--cobalt-lt); color:var(--cobalt); border:1px solid #93c5fd; }
+        .sb-done   { background:var(--emerald-lt); color:var(--emerald); border:1px solid #a7f3d0; }
+        .cycle-meta { display:flex; flex-wrap:wrap; gap:10px 24px; margin-bottom:18px; }
+        .meta-item { display:flex; flex-direction:column; gap:2px; }
+        .meta-label { font-size:.60rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ink4); }
+        .meta-val { font-size:.82rem; font-weight:500; color:var(--ink); font-family:var(--mono); }
+        .tbl-scroll { overflow-x:auto; }
+        table.kpi-tbl { width:100%; border-collapse:collapse; font-size:.78rem; }
+        table.kpi-tbl thead th { background:#f1f5f9; color:var(--ink3); padding:9px 14px; text-align:left; font-size:.60rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; border-bottom:1px solid var(--border); border-right:1px solid #eaeef7; white-space:nowrap; }
+        table.kpi-tbl thead th:last-child { border-right:none; text-align:center; }
+        table.kpi-tbl tbody tr { border-bottom:1px solid #eaeef7; transition:background .12s; }
+        table.kpi-tbl tbody tr:hover { background:#fffbeb; }
+        table.kpi-tbl tbody td { padding:11px 14px; color:var(--ink2); border-right:1px solid #eaeef7; vertical-align:middle; }
+        table.kpi-tbl tbody td:last-child { border-right:none; text-align:center; }
+        .pmp-cell { background:var(--navy) !important; color:rgba(255,255,255,.9) !important; font-weight:600; font-size:.70rem; text-align:center !important; }
+        .rating-badge { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:7px; font-family:var(--mono); font-size:.76rem; font-weight:600; }
+        .r1{background:#fff1f2;color:#e11d48} .r2{background:#fef3c7;color:#92400e}
+        .r3{background:var(--cobalt-lt);color:var(--cobalt)} .r4{background:var(--emerald-lt);color:var(--emerald)}
+        .r5{background:#ecfdf5;color:#064e3b}
+        .null-val { color:var(--ink4); font-size:.70rem; }
+
+        /* ── HISTORY ── */
+        .hist-card { background:var(--white); border:1px solid var(--border); border-radius:var(--rad-lg); overflow:hidden; box-shadow:var(--sh); }
+        .hist-head { background:var(--navy2); padding:12px 20px; }
+        .hist-title { font-size:.72rem; font-weight:600; color:rgba(255,255,255,.9); font-family:var(--mono); text-transform:uppercase; letter-spacing:.07em; }
+        table.hist-tbl { width:100%; border-collapse:collapse; font-size:.78rem; }
+        table.hist-tbl thead th { background:#f1f5f9; color:var(--ink3); padding:8px 14px; font-size:.60rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; border-bottom:1px solid var(--border); }
+        table.hist-tbl tbody tr { border-bottom:1px solid #eaeef7; }
+        table.hist-tbl tbody tr:last-child { border-bottom:none; }
+        table.hist-tbl tbody td { padding:10px 14px; color:var(--ink2); }
+
+        /* ── NO CYCLE ── */
+        .no-cycle { background:var(--white); border:1.5px dashed var(--border); border-radius:var(--rad-lg); padding:48px 24px; text-align:center; }
+        .no-cycle-icon { font-size:2.5rem; opacity:.25; display:block; margin-bottom:12px; }
+        .no-cycle-title { font-size:.90rem; font-weight:600; color:var(--ink); margin-bottom:6px; }
+        .no-cycle-sub { font-size:.78rem; color:var(--ink3); }
+
+        @@media (max-width:768px) {
+            .content, .hero { padding-left:16px; padding-right:16px; }
+        }
+        .btn-nav-logout {
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 7px;
+    border: 1px solid rgba(239,68,68,.45);
+    background: rgba(239,68,68,.12);
+    color: rgba(255,180,180,.9);
+    font-size: .72rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font);
+    transition: .15s;
+}
+.btn-nav-logout:hover {
+    background: rgba(239,68,68,.28);
+    color: #fff;
+    border-color: rgba(239,68,68,.7);
+}
+    </style>
+</head>
+<body>
+
+<nav class="nav">
+    <div class="nav-brand">
+        <div class="nav-logo">V</div>
+        <div class="nav-title">VGL — PMS<span>My Appraisal Dashboard</span></div>
+    </div>
+<div class="nav-right">
+   <div class="role-chip">✏️ Employee</div>
+    <a href="javascript:history.back()" class="btn-nav">← Back</a>
+    <form asp-area="Identity" asp-page="/Account/Logout" style="margin:0">
+        <button type="submit" class="btn-nav-logout">⏻ Logout</button>
+    </form>
+</div>
+</nav>
+
+<div class="hero">
+    <div class="hero-greeting">Welcome back</div>
+    <div class="hero-name">@Model.EmpName</div>
+    <div class="hero-meta">
+        <span class="hero-tag"><strong>@Model.EmpCode</strong></span>
+        <span class="hero-tag">💼 <strong>@Model.Designation</strong></span>
+        <span class="hero-tag">🏢 <strong>@Model.Department</strong></span>
+        @if (!string.IsNullOrEmpty(Model.RmName))
+        {
+            <span class="hero-tag">👔 RM: <strong>@Model.RmName</strong></span>
+        }
+    </div>
+</div>
+
+<div class="content">
+
+    <!-- ── STATS (Status card removed) ── -->
+    <div class="stats-row">
+        <div class="stat-card accent-emp">
+            <div class="stat-label">Active Cycle</div>
+            <div class="stat-val">@(hasCycle ? (mapping.AppraisalCycle ?? "—") : "None")</div>
+            <div class="stat-sub">@(hasCycle ? mapping.AppraisalYear.ToString() : "No active appraisal")</div>
+        </div>
+        <div class="stat-card accent-green">
+            <div class="stat-label">KPIs Mapped</div>
+            <div class="stat-val">@(hasCycle ? mapping.KpiRows.Count.ToString() : "0")</div>
+            <div class="stat-sub">For this cycle</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Past Cycles</div>
+            <div class="stat-val">@Model.PastMappings.Count</div>
+            <div class="stat-sub">Completed appraisals</div>
+        </div>
+
+    </div>
+
+    <!-- ── NOTIFICATIONS TABLE ── -->
+    <div class="section-lbl">📋 My Appraisals — All Cycles</div>
+    <div class="pms-card">
+        <div class="filter-toolbar">
+            <div class="ftb-group">
+                <label>Financial Year</label>
+                <select class="ftb-select" id="revYearFilter" onchange="loadReviewerMappings()">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+            <div class="status-tabs">
+                <button type="button" class="stab active is-pending" id="revtab-pending" onclick="setRevStatusFilter('pending',this)">
+                    ✏️ Action Required <span class="stab-count" id="revcount-pending">0</span>
+                </button>
+                <button type="button" class="stab is-done" id="revtab-completed" onclick="setRevStatusFilter('completed',this)">
+                    ✔ Submitted <span class="stab-count" id="revcount-completed">0</span>
+                </button>
+                <button type="button" class="stab" id="revtab-all" onclick="setRevStatusFilter('all',this)">
+                    All <span class="stab-count" id="revcount-all">0</span>
+                </button>
+            </div>
+            <div class="reviewer-search">
+                <span class="reviewer-search-icon">🔍</span>
+                <input type="text" class="ftb-input" id="revSearch" placeholder="Search cycle or year…" oninput="filterRevTable()" />
+            </div>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="rev-tbl">
+                <thead>
+                    <tr>
+                        <th style="width:40px">#</th>
+                        <th>Cycle</th>
+                        <th style="width:70px;text-align:center">Year</th>
+                        <th>Period</th>
+                        <th>Reporting Manager</th>
+                        <th>HOD</th>
+                        <th>Unit Head</th>
+                        <th style="width:100px;text-align:center">KPIs</th>                      
+                        <th style="width:140px">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="revTableBody">
+                    <tr><td colspan="10" class="rev-loading">Loading your appraisals…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── ACTIVE CYCLE KPI SNAPSHOT (pipeline & action banner removed) ── -->
+    @{
+        var pmpSeen  = new HashSet<string>();
+        var pmpSpans = hasCycle
+            ? mapping.KpiRows.GroupBy(r => r.PmpName).ToDictionary(g => g.Key, g => g.Count())
+            : new Dictionary<string, int>();
+        int sr = 0;
+    }
+
+    @if (hasCycle)
+    {
+        <div class="section-lbl">Active Cycle Details</div>
+        <div class="cycle-card">
+            <div class="cycle-header">
+                <div class="cycle-title">@mapping.AppraisalCycle @mapping.AppraisalYear</div>
+                <span class="status-badge @(mapping.Status switch {
+                    "Draft"          => "sb-draft",
+                    "EmployeeFilled" => "sb-filled",
+                    "HRFinalized"    => "sb-done",
+                    _ => "sb-review"
+                })">@mapping.Status</span>
+            </div>
+            <div class="cycle-meta">
+                @if (mapping.CycleFromDate.HasValue)
+                {
+                    <div class="meta-item">
+                        <span class="meta-label">Cycle Period</span>
+                        <span class="meta-val">@mapping.CycleFromDate.Value.ToString("dd-MMM-yyyy") → @(mapping.CycleToDate?.ToString("dd-MMM-yyyy") ?? "—")</span>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(mapping.RmName))
+                {
+                    <div class="meta-item"><span class="meta-label">Reporting Manager</span><span class="meta-val">@mapping.RmName</span></div>
+                }
+                @if (!string.IsNullOrEmpty(mapping.HodName))
+                {
+                    <div class="meta-item"><span class="meta-label">HOD</span><span class="meta-val">@mapping.HodName</span></div>
+                }
+                @if (!string.IsNullOrEmpty(mapping.UnitHeadName))
+                {
+                    <div class="meta-item"><span class="meta-label">Unit Head</span><span class="meta-val">@mapping.UnitHeadName</span></div>
+                }
+            </div>
+            @if (mapping.KpiRows.Any())
+            {
+                <div class="tbl-scroll">
+                    <table class="kpi-tbl">
+                        <thead>
+                            <tr>
+                                <th>#</th><th>PMP</th><th>KRA</th><th>KPI</th><th>Unit</th>
+                                <th>Wt%</th><th>Target</th><th>My Actual</th><th>My Rating</th><th>Wtd.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in mapping.KpiRows)
+                            {
+                                sr++;
+                                bool firstPmp = pmpSeen.Add(row.PmpName);
+                                int  span     = pmpSpans[row.PmpName];
+                                <tr>
+                                    <td style="color:var(--ink4);font-family:var(--mono);font-size:.70rem">@sr</td>
+                                    @if (firstPmp)
+                                    {
+                                        <td class="pmp-cell" rowspan="@span">@row.PmpName</td>
+                                    }
+                                    <td style="font-weight:500">@row.KraName</td>
+                                    <td style="font-weight:600">@row.KpiName</td>
+                                    <td style="text-align:center;font-family:var(--mono)">@row.UnitOfMeasure</td>
+                                    <td style="text-align:right;font-family:var(--mono)">@row.IndividualWeightage.ToString("0.##")%</td>
+                                    <td style="text-align:center;font-family:var(--mono);font-weight:600">@row.Target.ToString("0.##")</td>
+                                    <td style="text-align:center;font-family:var(--mono)">@(row.EmpActual.HasValue ? row.EmpActual.Value.ToString("0.##") : "—")</td>
+                                    <td>
+                                        @if (row.EmpRating.HasValue)
+                                        {
+                                            var rv = (int)row.EmpRating.Value;
+                                            <span class="rating-badge r@(rv)">@rv</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="null-val">—</span>
+                                        }
+                                    </td>
+                                    <td style="font-family:var(--mono);font-weight:600;color:var(--cobalt)">@(row.WeightedRating.HasValue ? row.WeightedRating.Value.ToString("0.##") : "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="no-cycle">
+            <span class="no-cycle-icon">📋</span>
+            <div class="no-cycle-title">No Active Appraisal Cycle</div>
+            <div class="no-cycle-sub">Your HR team has not assigned an appraisal cycle yet. Please check back later.</div>
+        </div>
+    }
+
+    <!-- ── HISTORY ── -->
+    @if (Model.PastMappings.Any())
+    {
+        <div class="section-lbl" style="margin-top:24px">Appraisal History</div>
+        <div class="hist-card">
+            <div class="hist-head"><div class="hist-title">Previous Cycles</div></div>
+            <table class="hist-tbl">
+                <thead>
+                    <tr>
+                        <th>Year</th><th>Cycle</th><th>Period</th>
+                        <th>KPIs</th><th>Reporting Manager</th><th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var pm in Model.PastMappings.OrderByDescending(x => x.AppraisalYear))
+                    {
+                        string sc = pm.Status == "HRFinalized" ? "sb-done"
+                                  : pm.Status?.Contains("Review") == true ? "sb-review"
+                                  : "sb-draft";
+                        <tr>
+                            <td style="font-family:var(--mono);font-weight:600">@pm.AppraisalYear</td>
+                            <td>@pm.AppraisalCycle</td>
+                            <td style="font-family:var(--mono);font-size:.70rem;color:var(--ink3)">
+                                @(pm.CycleFromDate?.ToString("dd-MMM-yy") ?? "—") – @(pm.CycleToDate?.ToString("dd-MMM-yy") ?? "—")
+                            </td>
+                            <td style="font-family:var(--mono);text-align:center">@pm.KpiRows.Count</td>
+                            <td style="font-size:.76rem">@(string.IsNullOrEmpty(pm.RmName) ? "—" : pm.RmName)</td>
+                            <td><span class="status-badge @sc" style="font-size:.60rem">@pm.Status</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+</div><!-- /.content -->
+
+<script>
+    var REVIEWER_ROLE    = 'Employee';
+    var OWN_STAGE_STATUS = 'EmployeeFilled';
+    var _revData         = [];
+    var _revStatusFilter = 'pending';
+
+    function esc(s) {
+        return String(s || '')
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function loadReviewerMappings() {
+        var year = document.getElementById('revYearFilter').value || 0;
+        document.getElementById('revTableBody').innerHTML =
+            '<tr><td colspan="9" class="rev-loading">Loading your appraisals\u2026</td></tr>';
+
+        fetch('/Pms/GetReviewerMappingsJson?role=' + REVIEWER_ROLE + '&year=' + year)
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (!res || res.error || !res.success) {
+                    document.getElementById('revTableBody').innerHTML =
+                        '<tr><td colspan="9" class="rev-empty"><span class="rev-empty-icon">&#x26A0;&#xFE0F;</span>Could not load data.</td></tr>';
+                    return;
+                }
+                _revData = res.rows || [];
+
+                var sel = document.getElementById('revYearFilter');
+                if (sel.options.length <= 1 && res.years && res.years.length) {
+                    res.years.forEach(function(y) {
+                        var o = document.createElement('option');
+                        o.value = y;
+                        o.textContent = 'FY ' + y + '-' + String(parseInt(y) + 1).slice(-2);
+                        sel.appendChild(o);
+                    });
+                }
+                renderRevCounts();
+                renderRevTable();
+            })
+            .catch(function() {
+                document.getElementById('revTableBody').innerHTML =
+                    '<tr><td colspan="9" class="rev-empty">Network error loading data.</td></tr>';
+            });
+    }
+
+    function renderRevCounts() {
+        var all     = _revData.length;
+        var pending = _revData.filter(function(r) { return r.isMyPending; }).length;
+        document.getElementById('revcount-all').textContent       = all;
+        document.getElementById('revcount-pending').textContent   = pending;
+        document.getElementById('revcount-completed').textContent = all - pending;
+    }
+
+    function setRevStatusFilter(f, btn) {
+        _revStatusFilter = f;
+        document.querySelectorAll('#revtab-pending,#revtab-completed,#revtab-all')
+            .forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        renderRevTable();
+    }
+
+    function filterRevTable() { renderRevTable(); }
+
+    function statusPill(row) {
+        if (row.isMyPending) {
+            if (row.status === OWN_STAGE_STATUS) {
+                return '<span class="pill-editable">&#x270F;&#xFE0F; Submitted \u2014 Editable</span>';
+            }
+            return '<span class="pill-pending">&#x270F;&#xFE0F; ' + esc(row.status) + '</span>';
+        }
+        if (row.status === 'HRFinalized') return '<span class="pill-done">&#x2714; Finalized</span>';
+        return '<span class="pill-done">&#x2714; ' + esc(row.status) + '</span>';
+    }
+
+    function buildActionLinks(r) {
+        if (r.isMyPending) {
+            if (r.status === OWN_STAGE_STATUS) {
+                return '<div class="link-btns">' +
+                    '<a href="' + r.pmsUrl + '" class="btn-link-edit" target="_blank">&#x270F;&#xFE0F; Edit Submission</a>' +
+                    '</div>';
+            }
+            return '<div class="link-btns">' +
+                '<a href="' + r.pmsUrl + '" class="btn-link-pms" target="_blank">&#x270F;&#xFE0F; Open Appraisal</a>' +
+                '</div>';
+        }
+        return '<div class="link-btns"><span class="btn-link-locked">&#x1F512; Locked</span></div>';
+    }
+
+    function renderRevTable() {
+        var q = (document.getElementById('revSearch').value || '').toLowerCase().trim();
+        var rows = _revData.filter(function(r) {
+            if (_revStatusFilter === 'pending'   && !r.isMyPending) return false;
+            if (_revStatusFilter === 'completed' &&  r.isMyPending) return false;
+            if (q) {
+                var hay = ((r.appraisalCycle || '') + ' ' + r.appraisalYear).toLowerCase();
+                if (hay.indexOf(q) < 0) return false;
+            }
+            return true;
+        });
+
+        var tbody = document.getElementById('revTableBody');
+        if (!rows.length) {
+            tbody.innerHTML =
+                '<tr><td colspan="9" class="rev-empty">' +
+                '<span class="rev-empty-icon">&#x1F4E1;</span>' +
+                'No appraisals found for this filter.</td></tr>';
+            return;
+        }
+var html = '';
+rows.forEach(function(r, i) {
+    // Build period string — try all likely field name variations
+    var period = '';
+    if (r.cycleFromDate && r.cycleToDate) {
+        period = esc(r.cycleFromDate) + ' → ' + esc(r.cycleToDate);
+    } else if (r.periodStart && r.periodEnd) {
+        period = esc(r.periodStart) + ' → ' + esc(r.periodEnd);
+    } else if (r.fromDate && r.toDate) {
+        period = esc(r.fromDate) + ' → ' + esc(r.toDate);
+    } else if (r.period) {
+        period = esc(r.period);
+    }
+
+    html += '<tr>' +
+        '<td style="color:var(--ink4);font-family:var(--mono);font-size:.70rem">' + (i + 1) + '</td>' +
+        '<td>' + esc(r.appraisalCycle || r.cycle || '') + '</td>' +
+        '<td style="text-align:center;font-family:var(--mono)">' + esc(r.appraisalYear || r.year || '') + '</td>' +
+        '<td style="font-family:var(--mono);font-size:.70rem;color:var(--ink3)">' + period + '</td>' +
+        '<td>' + esc(r.rmName || r.reportingManager || r.reportingManagerName || '') + '</td>' +
+        '<td>' + esc(r.hodName || r.hod || '') + '</td>' +
+        '<td>' + esc(r.unitHeadName || r.unitHead || '') + '</td>' +
+        '<td style="text-align:center;font-family:var(--mono)">' + esc(r.kpiCount || r.kpis || '') + '</td>' +
+        '<td>' + buildActionLinks(r) + '</td>' +
+    '</tr>';
+});
+tbody.innerHTML = html;
+    }
+
+    loadReviewerMappings();
+</script>
+</body>
+</html>

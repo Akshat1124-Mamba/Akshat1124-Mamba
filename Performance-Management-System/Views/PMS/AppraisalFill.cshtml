@@ -1,0 +1,2769 @@
+﻿@model vgl.Models.AppraisalFillVM
+@using vgl.Models
+@{
+    Layout = null;
+    var m = Model.Mapping;
+    var role = Model.Role;
+    var canEdit = Model.CanEdit;
+
+    bool showEmp = true;
+    bool showRm = role is "RM" or "HOD" or "UnitHead" or "HR";
+    bool showHod = role is "HOD" or "UnitHead" or "HR";
+    bool showUh = role is "UnitHead" or "HR";
+    if (role == "Employee") { showRm = false; showHod = false; showUh = false; }
+
+    string roleColor = role switch
+    {
+        "Employee" => "#b45309",
+        "RM" => "#1d4ed8",
+        "HOD" => "#6d28d9",
+        "UnitHead" => "#0f766e",
+        "ModCommittee" => "#c2410c",
+        "JMD" => "#9d174d",
+        _ => "#047857"
+    };
+    string roleBg = role switch
+    {
+        "Employee" => "#fef9ee",
+        "RM" => "#eff6ff",
+        "HOD" => "#f5f3ff",
+        "UnitHead" => "#f0fdfa",
+        "ModCommittee" => "#fff7ed",
+        "JMD" => "#fdf2f8",
+        _ => "#ecfdf5"
+    };
+    string roleName = role switch
+    {
+        "Employee" => "Self Appraisal",
+        "RM" => "Reporting Manager Review",
+        "HOD" => "HOD Review",
+        "UnitHead" => "Unit Head Review",
+        "ModCommittee" => "Moderation Committee Review",
+        "JMD" => "JMD Review",
+        _ => "HR View"
+    };
+    string roleIcon = role switch
+    {
+        "Employee" => "✏️",
+        "RM" => "👔",
+        "HOD" => "🏛",
+        "UnitHead" => "🏢",
+        "ModCommittee" => "⚖️",
+        "JMD" => "👑",
+        _ => "👁"
+    };
+
+    var pmpSpan = new Dictionary<string, int>();
+    var kraSpan = new Dictionary<string, int>();
+    foreach (var r in m.KpiRows)
+    {
+        var pk = r.PmpName;
+        var kk = pk + "||" + r.KraName;
+        pmpSpan[pk] = (pmpSpan.ContainsKey(pk) ? pmpSpan[pk] : 0) + 1;
+        kraSpan[kk] = (kraSpan.ContainsKey(kk) ? kraSpan[kk] : 0) + 1;
+    }
+    var seenPmp = new HashSet<string>();
+    var seenKra = new HashSet<string>();
+
+    // Fixed cols: #, PMP, KRA, KPI, Unit, Wt%, Target, Justification = 8
+    int fixedCols = 8;
+    int dynCols = 0;
+    if (showEmp) dynCols += 2;
+    if (showRm) dynCols += 3;
+    if (showHod) dynCols += 3;
+    if (showUh) dynCols += 3;
+
+    var totalWR = m.KpiRows.Where(r => r.WeightedRating.HasValue).Sum(r => (decimal)r.WeightedRating!.Value);
+
+    decimal? mcOverallRating = ViewBag.McOverallRating as decimal?;
+    decimal? jmdOverallRating = ViewBag.JmdOverallRating as decimal?;
+
+    decimal? ComputeAvgRmHodUh(EmpKpiRow r)
+    {
+        var vals = new List<decimal>();
+        if (r.RmRating.HasValue) vals.Add(r.RmRating.Value);
+        if (r.HodRating.HasValue) vals.Add(r.HodRating.Value);
+        if (r.UnitHeadRating.HasValue) vals.Add(r.UnitHeadRating.Value);
+        return vals.Any() ? Math.Round(vals.Average(), 2) : (decimal?)null;
+    }
+
+    string submitLabel = role switch
+    {
+        "Employee" => "Submit Self Appraisal",
+        "RM" => "Submit RM Review",
+        "HOD" => "Submit HOD Review",
+        "UnitHead" => "Submit Unit Head Review",
+        "ModCommittee" => "Submit Moderation Committee Review",
+        _ => "Submit JMD Review"
+    };
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@roleName — @m.EmpName</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --c-navy: #0b1731;
+            --c-navy2: #152447;
+            --c-navy3: #1e3460;
+            --c-slate: #64748b;
+            --c-muted: #94a3b8;
+            --c-border: #e2e8f0;
+            --c-bg: #f8fafc;
+            --c-bg2: #f1f5f9;
+            --c-white: #ffffff;
+            --c-ink: #0f172a;
+            --c-ink2: #1e293b;
+            --c-ink3: #475569;
+            --rc: @roleColor;
+            --rb: @roleBg;
+            --emp-bg: #fffbeb;
+            --emp-bd: #fcd34d;
+            --emp-tx: #92400e;
+            --rm-bg: #eff6ff;
+            --rm-bd: #93c5fd;
+            --rm-tx: #1e40af;
+            --hod-bg: #f5f3ff;
+            --hod-bd: #c4b5fd;
+            --hod-tx: #5b21b6;
+            --uh-bg: #f0fdfa;
+            --uh-bd: #5eead4;
+            --uh-tx: #0f766e;
+            --mc-bg: #fff7ed;
+            --mc-bd: #fdba74;
+            --mc-tx: #c2410c;
+            --jmd-bg: #fdf2f8;
+            --jmd-bd: #f9a8d4;
+            --jmd-tx: #9d174d;
+            --avg-bg: #f0f9ff;
+            --avg-bd: #7dd3fc;
+            --avg-tx: #0369a1;
+            --just-bg: #f0fdf4;
+            --just-bd: #86efac;
+            --just-tx: #166534;
+            --font: 'Plus Jakarta Sans',system-ui,sans-serif;
+            --mono: 'IBM Plex Mono',monospace;
+            --rad: 12px;
+            --rad-lg: 20px;
+            --sh: 0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+            --tr: .15s ease;
+        }
+
+        html, body {
+            font-family: var(--font);
+            background: var(--c-bg);
+            color: var(--c-ink);
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh
+        }
+
+        .nav {
+            height: 60px;
+            background: var(--c-navy);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            gap: 16px
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .nav-logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg,#3b82f6,#6366f1);
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+            font-weight: 800;
+            color: #fff;
+            font-family: var(--mono);
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(99,102,241,.4)
+        }
+
+        .nav-title strong {
+            display: block;
+            font-size: .84rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: .02em
+        }
+
+        .nav-title span {
+            font-size: .6rem;
+            color: rgba(255,255,255,.35);
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            font-family: var(--mono)
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .role-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            letter-spacing: .04em;
+            background: var(--rb);
+            color: var(--rc);
+            border: 1.5px solid var(--rc)
+        }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,.15);
+            background: rgba(255,255,255,.08);
+            color: rgba(255,255,255,.75);
+            font-size: .74rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: var(--tr)
+        }
+
+            .btn-back:hover {
+                background: rgba(255,255,255,.15);
+                color: #fff
+            }
+
+        .hero {
+            background: linear-gradient(120deg,var(--c-navy) 0%,var(--c-navy3) 100%);
+            padding: 26px 32px 22px;
+            position: relative;
+            overflow: hidden
+        }
+
+            .hero::after {
+                content: '';
+                position: absolute;
+                right: -80px;
+                top: -80px;
+                width: 320px;
+                height: 320px;
+                border-radius: 50%;
+                background: rgba(255,255,255,.03);
+                pointer-events: none
+            }
+
+        .hero-name {
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -.01em;
+            line-height: 1.2
+        }
+
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 18px;
+            margin-top: 10px
+        }
+
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: .69rem;
+            color: rgba(255,255,255,.5);
+            font-family: var(--mono)
+        }
+
+            .hero-tag strong {
+                color: rgba(255,255,255,.82);
+                font-weight: 600
+            }
+
+        .hero-badge {
+            background: rgba(255,255,255,.12);
+            border: 1px solid rgba(255,255,255,.2);
+            border-radius: 30px;
+            padding: 2px 12px;
+            font-size: .66rem;
+            font-weight: 700;
+            color: rgba(255,255,255,.9);
+            font-family: var(--mono)
+        }
+
+        .body {
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 24px 28px 80px
+        }
+
+        .alert {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: var(--rad);
+            margin-bottom: 16px;
+            font-size: .82rem;
+            line-height: 1.6
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            margin-top: 1px
+        }
+
+        .alert-role {
+            background: var(--rb);
+            border: 1.5px solid var(--rc)
+        }
+
+            .alert-role .alert-text strong {
+                color: var(--rc)
+            }
+
+        .alert-ro {
+            background: #fefce8;
+            border: 1.5px solid #fde047;
+            border-left: 4px solid #eab308;
+            color: #713f12;
+            font-weight: 600
+        }
+
+        .card {
+            background: var(--c-white);
+            border: 1px solid var(--c-border);
+            border-radius: var(--rad-lg);
+            box-shadow: var(--sh);
+            margin-bottom: 20px
+        }
+
+        .card-hd {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            background: linear-gradient(135deg,var(--c-navy) 0%,var(--c-navy3) 100%);
+            border-radius: var(--rad-lg) var(--rad-lg) 0 0
+        }
+
+        .card-hd-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: .72rem;
+            font-weight: 700;
+            color: rgba(255,255,255,.9);
+            font-family: var(--mono);
+            text-transform: uppercase;
+            letter-spacing: .08em
+        }
+
+        .card-hd-badge {
+            font-size: .62rem;
+            font-weight: 600;
+            background: rgba(255,255,255,.12);
+            color: rgba(255,255,255,.65);
+            padding: 3px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,.15);
+            font-family: var(--mono)
+        }
+
+        .tbl-wrap {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 62vh;
+            border-radius: 0 0 var(--rad-lg) var(--rad-lg)
+        }
+
+        table.ap {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .78rem;
+            table-layout: auto
+        }
+
+            table.ap thead th {
+                padding: 9px 12px;
+                border: 1px solid var(--c-border);
+                font-weight: 700;
+                letter-spacing: .07em;
+                text-transform: uppercase;
+                white-space: nowrap;
+                text-align: center
+            }
+
+            table.ap thead tr:first-child th {
+                background: var(--c-bg2);
+                color: var(--c-slate);
+                font-size: .57rem
+            }
+
+            table.ap thead tr:last-child th {
+                font-size: .58rem;
+                color: var(--c-slate)
+            }
+
+            table.ap thead th[rowspan] {
+                background: var(--c-bg2);
+                color: var(--c-slate);
+                font-size: .57rem;
+                vertical-align: middle
+            }
+
+                table.ap thead th[rowspan].tl {
+                    text-align: left
+                }
+
+        .cg-emp {
+            background: var(--emp-bg) !important;
+            color: var(--emp-tx) !important;
+            border-bottom: 2px solid var(--emp-bd) !important
+        }
+
+        .cg-rm {
+            background: var(--rm-bg) !important;
+            color: var(--rm-tx) !important;
+            border-bottom: 2px solid var(--rm-bd) !important
+        }
+
+        .cg-hod {
+            background: var(--hod-bg) !important;
+            color: var(--hod-tx) !important;
+            border-bottom: 2px solid var(--hod-bd) !important
+        }
+
+        .cg-uh {
+            background: var(--uh-bg) !important;
+            color: var(--uh-tx) !important;
+            border-bottom: 2px solid var(--uh-bd) !important
+        }
+
+        .sl-emp {
+            background: var(--emp-bg) !important;
+            color: var(--emp-tx) !important
+        }
+
+        .sl-rm {
+            background: var(--rm-bg) !important;
+            color: var(--rm-tx) !important
+        }
+
+        .sl-hod {
+            background: var(--hod-bg) !important;
+            color: var(--hod-tx) !important
+        }
+
+        .sl-uh {
+            background: var(--uh-bg) !important;
+            color: var(--uh-tx) !important
+        }
+
+        .cg-you {
+            outline: 2.5px solid var(--rc);
+            outline-offset: -2px
+        }
+
+        table.ap tbody tr:hover td {
+            background: #f8fafc
+        }
+
+        table.ap tbody td {
+            padding: 10px 12px;
+            border: 1px solid #e8edf5;
+            vertical-align: middle
+        }
+
+            table.ap tbody td.tc {
+                text-align: center
+            }
+
+            table.ap tbody td.tr {
+                text-align: right;
+                font-family: var(--mono)
+            }
+
+        .pmp-cell {
+            background: linear-gradient(160deg,var(--c-navy) 0%,var(--c-navy3) 100%) !important;
+            color: #fff !important;
+            font-weight: 700;
+            font-size: .69rem;
+            text-align: center !important;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            padding: 12px 10px !important;
+            vertical-align: middle !important
+        }
+
+        .kra-cell {
+            background: var(--c-bg2) !important;
+            font-weight: 600;
+            font-size: .73rem;
+            color: var(--c-ink2);
+            border-left: 3px solid #93c5fd !important;
+            vertical-align: middle !important
+        }
+
+        .kpi-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .kpi-sr {
+            flex-shrink: 0;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: var(--c-navy);
+            color: #fff;
+            font-size: .58rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .kpi-name {
+            font-weight: 600;
+            font-size: .79rem;
+            color: var(--c-ink)
+        }
+
+        .bg-emp {
+            background: var(--emp-bg)
+        }
+
+        .bg-rm {
+            background: var(--rm-bg)
+        }
+
+        .bg-hod {
+            background: var(--hod-bg)
+        }
+
+        .bg-uh {
+            background: var(--uh-bg)
+        }
+
+        .bg-mc {
+            background: var(--mc-bg)
+        }
+
+        .bg-jmd {
+            background: var(--jmd-bg)
+        }
+
+        .bg-avg {
+            background: var(--avg-bg)
+        }
+
+        .bg-active-emp {
+            background: #fef3c7
+        }
+
+        .bg-active-rm {
+            background: #dbeafe
+        }
+
+        .bg-active-hod {
+            background: #ede9fe
+        }
+
+        .bg-active-uh {
+            background: #ccfbf1
+        }
+
+        /* ── JUSTIFICATION COLUMN ── */
+        .cg-just {
+            background: var(--just-bg) !important;
+            color: var(--just-tx) !important;
+            border-bottom: 2px solid var(--just-bd) !important
+        }
+
+        .bg-just {
+            background: var(--just-bg)
+        }
+
+        .justification-inp {
+            width: 100%;
+            min-width: 200px;
+            min-height: 72px;
+            max-height: 140px;
+            border: 1.5px solid var(--just-bd);
+            border-radius: 8px;
+            background: #fff;
+            font-family: var(--font);
+            font-size: .75rem;
+            color: var(--c-ink);
+            padding: 8px 10px;
+            resize: vertical;
+            outline: none;
+            line-height: 1.5;
+            transition: var(--tr);
+        }
+
+            .justification-inp:focus {
+                border-color: var(--just-tx);
+                box-shadow: 0 0 0 3px rgba(22,101,52,.12);
+            }
+
+            .justification-inp.inp-error {
+                border-color: #f43f5e !important;
+                box-shadow: 0 0 0 3px rgba(244,63,94,.18) !important;
+                background: #fff1f2 !important;
+            }
+
+            .justification-inp::placeholder {
+                color: var(--c-muted);
+                font-style: italic
+            }
+
+        .just-display {
+            font-size: .74rem;
+            color: var(--c-ink3);
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .just-missing-warn {
+            font-size: .68rem;
+            color: #dc2626;
+            font-weight: 600;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .just-char-count {
+            font-size: .62rem;
+            color: var(--c-muted);
+            text-align: right;
+            margin-top: 2px;
+            font-family: var(--mono);
+        }
+
+            .just-char-count.warn {
+                color: #f59e0b;
+                font-weight: 600
+            }
+
+            .just-char-count.over {
+                color: #f43f5e;
+                font-weight: 700
+            }
+
+        .overall-rating-card {
+            background: #fff;
+            border: 1.5px solid var(--c-border);
+            border-radius: 14px;
+            padding: 20px 26px;
+            margin-bottom: 20px;
+            box-shadow: var(--sh)
+        }
+
+        .orc-title {
+            font-size: .80rem;
+            font-weight: 700;
+            color: var(--c-navy);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: .06em
+        }
+
+        .orc-body {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap
+        }
+
+        .orc-info {
+            font-size: .78rem;
+            color: var(--c-ink3);
+            line-height: 1.6;
+            flex: 1;
+            min-width: 200px
+        }
+
+        .orc-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .orc-input {
+            width: 100px;
+            height: 42px;
+            border: 2px solid var(--rc);
+            border-radius: 10px;
+            text-align: center;
+            font-family: var(--mono);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--c-ink);
+            background: var(--rb);
+            outline: none;
+            padding: 0 8px;
+            transition: var(--tr)
+        }
+
+            .orc-input:focus {
+                box-shadow: 0 0 0 3px color-mix(in srgb,var(--rc) 20%,transparent)
+            }
+
+            .orc-input.inp-error {
+                border-color: #f43f5e !important;
+                background: #fff1f2 !important;
+                box-shadow: 0 0 0 3px rgba(244,63,94,.18) !important
+            }
+
+        .orc-label {
+            font-size: .72rem;
+            color: var(--c-slate);
+            font-weight: 600
+        }
+
+        .orc-display {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 70px;
+            height: 42px;
+            padding: 0 14px;
+            border-radius: 10px;
+            background: var(--rb);
+            border: 2px solid var(--rc);
+            color: var(--rc);
+            font-family: var(--mono);
+            font-size: 1.15rem;
+            font-weight: 700
+        }
+
+        .mc-info-panel {
+            background: var(--mc-bg);
+            border: 1.5px solid var(--mc-bd);
+            border-radius: 10px;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px
+        }
+
+        .mc-info-label {
+            font-size: .72rem;
+            font-weight: 700;
+            color: var(--mc-tx);
+            text-transform: uppercase;
+            letter-spacing: .06em
+        }
+
+        .mc-info-val {
+            font-family: var(--mono);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--mc-tx)
+        }
+
+        .avg-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 48px;
+            height: 28px;
+            padding: 0 8px;
+            border-radius: 7px;
+            background: var(--avg-bg);
+            border: 1.5px solid var(--avg-bd);
+            color: var(--avg-tx);
+            font-family: var(--mono);
+            font-size: .80rem;
+            font-weight: 700
+        }
+
+        .avg-badge-null {
+            background: var(--c-bg2);
+            border-color: var(--c-border);
+            color: var(--c-muted)
+        }
+
+        .num-inp {
+            width: 80px;
+            height: 34px;
+            border: 1.5px solid var(--c-border);
+            border-radius: 7px;
+            text-align: center;
+            font-family: var(--mono);
+            font-size: .80rem;
+            color: var(--c-ink);
+            background: #fff;
+            outline: none;
+            padding: 0 6px;
+            transition: var(--tr)
+        }
+
+            .num-inp:focus {
+                border-color: var(--rc);
+                box-shadow: 0 0 0 3px color-mix(in srgb,var(--rc) 15%,transparent)
+            }
+
+            .num-inp.ei {
+                border-color: var(--emp-bd);
+                background: var(--emp-bg)
+            }
+
+            .num-inp.ri {
+                border-color: var(--rm-bd);
+                background: var(--rm-bg)
+            }
+
+            .num-inp.hi {
+                border-color: var(--hod-bd);
+                background: var(--hod-bg)
+            }
+
+            .num-inp.ui {
+                border-color: var(--uh-bd);
+                background: var(--uh-bg)
+            }
+
+        .rem-inp {
+            width: 160px;
+            height: 34px;
+            border: 1.5px solid var(--c-border);
+            border-radius: 7px;
+            font-family: var(--font);
+            font-size: .73rem;
+            color: var(--c-ink);
+            padding: 0 10px;
+            outline: none;
+            transition: var(--tr);
+            background: #fff
+        }
+
+            .rem-inp:focus {
+                border-color: var(--rc);
+                box-shadow: 0 0 0 2px color-mix(in srgb,var(--rc) 12%,transparent)
+            }
+
+        .inp-error {
+            border-color: #f43f5e !important;
+            box-shadow: 0 0 0 3px rgba(244,63,94,.18) !important;
+            background: #fff1f2 !important
+        }
+
+        .row-incomplete td {
+            background: rgba(244,63,94,.045) !important
+        }
+
+        .kpi-progress-bar {
+            height: 5px;
+            border-radius: 3px;
+            background: #e2e8f0;
+            overflow: hidden;
+            flex: 1;
+            min-width: 80px
+        }
+
+        .kpi-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: #22c55e;
+            transition: width .25s ease, background .25s ease
+        }
+
+        .kpi-counter {
+            font-family: var(--mono);
+            font-size: .74rem;
+            font-weight: 700;
+            white-space: nowrap
+        }
+
+        .stars {
+            display: flex;
+            gap: 2px;
+            justify-content: center
+        }
+
+        .star {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 1.5px solid var(--c-border);
+            background: #fff;
+            font-family: var(--mono);
+            font-size: .74rem;
+            font-weight: 700;
+            color: var(--c-slate);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--tr)
+        }
+
+            .star:hover {
+                border-color: var(--rc);
+                color: var(--rc);
+                background: var(--rb)
+            }
+
+            .star.on {
+                background: var(--rc);
+                border-color: var(--rc);
+                color: #fff;
+                box-shadow: 0 2px 6px rgba(0,0,0,.2)
+            }
+
+        .val {
+            font-family: var(--mono);
+            font-size: .80rem;
+            font-weight: 700
+        }
+
+        .ve {
+            color: var(--emp-tx)
+        }
+
+        .vr {
+            color: var(--rm-tx)
+        }
+
+        .vh {
+            color: var(--hod-tx)
+        }
+
+        .vu {
+            color: var(--uh-tx)
+        }
+
+        .rb {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-size: .73rem;
+            font-weight: 700;
+            font-family: var(--mono)
+        }
+
+        .rb1 {
+            background: #fff1f2;
+            color: #e11d48;
+            border: 2px solid #fecdd3
+        }
+
+        .rb2 {
+            background: #fef9c3;
+            color: #a16207;
+            border: 2px solid #fde047
+        }
+
+        .rb3 {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 2px solid #93c5fd
+        }
+
+        .rb4 {
+            background: #f0fdf4;
+            color: #15803d;
+            border: 2px solid #86efac
+        }
+
+        .rb5 {
+            background: #f0fdf4;
+            color: #14532d;
+            border: 2px solid #4ade80
+        }
+
+        .total-row td {
+            background: linear-gradient(120deg,var(--c-navy) 0%,var(--c-navy3) 100%);
+            color: #fff;
+            font-family: var(--mono);
+            font-weight: 700;
+            font-size: .82rem;
+            padding: 13px 12px !important
+        }
+
+        .total-score {
+            color: #34d399;
+            font-size: 1.05rem
+        }
+
+        .action-bar {
+            background: var(--c-white);
+            border: 1px solid var(--c-border);
+            border-radius: var(--rad);
+            padding: 16px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            box-shadow: var(--sh)
+        }
+
+        .action-msg {
+            font-size: .81rem;
+            color: var(--c-ink3);
+            line-height: 1.5
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            align-items: center
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 40px;
+            padding: 0 20px;
+            border-radius: 9px;
+            font-family: var(--font);
+            font-size: .80rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: var(--tr);
+            text-decoration: none;
+            white-space: nowrap
+        }
+
+            .btn:active {
+                transform: scale(.97)
+            }
+
+        .btn-pri {
+            background: var(--rc);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,.18)
+        }
+
+            .btn-pri:hover {
+                filter: brightness(1.08);
+                box-shadow: 0 4px 16px rgba(0,0,0,.22)
+            }
+
+        .btn-sec {
+            background: #fff;
+            color: var(--c-ink2);
+            border: 1.5px solid var(--c-border)
+        }
+
+            .btn-sec:hover {
+                border-color: var(--c-slate);
+                color: var(--c-ink)
+            }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9000;
+            background: rgba(11,23,49,.6);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center
+        }
+
+            .overlay.on {
+                display: flex
+            }
+
+        .overlay-box {
+            background: #fff;
+            border-radius: 18px;
+            padding: 40px 52px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,.25)
+        }
+
+        .spin {
+            width: 44px;
+            height: 44px;
+            border: 4px solid #e2e8f0;
+            border-top-color: var(--rc);
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            margin: 0 auto 16px
+        }
+
+        @@keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .overlay-txt {
+            font-size: .84rem;
+            color: var(--c-slate);
+            font-weight: 500
+        }
+
+        .toasts {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px
+        }
+
+        .toast {
+            background: var(--c-navy);
+            color: rgba(255,255,255,.9);
+            border-radius: 10px;
+            padding: 11px 16px;
+            font-size: .80rem;
+            font-weight: 500;
+            min-width: 280px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            box-shadow: 0 8px 32px rgba(0,0,0,.2);
+            animation: tin .2s ease
+        }
+
+            .toast.ok {
+                border-left: 4px solid #34d399
+            }
+
+            .toast.err {
+                border-left: 4px solid #f43f5e
+            }
+
+        @@keyframes tin {
+            from {
+                opacity: 0;
+                transform: translateX(16px)
+            }
+
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        @@media(max-width:768px) {
+            .body, .hero, .nav {
+                padding-left: 14px;
+                padding-right: 14px
+            }
+
+            .hero-meta {
+                flex-direction: column;
+                gap: 6px
+            }
+        }
+
+        .doc-zone {
+            border: 1.5px dashed var(--c-border);
+            border-radius: 9px;
+            padding: 10px 12px;
+            background: var(--c-bg);
+            min-width: 220px;
+            transition: border-color .15s, background .15s
+        }
+
+            .doc-zone:hover {
+                border-color: var(--rc);
+                background: var(--rb)
+            }
+
+        .doc-zone-inner {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .doc-upload-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 7px;
+            border: 1.5px solid var(--rc);
+            background: var(--rb);
+            color: var(--rc);
+            font-family: var(--font);
+            font-size: .72rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: .15s
+        }
+
+            .doc-upload-btn:hover {
+                filter: brightness(.93)
+            }
+
+            .doc-upload-btn input[type=file] {
+                display: none
+            }
+
+        .doc-pills {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 6px;
+            width: 100%
+        }
+
+        .doc-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #fff;
+            border: 1px solid var(--c-border);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: .70rem;
+            color: var(--c-ink2);
+            min-width: 0
+        }
+
+        .doc-pill-icon {
+            font-size: .85rem;
+            flex-shrink: 0
+        }
+
+        .doc-pill-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 500
+        }
+
+        .doc-pill-role {
+            font-size: .60rem;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            flex-shrink: 0
+        }
+
+        .doc-pill-view {
+            font-size: .68rem;
+            font-weight: 700;
+            color: var(--rc);
+            text-decoration: none;
+            flex-shrink: 0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--rc);
+            background: var(--rb);
+            white-space: nowrap
+        }
+
+            .doc-pill-view:hover {
+                filter: brightness(.93)
+            }
+
+        .doc-pill-del {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #e11d48;
+            font-size: .75rem;
+            padding: 0 2px;
+            flex-shrink: 0;
+            line-height: 1
+        }
+
+        .doc-uploading {
+            font-size: .70rem;
+            color: var(--c-slate);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-style: italic
+        }
+
+        .doc-spin {
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--c-border);
+            border-top-color: var(--rc);
+            border-radius: 50%;
+            animation: spin .6s linear infinite;
+            flex-shrink: 0
+        }
+
+        .doc-missing-warn {
+            font-size: .68rem;
+            color: #dc2626;
+            font-weight: 600;
+            margin-top: 4px;
+            display: none
+        }
+
+        .doc-zone.doc-required-err {
+            border-color: #f43f5e;
+            background: #fff1f2
+        }
+
+        /* ── Compact column widths — friendlier scrolling ── */
+        table.ap th[style*="min-width:210px"] {
+            min-width: 180px !important;
+        }
+
+        table.ap th[style*="min-width:168px"] {
+            min-width: 150px !important;
+        }
+
+        table.ap th[style*="min-width:88px"] {
+            min-width: 64px !important;
+        }
+
+        table.ap th[style*="min-width:240px"] {
+            min-width: 170px !important;
+        }
+
+        table.ap th[style*="min-width:260px"] {
+            min-width: 220px !important;
+        }
+
+        .star {
+            width: 24px;
+            height: 24px;
+            font-size: .66rem;
+        }
+
+        .num-inp {
+            width: 58px;
+        }
+
+        .rem-inp {
+            width: 130px;
+        }
+
+        .justification-inp {
+            min-width: 180px;
+        }
+
+        .doc-zone {
+            min-width: 150px;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="nav">
+        <div class="nav-brand">
+            <div class="nav-logo">V</div>
+            <div class="nav-title">
+                <strong>VANDANA GLOBAL LIMITED</strong>
+                <span>Performance Management System</span>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="role-chip">@roleIcon &nbsp;@roleName</div>
+            <a href="javascript:history.back()" class="btn-back">← Back</a>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <div class="hero-name">@m.EmpName</div>
+        <div class="hero-meta">
+            <span class="hero-tag">🔑 <strong>@m.EmpCode</strong></span>
+            <span class="hero-tag">💼 <strong>@m.Designation</strong></span>
+            <span class="hero-tag">🏢 <strong>@m.Department</strong></span>
+            <span class="hero-tag">📅 <strong>@m.AppraisalYear</strong></span>
+            <span class="hero-tag"><span class="hero-badge">@m.AppraisalCycle</span></span>
+            @if (m.CycleFromDate.HasValue && m.CycleToDate.HasValue)
+            {
+                <span class="hero-tag">📆 <strong>@m.CycleFromDate.Value.ToString("dd MMM yyyy") → @m.CycleToDate.Value.ToString("dd MMM yyyy")</strong></span>
+            }
+            @if (!string.IsNullOrEmpty(m.RmName))
+            {
+                <span class="hero-tag">👔 RM: <strong>@m.RmName</strong></span>
+            }
+            @if (!string.IsNullOrEmpty(m.HodName))
+            {
+                <span class="hero-tag">🏛 HOD: <strong>@m.HodName</strong></span>
+            }
+            @if (!string.IsNullOrEmpty(m.UnitHeadName))
+            {
+                <span class="hero-tag">🏢 UH: <strong>@m.UnitHeadName</strong></span>
+            }
+        </div>
+    </div>
+
+    <div class="body">
+
+        <!-- Role / instruction banner -->
+        <div class="alert alert-role">
+            <div class="alert-icon">@roleIcon</div>
+            <div class="alert-text">
+                @if (role == "Employee" && canEdit)
+                {
+                    <text><strong>Self Appraisal</strong> — Enter your <strong>Actual</strong> value and <strong>Rating (1–5)</strong> for each KPI. Provide a <strong>Justification</strong> explaining your performance. Supporting documents are optional. Once you submit, your appraisal is forwarded to your Reporting Manager.</text>
+                }
+                else if (role == "Employee")
+                {
+                    <text><strong>Self Appraisal (Read Only)</strong> — Your appraisal has been submitted and is now under review.</text>
+                }
+                else if (role == "RM" && canEdit)
+                {
+                    <text><strong>Reporting Manager Review</strong> — Your input columns appear first. Enter <strong>RM Actual</strong>, <strong>RM Rating (1–5)</strong> and optional <strong>Remarks</strong>. Employee's scores and justifications are shown for reference. Submitting forwards to HOD.</text>
+                }
+                else if (role == "RM")
+                {
+
+                    <text><strong>RM Review (Read Only)</strong> — This appraisal is not in the RM review stage or has already been reviewed.</text>
+                }
+                else if (role == "HOD" && canEdit)
+                {
+                    <text><strong>HOD Review</strong> — Your input columns appear first. Enter <strong>HOD Actual</strong>, <strong>HOD Rating (1–5)</strong> and optional <strong>Remarks</strong>. Previous scores and employee justifications shown for reference. Submitting forwards to Unit Head.</text>
+                }
+                else if (role == "HOD")
+                {
+
+                    <text><strong>HOD Review (Read Only)</strong> — This appraisal is not currently in the HOD review stage.</text>
+                }
+                else if (role == "UnitHead" && canEdit)
+                {
+                    <text><strong>Unit Head Review</strong> — Your input columns appear first. Enter <strong>UH Actual</strong>, <strong>UH Rating (1–5)</strong> and optional <strong>Remarks</strong>. Previous scores and employee justifications shown for reference. Submitting forwards to Moderation Committee.</text>
+                }
+                else if (role == "UnitHead")
+                {
+
+                    <text><strong>Unit Head Review (Read Only)</strong> — This appraisal is not currently in the Unit Head review stage.</text>
+                }
+                else if (role == "ModCommittee" && canEdit)
+                {
+                    <text><strong>Moderation Committee Review</strong> — Review per-KPI scores and employee justifications, then provide a single <strong>Overall MC Rating (0.01–5.00)</strong> with optional remarks. Submitting forwards to JMD.</text>
+                }
+                else if (role == "ModCommittee")
+                {
+
+                    <text><strong>Moderation Committee Review (Read Only)</strong> — Not currently in Moderation Committee stage.</text>
+                }
+                else if (role == "JMD" && canEdit)
+                {
+                    <text><strong>JMD Review</strong> — Review all reviewer scores, employee justifications and the MC Overall Rating, then provide a single <strong>Overall JMD Rating (0.01–5.00)</strong>. Submitting forwards to HR.</text>
+                }
+                else if (role == "JMD")
+                {
+
+                    <text><strong>JMD Review (Read Only)</strong> — Not currently in JMD review stage.</text>
+                }
+                else
+                {
+
+                    <text><strong>HR View</strong> — Complete read-only view of all appraisal stages including employee justifications.</text>
+                }
+            </div>
+        </div>
+
+        @if (!canEdit)
+        {
+            <div class="alert alert-ro">⚠️ Read-only mode — Current status: <strong>@m.Status</strong></div>
+        }
+
+        <!-- MC OVERALL RATING PANEL -->
+        @if (role is "ModCommittee" or "JMD" or "HR")
+        {
+            var allVals = new List<decimal>();
+            foreach (var kRow in m.KpiRows)
+            {
+                if (kRow.RmRating.HasValue) allVals.Add(kRow.RmRating.Value);
+                if (kRow.HodRating.HasValue) allVals.Add(kRow.HodRating.Value);
+                if (kRow.UnitHeadRating.HasValue) allVals.Add(kRow.UnitHeadRating.Value);
+            }
+            decimal? overallAvg = allVals.Any() ? (decimal?)Math.Round(allVals.Average(), 2) : null;
+
+            <div class="overall-rating-card">
+                <div class="orc-title"><span>⚖️</span>@(role == "ModCommittee" ? "Moderation Committee — Overall Rating" : "Moderation Committee — Overall Rating (Reference)")</div>
+                <div class="orc-body">
+                    <div class="orc-info">
+                        <strong>Overall Average (RM + HOD + Unit Head)</strong> across all @m.KpiRows.Count KPI(s):<br />
+                        <span style="font-family:var(--mono);font-size:1.05rem;font-weight:700;color:var(--avg-tx)">@(overallAvg.HasValue? overallAvg.Value.ToString("0.00") : "—")</span>
+                        <span style="font-size:.70rem;color:var(--c-slate);margin-left:6px">(avg of all RM, HOD &amp; UH ratings)</span><br />
+                        <span style="font-size:.74rem;color:var(--c-ink3);margin-top:4px;display:block">MC gives a single overall rating for the entire appraisal (decimal allowed, max 5.00).</span>
+                    </div>
+                    <div class="orc-input-wrap">
+                        @if (role == "ModCommittee" && canEdit)
+                        {
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+                                <input type="number" id="mcOverallRatingInput" class="orc-input"
+                                       placeholder="e.g. 3.75" step="0.01" min="0.01" max="5"
+                                       value="@(mcOverallRating.HasValue? mcOverallRating.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")"
+                                       oninput="clampOverallRating(this)" />
+                                <span class="orc-label">MC Rating (max 5.00)</span>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:4px">
+                                <label style="font-size:.70rem;font-weight:600;color:var(--c-slate)">MC Remarks (optional)</label>
+                                <input type="text" id="mcOverallRemarksInput" class="rem-inp"
+                                       placeholder="Overall remarks…" style="width:220px"
+                                       value="@(ViewBag.McOverallRemarks as string ?? "")" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+                                <span class="orc-display">@(mcOverallRating.HasValue? mcOverallRating.Value.ToString("0.##") : "—")</span>
+                                <span class="orc-label" style="color:var(--mc-tx)">MC Overall Rating</span>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(ViewBag.McOverallRemarks as string))
+                            {
+                                <div style="font-size:.74rem;color:var(--c-slate);max-width:260px">
+                                    <span style="font-weight:600;color:var(--mc-tx)">MC Remarks:</span><br />@(ViewBag.McOverallRemarks as string)
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- JMD OVERALL RATING PANEL -->
+        @if (role is "JMD" or "HR")
+        {
+            <div class="overall-rating-card" style="--rc:var(--jmd-tx);--rb:var(--jmd-bg)">
+                <div class="orc-title"><span>👑</span>@(role == "JMD" ? "JMD — Overall Rating" : "JMD — Overall Rating (Reference)")</div>
+                <div class="orc-body">
+                    <div class="orc-info">
+                        @if (mcOverallRating.HasValue)
+                        {
+                            <div class="mc-info-panel" style="margin-bottom:10px">
+                                <span class="mc-info-label">⚖️ MC Overall Rating:</span>
+                                <span class="mc-info-val">@mcOverallRating.Value.ToString("0.##")</span>
+                                @if (!string.IsNullOrWhiteSpace(ViewBag.McOverallRemarks as string))
+                                {
+                                    <span style="font-size:.72rem;color:var(--mc-tx);margin-left:8px">"@(ViewBag.McOverallRemarks as string)"</span>
+                                }
+                            </div>
+                        }
+                        <span style="font-size:.74rem;color:var(--c-ink3)">JMD gives a single overall rating for the entire appraisal (decimal allowed, max 5.00).</span>
+                    </div>
+                    <div class="orc-input-wrap">
+                        @if (role == "JMD" && canEdit)
+                        {
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+                                <input type="number" id="jmdOverallRatingInput" class="orc-input"
+                                       style="border-color:var(--jmd-bd);background:var(--jmd-bg)"
+                                       placeholder="e.g. 4.25" step="0.01" min="0.01" max="5"
+                                       value="@(jmdOverallRating.HasValue? jmdOverallRating.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")"
+                                       oninput="clampOverallRating(this)" />
+                                <span class="orc-label">JMD Rating (max 5.00)</span>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:4px">
+                                <label style="font-size:.70rem;font-weight:600;color:var(--c-slate)">JMD Remarks (optional)</label>
+                                <input type="text" id="jmdOverallRemarksInput" class="rem-inp"
+                                       placeholder="Overall remarks…" style="width:220px"
+                                       value="@(ViewBag.JmdOverallRemarks as string ?? "")" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+                                <span class="orc-display" style="border-color:var(--jmd-bd);background:var(--jmd-bg);color:var(--jmd-tx)">
+                                    @(jmdOverallRating.HasValue? jmdOverallRating.Value.ToString("0.##") : "—")
+                                </span>
+                                <span class="orc-label" style="color:var(--jmd-tx)">JMD Overall Rating</span>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(ViewBag.JmdOverallRemarks as string))
+                            {
+                                <div style="font-size:.74rem;color:var(--c-slate);max-width:260px">
+                                    <span style="font-weight:600;color:var(--jmd-tx)">JMD Remarks:</span><br />@(ViewBag.JmdOverallRemarks as string)
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- APPRAISAL TABLE -->
+        <div class="card">
+            <div class="card-hd">
+                <div class="card-hd-title">📊 Appraisal Sheet — @m.EmpName</div>
+                <span class="card-hd-badge">@m.KpiRows.Count KPI(s)</span>
+            </div>
+
+            <div class="tbl-wrap">
+                <table class="ap">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="tl" style="min-width:40px;width:40px">#</th>
+                            <th rowspan="2" class="tl" style="min-width:100px">PMP</th>
+                            <th rowspan="2" class="tl" style="min-width:120px">KRA</th>
+                            <th rowspan="2" class="tl" style="min-width:210px">KPI</th>
+                            <th rowspan="2" style="min-width:58px">Unit</th>
+                            <th rowspan="2" style="min-width:58px">Wt%</th>
+                            <th rowspan="2" style="min-width:66px">Target</th>
+
+                            @* Active role columns first *@
+                            @if (role == "Employee" && showEmp)
+                            {
+                                <th colspan="2" class="cg-emp cg-you">✏️ You — Employee</th>
+                            }
+                            @if (role == "RM" && showRm)
+                            {
+                                <th colspan="3" class="cg-rm cg-you">👔 You — RM Review</th>
+                            }
+                            @if (role == "HOD" && showHod)
+                            {
+                                <th colspan="3" class="cg-hod cg-you">🏛 You — HOD Review</th>
+                            }
+                            @if (role == "UnitHead" && showUh)
+                            {
+                                <th colspan="3" class="cg-uh cg-you">🏢 You — Unit Head Review</th>
+                            }
+
+                            @* Other roles read-only *@
+                            @if (role != "Employee" && showEmp)
+                            {
+                                <th colspan="2" class="cg-emp">✏️ Employee</th>
+                            }
+                            @if (role != "RM" && showRm)
+                            {
+                                <th colspan="3" class="cg-rm">👔 Reporting Manager</th>
+                            }
+                            @if (role != "HOD" && showHod)
+                            {
+                                <th colspan="3" class="cg-hod">🏛 HOD</th>
+                            }
+                            @if (role != "UnitHead" && showUh)
+                            {
+                                <th colspan="3" class="cg-uh">🏢 Unit Head</th>
+                            }
+
+                            <th rowspan="2" style="min-width:240px">📎 Documents</th>
+                            <!-- JUSTIFICATION COLUMN -->
+                            <th rowspan="2" class="cg-just" style="min-width:260px">💬 Justification</th>
+                            <th rowspan="2" style="min-width:90px">Wtd. Rating</th>
+                        </tr>
+                        <tr>
+                            @* Active role sub-headers *@
+                            @if (role == "Employee" && showEmp)
+                            {
+                                <th class="sl-emp" style="min-width:88px">Actual</th>
+                                <th class="sl-emp" style="min-width:168px">Rating (1–5)</th>
+                            }
+                            @if (role == "RM" && showRm)
+                            {
+                                <th class="sl-rm" style="min-width:88px">Actual</th>
+                                <th class="sl-rm" style="min-width:168px">Rating (1–5)</th>
+                                <th class="sl-rm" style="min-width:168px">Remarks</th>
+                            }
+                            @if (role == "HOD" && showHod)
+                            {
+                                <th class="sl-hod" style="min-width:88px">Actual</th>
+                                <th class="sl-hod" style="min-width:168px">Rating (1–5)</th>
+                                <th class="sl-hod" style="min-width:168px">Remarks</th>
+                            }
+                            @if (role == "UnitHead" && showUh)
+                            {
+                                <th class="sl-uh" style="min-width:88px">Actual</th>
+                                <th class="sl-uh" style="min-width:168px">Rating (1–5)</th>
+                                <th class="sl-uh" style="min-width:168px">Remarks</th>
+                            }
+                            @* Other roles sub-headers *@
+                            @if (role != "Employee" && showEmp)
+                            {
+                                <th class="sl-emp" style="min-width:88px">Actual</th>
+                                <th class="sl-emp" style="min-width:168px">Rating</th>
+                            }
+                            @if (role != "RM" && showRm)
+                            {
+                                <th class="sl-rm" style="min-width:88px">Actual</th>
+                                <th class="sl-rm" style="min-width:168px">Rating</th>
+                                <th class="sl-rm" style="min-width:168px">Remarks</th>
+                            }
+                            @if (role != "HOD" && showHod)
+                            {
+                                <th class="sl-hod" style="min-width:88px">Actual</th>
+                                <th class="sl-hod" style="min-width:168px">Rating</th>
+                                <th class="sl-hod" style="min-width:168px">Remarks</th>
+                            }
+                            @if (role != "UnitHead" && showUh)
+                            {
+                                <th class="sl-uh" style="min-width:88px">Actual</th>
+                                <th class="sl-uh" style="min-width:168px">Rating</th>
+                                <th class="sl-uh" style="min-width:168px">Remarks</th>
+                            }
+                        </tr>
+                    </thead>
+
+                    <tbody id="kpiBody">
+                        @{
+                            int sr = 0;
+                        }
+                        @foreach (var row in m.KpiRows)
+                        {
+                            sr++;
+                            var pk = row.PmpName;
+                            var kk = pk + "||" + row.KraName;
+                            bool np = seenPmp.Add(pk);
+                            bool nk = seenKra.Add(kk);
+
+                            <tr data-row-id="@row.EmpKpiRowId">
+
+                                <td class="tc" style="font-family:var(--mono);color:var(--c-muted);font-size:.72rem">@sr</td>
+
+                                @if (np)
+                                {
+                                    <td class="pmp-cell" rowspan="@pmpSpan[pk]">@row.PmpName</td>
+                                }
+                                @if (nk)
+                                {
+                                    <td class="kra-cell" rowspan="@kraSpan[kk]">@row.KraName</td>
+                                }
+
+                                <td>
+                                    <div class="kpi-wrap">
+                                        <span class="kpi-sr">@sr</span>
+                                        <span class="kpi-name">@row.KpiName</span>
+                                    </div>
+                                </td>
+                                <td class="tc" style="font-family:var(--mono);color:var(--c-slate);font-size:.72rem">@row.UnitOfMeasure</td>
+                                <td class="tr" style="font-size:.72rem">@row.IndividualWeightage.ToString("0.##")%</td>
+                                <td class="tc" style="font-family:var(--mono);font-weight:700;color:var(--c-navy)">@row.Target.ToString("0.##")%</td>
+
+                                @* ── Employee (active / editable) ── *@
+                                @if (role == "Employee" && showEmp)
+                                {
+                                    <td class="tc bg-active-emp">
+                                        @if (canEdit)
+                                        {
+                                            <input type="number" class="num-inp ei emp-actual"
+                                                   data-id="@row.EmpKpiRowId" data-target="@row.Target.ToString("0.##")"
+                                                   value="@(row.EmpActual?.ToString("0.##") ?? "")"
+                                                   placeholder="0" step="0.01" min="0" max="100" />
+                                        }
+                                        else
+                                        {
+
+                                            <span class="val ve">@(row.EmpActual.HasValue? row.EmpActual.Value.ToString("0.##") : "—")</span>
+                                        }
+                                    </td>
+                                    <td class="tc bg-active-emp">
+                                        @if (canEdit)
+                                        {
+                                            <div class="stars" data-id="@row.EmpKpiRowId" data-field="empRating">
+                                                @for (int s = 1; s <= 5; s++)
+                                                {
+                                                    <button type="button" class="star @(row.EmpRating.HasValue && (int)row.EmpRating.Value >= s ? "on" : "")"
+                                                            data-val="@s" onclick="setRating(this)">
+                                                        @s
+                                                    </button>
+                                                }
+                                            </div>
+                                            <input type="hidden" class="emp-rating" data-id="@row.EmpKpiRowId"
+                                                   value="@(row.EmpRating?.ToString("0") ?? "")" />
+                                        }
+                                        else
+                                        {
+                                            @if (row.EmpRating.HasValue)
+                                            {
+                                                var rv = (int)row.EmpRating.Value;
+                                                <span class="rb rb@rv">@rv</span>
+                                            }
+                                            else
+                                            {
+
+                                                <span style="color:var(--c-muted)">—</span>
+                                            }
+                                        }
+                                    </td>
+                                }
+
+                                @* ── RM (active / editable) ── *@
+                                @if (role == "RM" && showRm)
+                                {
+                                    <td class="tc bg-active-rm">
+                                        @if (canEdit)
+                                        {
+                                            <input type="number" class="num-inp ri rm-actual"
+                                                   data-id="@row.EmpKpiRowId" data-target="@row.Target.ToString("0.##")"
+                                                   value="@(row.RmActual?.ToString("0.##") ?? "")"
+                                                   placeholder="0" step="0.01" min="0" max="100" />
+                                        }
+                                        else
+                                        {
+
+                                            <span class="val vr">@(row.RmActual.HasValue? row.RmActual.Value.ToString("0.##") : "—")</span>
+                                        }
+                                    </td>
+                                    <td class="tc bg-active-rm">
+                                        @if (canEdit)
+                                        {
+                                            <div class="stars" data-id="@row.EmpKpiRowId" data-field="rmRating">
+                                                @for (int s = 1; s <= 5; s++)
+                                                {
+                                                    <button type="button" class="star @(row.RmRating.HasValue && (int)row.RmRating.Value >= s ? "on" : "")"
+                                                            data-val="@s" onclick="setRating(this)">
+                                                        @s
+                                                    </button>
+                                                }
+                                            </div>
+                                            <input type="hidden" class="rm-rating" data-id="@row.EmpKpiRowId"
+                                                   value="@(row.RmRating?.ToString("0") ?? "")" />
+                                        }
+                                        else
+                                        {
+                                            @if (row.RmRating.HasValue)
+                                            {
+                                                var rv = (int)row.RmRating.Value;
+                                                <span class="rb rb@rv">@rv</span>
+                                            }
+                                            else
+                                            {
+
+                                                <span style="color:var(--c-muted)">—</span>
+                                            }
+                                        }
+                                    </td>
+                                    <td class="bg-active-rm">
+                                        @if (canEdit)
+                                        {
+                                            <input type="text" class="rem-inp rm-remarks" data-id="@row.EmpKpiRowId"
+                                                   value="@(row.RmRemarks ?? "")" placeholder="Remarks…" />
+                                        }
+                                        else
+                                        {
+
+                                            <span style="font-size:.73rem;color:var(--c-slate)">@(string.IsNullOrEmpty(row.RmRemarks) ? "—" : row.RmRemarks)</span>
+                                        }
+                                    </td>
+                                }
+
+                                @* ── HOD (active / editable) ── *@
+                                @if (role == "HOD" && showHod)
+                                {
+                                    <td class="tc bg-active-hod">
+                                        @if (canEdit)
+                                        {
+                                            <input type="number" class="num-inp hi hod-actual"
+                                                   data-id="@row.EmpKpiRowId" data-target="@row.Target.ToString("0.##")"
+                                                   value="@(row.HodActual?.ToString("0.##") ?? "")"
+                                                   placeholder="0" step="0.01" min="0" max="100" />
+                                        }
+                                        else
+                                        {
+
+                                            <span class="val vh">@(row.HodActual.HasValue? row.HodActual.Value.ToString("0.##") : "—")</span>
+                                        }
+                                    </td>
+                                    <td class="tc bg-active-hod">
+                                        @if (canEdit)
+                                        {
+                                            <div class="stars" data-id="@row.EmpKpiRowId" data-field="hodRating">
+                                                @for (int s = 1; s <= 5; s++)
+                                                {
+                                                    <button type="button" class="star @(row.HodRating.HasValue && (int)row.HodRating.Value >= s ? "on" : "")"
+                                                            data-val="@s" onclick="setRating(this)">
+                                                        @s
+                                                    </button>
+                                                }
+                                            </div>
+                                            <input type="hidden" class="hod-rating" data-id="@row.EmpKpiRowId"
+                                                   value="@(row.HodRating?.ToString("0") ?? "")" />
+                                        }
+                                        else
+                                        {
+                                            @if (row.HodRating.HasValue)
+                                            {
+                                                var rv = (int)row.HodRating.Value;
+                                                <span class="rb rb@rv">@rv</span>
+                                            }
+                                            else
+                                            {
+
+                                                <span style="color:var(--c-muted)">—</span>
+                                            }
+                                        }
+                                    </td>
+                                    <td class="bg-active-hod">
+                                        @if (canEdit)
+                                        {
+                                            <input type="text" class="rem-inp hod-remarks" data-id="@row.EmpKpiRowId"
+                                                   value="@(row.HodRemarks ?? "")" placeholder="Remarks…" />
+                                        }
+                                        else
+                                        {
+
+                                            <span style="font-size:.73rem;color:var(--c-slate)">@(string.IsNullOrEmpty(row.HodRemarks) ? "—" : row.HodRemarks)</span>
+                                        }
+                                    </td>
+                                }
+
+                                @* ── UnitHead (active / editable) ── *@
+                                @if (role == "UnitHead" && showUh)
+                                {
+                                    <td class="tc bg-active-uh">
+                                        @if (canEdit)
+                                        {
+                                            <input type="number" class="num-inp ui uh-actual"
+                                                   data-id="@row.EmpKpiRowId" data-target="@row.Target.ToString("0.##")"
+                                                   value="@(row.UnitHeadActual?.ToString("0.##") ?? "")"
+                                                   placeholder="0" step="0.01" min="0" max="100" />
+                                        }
+                                        else
+                                        {
+
+                                            <span class="val vu">@(row.UnitHeadActual.HasValue? row.UnitHeadActual.Value.ToString("0.##") : "—")</span>
+                                        }
+                                    </td>
+                                    <td class="tc bg-active-uh">
+                                        @if (canEdit)
+                                        {
+                                            <div class="stars" data-id="@row.EmpKpiRowId" data-field="uhRating">
+                                                @for (int s = 1; s <= 5; s++)
+                                                {
+                                                    <button type="button" class="star @(row.UnitHeadRating.HasValue && (int)row.UnitHeadRating.Value >= s ? "on" : "")"
+                                                            data-val="@s" onclick="setRating(this)">
+                                                        @s
+                                                    </button>
+                                                }
+                                            </div>
+                                            <input type="hidden" class="uh-rating" data-id="@row.EmpKpiRowId"
+                                                   value="@(row.UnitHeadRating?.ToString("0") ?? "")" />
+                                        }
+                                        else
+                                        {
+                                            @if (row.UnitHeadRating.HasValue)
+                                            {
+                                                var rv = (int)row.UnitHeadRating.Value;
+                                                <span class="rb rb@rv">@rv</span>
+                                            }
+                                            else
+                                            {
+
+                                                <span style="color:var(--c-muted)">—</span>
+                                            }
+                                        }
+                                    </td>
+                                    <td class="bg-active-uh">
+                                        @if (canEdit)
+                                        {
+                                            <input type="text" class="rem-inp uh-remarks" data-id="@row.EmpKpiRowId"
+                                                   value="@(row.UnitHeadRemarks ?? "")" placeholder="Remarks…" />
+                                        }
+                                        else
+                                        {
+
+                                            <span style="font-size:.73rem;color:var(--c-slate)">@(string.IsNullOrEmpty(row.UnitHeadRemarks) ? "—" : row.UnitHeadRemarks)</span>
+                                        }
+                                    </td>
+                                }
+
+                                @* ── Employee read-only (shown to RM / HOD / UH / MC / JMD / HR) ── *@
+                                @if (role != "Employee" && showEmp)
+                                {
+                                    <td class="tc bg-emp"><span class="val ve">@(row.EmpActual.HasValue? row.EmpActual.Value.ToString("0.##") : "—")</span></td>
+                                    <td class="tc bg-emp">
+                                        @if (row.EmpRating.HasValue)
+                                        {
+                                            var rv = (int)row.EmpRating.Value;
+                                            <span class="rb rb@rv">@rv</span>
+                                        }
+                                        else
+                                        {
+
+                                            <span style="color:var(--c-muted)">—</span>
+                                        }
+                                    </td>
+                                }
+
+                                @* ── RM read-only ── *@
+                                @if (role != "RM" && showRm)
+                                {
+                                    <td class="tc bg-rm"><span class="val vr">@(row.RmActual.HasValue? row.RmActual.Value.ToString("0.##") : "—")</span></td>
+                                    <td class="tc bg-rm">
+                                        @if (row.RmRating.HasValue)
+                                        {
+                                            var rv = (int)row.RmRating.Value;
+                                            <span class="rb rb@rv">@rv</span>
+                                        }
+                                        else
+                                        {
+
+                                            <span style="color:var(--c-muted)">—</span>
+                                        }
+                                    </td>
+                                    <td class="bg-rm"><span style="font-size:.73rem;color:var(--c-slate)">@(string.IsNullOrEmpty(row.RmRemarks) ? "—" : row.RmRemarks)</span></td>
+                                }
+
+                                @* ── HOD read-only ── *@
+                                @if (role != "HOD" && showHod)
+                                {
+                                    <td class="tc bg-hod"><span class="val vh">@(row.HodActual.HasValue? row.HodActual.Value.ToString("0.##") : "—")</span></td>
+                                    <td class="tc bg-hod">
+                                        @if (row.HodRating.HasValue)
+                                        {
+                                            var rv = (int)row.HodRating.Value;
+                                            <span class="rb rb@rv">@rv</span>
+                                        }
+                                        else
+                                        {
+
+                                            <span style="color:var(--c-muted)">—</span>
+                                        }
+                                    </td>
+                                    <td class="bg-hod"><span style="font-size:.73rem;color:var(--c-slate)">@(string.IsNullOrEmpty(row.HodRemarks) ? "—" : row.HodRemarks)</span></td>
+                                }
+
+                                @* ── UnitHead read-only ── *@
+                                @if (role != "UnitHead" && showUh)
+                                {
+                                    <td class="tc bg-uh"><span class="val vu">@(row.UnitHeadActual.HasValue? row.UnitHeadActual.Value.ToString("0.##") : "—")</span></td>
+                                    <td class="tc bg-uh">
+                                        @if (row.UnitHeadRating.HasValue)
+                                        {
+                                            var rv = (int)row.UnitHeadRating.Value;
+                                            <span class="rb rb@rv">@rv</span>
+                                        }
+                                        else
+                                        {
+
+                                            <span style="color:var(--c-muted)">—</span>
+                                        }
+                                    </td>
+                                    <td class="bg-uh"><span style="font-size:.73rem;color:var(--c-slate)">@(string.IsNullOrEmpty(row.UnitHeadRemarks) ? "—" : row.UnitHeadRemarks)</span></td>
+                                }
+
+                                @* ── DOCUMENTS ── *@
+                                <td style="vertical-align:top;padding:10px 12px">
+                                    <div class="doc-zone" id="doczone-@row.EmpKpiRowId">
+                                        <div class="doc-zone-inner">
+                                            @if (canEdit)
+                                            {
+                                                <label class="doc-upload-btn" title="Attach JPEG, PDF or DOC">
+                                                    📎 @(role == "Employee" ? "Attach" : "Add Doc")
+                                                    <input type="file"
+                                                           accept=".jpg,.jpeg,.pdf,.doc,.docx,image/jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                                           onchange="handleDocUpload(event, @row.EmpKpiRowId)" multiple />
+                                                </label>
+                                            }
+                                        </div>
+                                        <div class="doc-pills" id="docpills-@row.EmpKpiRowId">
+                                            @if (row.Documents != null && row.Documents.Any())
+                                            {
+                                                foreach (var doc in row.Documents)
+                                                {
+                                                    var roleLabel = doc.UploaderRole switch
+                                                    {
+                                                        "Employee" => ("EMP", "#92400e", "#fef9ee"),
+                                                        "RM" => ("RM", "#1e40af", "#eff6ff"),
+                                                        "HOD" => ("HOD", "#5b21b6", "#f5f3ff"),
+                                                        "UnitHead" => ("UH", "#0f766e", "#f0fdfa"),
+                                                        "ModCommittee" => ("MC", "#c2410c", "#fff7ed"),
+                                                        "JMD" => ("JMD", "#9d174d", "#fdf2f8"),
+                                                        _ => ("HR", "#047857", "#ecfdf5")
+                                                    };
+                                                    var ext = System.IO.Path.GetExtension(doc.FileName).ToLower();
+                                                    var icon = ext is ".pdf" ? "📄" : ext is ".jpg" or ".jpeg" ? "🖼" : "📝";
+                                                    <div class="doc-pill" id="docpill-@doc.Id">
+                                                        <span class="doc-pill-icon">@icon</span>
+                                                        <span class="doc-pill-name" title="@doc.OriginalFileName">@doc.OriginalFileName</span>
+                                                        <span class="doc-pill-role" style="color:@roleLabel.Item2;background:@roleLabel.Item3">@roleLabel.Item1</span>
+                                                        <a href="/Pms/DownloadKpiDoc?id=@doc.Id" target="_blank" class="doc-pill-view">View</a>
+                                                        @if (canEdit && doc.UploaderRole == role)
+                                                        {
+                                                            <button type="button" class="doc-pill-del"
+                                                                    onclick="deleteKpiDoc(@doc.Id, @row.EmpKpiRowId)" title="Remove">
+                                                                ✕
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                       
+                                    </div>
+                                </td>
+
+                                @* ════════════════════════════════════════════
+                               JUSTIFICATION COLUMN
+                            ════════════════════════════════════════════ *@
+                                <td class="bg-just" style="vertical-align:top;padding:10px 12px">
+                                    @if (role == "Employee" && canEdit)
+                                    {
+                                        <textarea class="justification-inp emp-justification"
+                                          id="just-@row.EmpKpiRowId"
+                                          data-id="@row.EmpKpiRowId"
+                                          maxlength="500"
+                                          placeholder="Explain your performance for this KPI — what you achieved, how you measured it, and any challenges faced…"
+                                          oninput="onJustificationInput(this)">@(row.EmpJustification ?? "")</textarea>
+                                        <div class="just-char-count" id="justcount-@row.EmpKpiRowId">
+                                            <span id="justcountval-@row.EmpKpiRowId">@((row.EmpJustification ?? "").Length)</span> / 500
+                                        </div>
+                                        <div class="just-missing-warn" id="justwarn-@row.EmpKpiRowId">⚠ Justification required</div>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(row.EmpJustification))
+                                    {
+                                        <div style="display:flex;flex-direction:column;gap:4px">
+                                            <span style="font-size:.60rem;font-weight:700;color:var(--just-tx);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Employee Justification</span>
+                                            <span class="just-display">@row.EmpJustification</span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:var(--c-muted);font-size:.72rem;font-style:italic">No justification provided</span>
+                                    }
+                                </td>
+
+                                @* ── WEIGHTED RATING ── *@
+                                <td class="tc">
+                                    <span style="font-family:var(--mono);font-weight:700;color:var(--c-navy);font-size:.82rem">
+                                        @(row.WeightedRating.HasValue? row.WeightedRating.Value.ToString("0.00") : "—")
+                                    </span>
+                                </td>
+
+                            </tr>
+                        }
+
+                        <!-- Total row -->
+                        <tr class="total-row">
+                            <td colspan="@(fixedCols + dynCols)" style="text-align:right;font-size:.70rem;letter-spacing:.08em;opacity:.6">
+                                TOTAL WEIGHTED RATING
+                            </td>
+                            <td class="tc" colspan="2"><span class="total-score">@totalWR.ToString("0.00")</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ACTION BAR -->
+        @if (canEdit)
+        {
+            <div class="action-bar">
+                <div class="action-msg" style="display:flex;flex-direction:column;gap:8px;flex:1">
+                    @if (role is not "ModCommittee" and not "JMD")
+                    {
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <span class="kpi-counter" id="progressCounter" style="color:var(--c-slate)">0 / @m.KpiRows.Count filled</span>
+                            <div class="kpi-progress-bar">
+                                <div class="kpi-progress-fill" id="progressFill" style="width:0%"></div>
+                            </div>
+                        </div>
+                    }
+                    <span id="valMsg" style="color:#dc2626;font-weight:600;display:none">
+                        ⚠️ <span id="valMsgText">Please fill Actual, Rating and Justification for every KPI before submitting.</span>
+                    </span>
+                    <span id="okMsg" style="display:none;color:#15803d;font-weight:600">
+                        @if (role is "ModCommittee" or "JMD")
+                        {
+                            <text>✔ Ready to submit — Overall rating provided.</text>
+                        }
+                        else
+                        {
+
+                            <text>✔ All @m.KpiRows.Count KPI(s) filled — ready to submit.</text>
+                        }
+                    </span>
+                </div>
+                <div class="btn-row">
+                    <button type="button" class="btn btn-sec" onclick="history.back()">Cancel</button>
+                    <button type="button" class="btn btn-pri" id="btnSubmit" onclick="doSubmit()">
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                            <path d="M1.5 7l4 4 6-6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        @submitLabel
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="action-bar">
+                <div class="action-msg">
+                    @(m.Status == "EmployeeFilled" && role == "Employee" ? "Your appraisal has been submitted and is awaiting Reporting Manager review." :
+                                    m.Status == "RMReview" && role == "RM" ? "RM review submitted. Awaiting HOD review." :
+                                    m.Status == "HODReview" && role == "HOD" ? "HOD review submitted. Awaiting Unit Head review." :
+                                    m.Status == "UnitHeadReview" && role == "UnitHead" ? "Unit Head review submitted. Awaiting Moderation Committee review." :
+                                    m.Status == "ModCommitteeReview" && role == "ModCommittee" ? "Moderation Committee review submitted. Awaiting JMD review." :
+                                    m.Status == "JMDReview" && role == "JMD" ? "JMD review submitted. Awaiting HR finalization." :
+                                    m.Status == "HRFinalized" ? "This appraisal has been finalized by HR." :
+                                    "This appraisal sheet is currently in read-only mode.")
+            </div>
+            <button type="button" class="btn btn-sec" onclick="history.back()">← Back</button>
+        </div>
+                }
+
+    </div><!-- /.body -->
+
+    <div class="overlay" id="overlay">
+        <div class="overlay-box">
+            <div class="spin"></div>
+            <div class="overlay-txt" id="overlayTxt">Submitting…</div>
+        </div>
+    </div>
+    <div class="toasts" id="toasts"></div>
+
+    <script>
+        var MAPPING_ID  = @m.MappingId;
+        var FILLER_ROLE = '@role';
+        var SUBMIT_URL  = '@Url.Action("SubmitAppraisalFill", "Pms")';
+        var TOTAL_ROWS  = @m.KpiRows.Count;
+        var IS_MC_JMD   = (FILLER_ROLE === 'ModCommittee' || FILLER_ROLE === 'JMD');
+
+        /* ── JUSTIFICATION CHARACTER COUNTER ── */
+        function onJustificationInput(ta) {
+            var rowId = ta.dataset.id;
+            var len   = ta.value.length;
+            var cntEl = document.getElementById('justcountval-' + rowId);
+            var boxEl = document.getElementById('justcount-'    + rowId);
+            if (cntEl) cntEl.textContent = len;
+            if (boxEl) {
+                boxEl.className = 'just-char-count' + (len > 450 && len < 500 ? ' warn' : len >= 500 ? ' over' : '');
+            }
+            /* clear warning once filled */
+            var warnEl = document.getElementById('justwarn-' + rowId);
+            if (warnEl && ta.value.trim().length > 0) {
+                warnEl.style.display = 'none';
+                ta.classList.remove('inp-error');
+            }
+            onAnyInput();
+        }
+
+        /* ── CLAMP OVERALL RATING ── */
+        function clampOverallRating(inp) {
+            var v = parseFloat(inp.value);
+            if (!isNaN(v) && v > 5) inp.value = 5;
+            if (!isNaN(v) && v < 0) inp.value = '';
+            inp.classList.remove('inp-error');
+        }
+
+        /* ── STAR RATING ── */
+        function setRating(btn) {
+            var grp   = btn.closest('.stars');
+            var val   = +btn.dataset.val;
+            var field = grp.dataset.field;
+            grp.querySelectorAll('.star').forEach(function (b) {
+                b.classList.toggle('on', +b.dataset.val <= val);
+            });
+            var classMap = { empRating:'emp-rating', rmRating:'rm-rating', hodRating:'hod-rating', uhRating:'uh-rating' };
+            var tr = grp.closest('tr');
+            var hidden = tr && tr.querySelector('.' + (classMap[field] || 'emp-rating'));
+            if (hidden) { hidden.value = val; onAnyInput(); }
+        }
+
+        /* ── FIELD ACCESSORS ── */
+        function getFields(tr) {
+            function q(cls)  { return tr.querySelector('.' + cls); }
+            function fv(cls) { var e = q(cls); return e ? e.value.trim() : ''; }
+            var roleMap = {
+                Employee: { actual:'emp-actual', rating:'emp-rating', remarks:null, justification:'emp-justification' },
+                RM:       { actual:'rm-actual',  rating:'rm-rating',  remarks:'rm-remarks',  justification:null },
+                HOD:      { actual:'hod-actual', rating:'hod-rating', remarks:'hod-remarks', justification:null },
+                UnitHead: { actual:'uh-actual',  rating:'uh-rating',  remarks:'uh-remarks',  justification:null }
+            };
+            var map = roleMap[FILLER_ROLE];
+            if (!map) return null;
+            return {
+                actualEl:         map.actual        ? q(map.actual)        : null,
+                ratingEl:         map.rating        ? q(map.rating)        : null,
+                remarksEl:        map.remarks       ? q(map.remarks)       : null,
+                justificationEl:  map.justification ? q(map.justification) : null,
+                actualVal:        fv(map.actual),
+                ratingVal:        fv(map.rating),
+                remarksVal:       map.remarks       ? fv(map.remarks)       : '',
+                justificationVal: map.justification ? fv(map.justification) : ''
+            };
+        }
+
+        /* ── COLLECT PER-KPI ROWS ── */
+        function collectRows() {
+            var rows = [];
+            document.querySelectorAll('#kpiBody tr[data-row-id]').forEach(function (tr) {
+                var rowId = +tr.dataset.rowId;
+                if (!rowId) return;
+                var f = getFields(tr);
+                if (!f) return;
+                rows.push({
+                    empKpiRowId:   rowId,
+                    actual:        f.actualVal !== '' ? parseFloat(f.actualVal) : null,
+                    rating:        f.ratingVal ? +f.ratingVal : 0,
+                    remarks:       f.remarksVal,
+                    justification: f.justificationVal
+                });
+            });
+            return rows;
+        }
+
+        /* ── COLLECT MC/JMD ROW REMARKS ── */
+        function collectRowRemarks(cls) {
+            var remarks = [];
+            document.querySelectorAll('#kpiBody tr[data-row-id]').forEach(function (tr) {
+                var rowId = +tr.dataset.rowId;
+                if (!rowId) return;
+                var inp = tr.querySelector('.' + cls);
+                remarks.push({ empKpiRowId: rowId, remarks: inp ? inp.value.trim() : '' });
+            });
+            return remarks;
+        }
+
+        /* ── VALIDATE ALL ROWS ── */
+        function validateAll() {
+            var errors = [];
+            document.querySelectorAll('#kpiBody tr[data-row-id]').forEach(function (tr, idx) {
+                var rowId = +tr.dataset.rowId;
+                if (!rowId) return;
+                var f = getFields(tr);
+                if (!f) return;
+
+                var rowErrors = [];
+        if (f.actualVal === '') {
+                            rowErrors.push('Actual missing');
+                        } else {
+                            var actualNum = parseFloat(f.actualVal);
+                            if (!isNaN(actualNum) && actualNum > 100) {
+                                rowErrors.push('Actual cannot exceed 100%');
+                                if (f.actualEl) f.actualEl.classList.add('inp-error');
+                            }
+                        }
+
+                        if (!f.ratingVal || f.ratingVal === '0')        rowErrors.push('Rating missing');
+                        else if (+f.ratingVal < 1 || +f.ratingVal > 5) rowErrors.push('Rating must be 1–5');
+
+                        /* Justification required for Employee role */
+                        if (FILLER_ROLE === 'Employee' && f.justificationVal.trim().length === 0) {
+                            rowErrors.push('Justification required');
+                            var justEl   = document.getElementById('just-'     + rowId);
+                            var warnEl   = document.getElementById('justwarn-' + rowId);
+                            if (justEl)  justEl.classList.add('inp-error');
+                            if (warnEl)  warnEl.style.display = 'block';
+                        }
+
+                if (rowErrors.length) {
+                    errors.push({ tr, rowId, srNo: idx + 1, messages: rowErrors,
+                                  actualEl: f.actualEl, ratingEl: f.ratingEl });
+                }
+            });
+            return errors;
+        }
+
+        /* ── VALIDATE MC/JMD OVERALL RATING ── */
+        function validateOverallRating() {
+            var inputId = FILLER_ROLE === 'ModCommittee' ? 'mcOverallRatingInput' : 'jmdOverallRatingInput';
+            var inp = document.getElementById(inputId);
+            if (!inp) return true;
+            var v = parseFloat(inp.value);
+            if (isNaN(v) || v <= 0 || v > 5) { inp.classList.add('inp-error'); inp.focus(); return false; }
+            inp.classList.remove('inp-error');
+            return true;
+        }
+
+        /* ── COUNT COMPLETE ROWS ── */
+        function countComplete() {
+            var complete = 0;
+            document.querySelectorAll('#kpiBody tr[data-row-id]').forEach(function (tr) {
+                if (!+tr.dataset.rowId) return;
+                var f = getFields(tr);
+                if (!f) return;
+                var hasActual  = f.actualVal !== '';
+                var hasRating  = f.ratingVal && f.ratingVal !== '0' && +f.ratingVal >= 1 && +f.ratingVal <= 5;
+                var hasJust    = FILLER_ROLE !== 'Employee' || f.justificationVal.trim().length > 0;
+                if (hasActual && hasRating && hasJust) complete++;
+            });
+            return complete;
+        }
+
+        /* ── HIGHLIGHT / CLEAR ── */
+        function applyHighlights(errors) {
+            document.querySelectorAll('#kpiBody tr[data-row-id]').forEach(function (tr) {
+                tr.classList.remove('row-incomplete');
+                tr.querySelectorAll('.inp-error').forEach(function (el) { el.classList.remove('inp-error'); });
+            });
+            errors.forEach(function (e) {
+                e.tr.classList.add('row-incomplete');
+                if (e.actualEl && e.messages.indexOf('Actual missing') >= 0) e.actualEl.classList.add('inp-error');
+                if (e.ratingEl && e.messages.some(function(m){ return m.indexOf('Rating') >= 0; })) e.ratingEl.classList.add('inp-error');
+            });
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('#kpiBody tr[data-row-id]').forEach(function (tr) {
+                tr.classList.remove('row-incomplete');
+                tr.querySelectorAll('.inp-error').forEach(function (el) { el.classList.remove('inp-error'); });
+                var rowId = +tr.dataset.rowId;
+                if (rowId) {
+                    var zoneEl = document.getElementById('doczone-'  + rowId);
+                    var warnEl = document.getElementById('docwarn-'  + rowId);
+                    var justEl = document.getElementById('just-'     + rowId);
+                    var jwEl   = document.getElementById('justwarn-' + rowId);
+                    if (zoneEl) zoneEl.classList.remove('doc-required-err');
+                    if (warnEl) warnEl.style.display = 'none';
+                    if (justEl) justEl.classList.remove('inp-error');
+                    if (jwEl)   jwEl.style.display   = 'none';
+                }
+            });
+        }
+
+        /* ── PROGRESS BAR ── */
+        function updateProgress() {
+            if (IS_MC_JMD) return;
+            var complete = countComplete();
+            var pct      = TOTAL_ROWS > 0 ? Math.round(complete / TOTAL_ROWS * 100) : 0;
+            var counter  = document.getElementById('progressCounter');
+            var fill     = document.getElementById('progressFill');
+            var valMsg   = document.getElementById('valMsg');
+            var okMsg    = document.getElementById('okMsg');
+            if (counter) counter.textContent = complete + ' / ' + TOTAL_ROWS + ' filled';
+            if (fill) {
+                fill.style.width      = pct + '%';
+                fill.style.background = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#f43f5e';
+            }
+            if (complete === TOTAL_ROWS) {
+                if (valMsg) valMsg.style.display = 'none';
+                if (okMsg)  okMsg.style.display  = 'inline';
+                clearHighlights();
+            } else {
+                if (okMsg) okMsg.style.display = 'none';
+            }
+        }
+
+        /* ── LIVE ACTUAL vs TARGET VALIDATION ── */
+        /* ── LIVE ACTUAL VALIDATION (capped at 100%) ── */
+               function validateActualInput(inp) {
+                   var val = parseFloat(inp.value);
+                   if (!isNaN(val) && val > 100) {
+                       inp.classList.add('inp-error');
+                       inp.title = 'Actual cannot exceed 100%';
+                       clearTimeout(inp._clampTimer);
+                       inp._clampTimer = setTimeout(function () {
+                           inp.value = 100;
+                           inp.classList.remove('inp-error');
+                           inp.title = '';
+                           onAnyInput();
+                       }, 1200);
+                   } else {
+                       inp.classList.remove('inp-error');
+                       inp.title = '';
+                   }
+               }
+        function onAnyInput() { updateProgress(); }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!IS_MC_JMD) {
+                document.querySelectorAll('#kpiBody .num-inp, #kpiBody .rem-inp').forEach(function (inp) {
+                    inp.addEventListener('input', function () {
+                        var cls = inp.className;
+                        if (cls.indexOf('emp-actual') >= 0 || cls.indexOf('rm-actual') >= 0 ||
+                            cls.indexOf('hod-actual') >= 0 || cls.indexOf('uh-actual') >= 0) {
+                            validateActualInput(inp);
+                        }
+                        onAnyInput();
+                    });
+                });
+                /* Justification textareas trigger progress too */
+                document.querySelectorAll('#kpiBody .justification-inp').forEach(function (ta) {
+                    ta.addEventListener('input', function () { onAnyInput(); });
+                });
+                updateProgress();
+            }
+        });
+
+        /* ── SUBMIT ── */
+        function doSubmit() {
+            var valMsg     = document.getElementById('valMsg');
+            var valMsgText = document.getElementById('valMsgText');
+            var okMsg      = document.getElementById('okMsg');
+
+            if (IS_MC_JMD) {
+                if (!validateOverallRating()) {
+                    var labelRole = FILLER_ROLE === 'ModCommittee' ? 'MC' : 'JMD';
+                    if (valMsgText) valMsgText.textContent = 'Please enter a valid ' + labelRole + ' Overall Rating (0.01 – 5.00) before submitting.';
+                    if (valMsg) valMsg.style.display = 'inline';
+                    if (okMsg)  okMsg.style.display  = 'none';
+                    toast('Please provide a valid overall rating (0.01 – 5.00).', 'err');
+                    return;
+                }
+                if (valMsg) valMsg.style.display = 'none';
+                if (okMsg)  okMsg.style.display  = 'inline';
+            } else {
+                var errors = validateAll();
+                if (errors.length > 0) {
+                    applyHighlights(errors);
+                    if (valMsgText) valMsgText.textContent =
+                        errors.length + ' of ' + TOTAL_ROWS + ' KPI(s) incomplete — ' +
+                        errors.map(function (e) { return 'KPI ' + e.srNo; }).join(', ') +
+                        '. Please fill Actual, Rating and Justification for each.';
+                    if (valMsg) valMsg.style.display = 'inline';
+                    if (okMsg)  okMsg.style.display  = 'none';
+                    errors[0].tr.scrollIntoView({ behavior:'smooth', block:'center' });
+                    toast(errors.length + ' KPI(s) still need Actual, Rating and/or Justification.', 'err');
+                    return;
+                }
+            }
+
+            var confirmMessages = {
+                Employee:     'Submit your self-appraisal? This will send it to your Reporting Manager for review.',
+                RM:           'Submit your RM review? This will forward the appraisal to the Head of Department.',
+                HOD:          'Submit your HOD review? This will forward the appraisal to the Unit Head.',
+                UnitHead:     'Submit your Unit Head review? This will forward the appraisal to the Moderation Committee.',
+                ModCommittee: 'Submit the Moderation Committee overall rating? This will forward the appraisal to the JMD.',
+                JMD:          'Submit your JMD overall rating? This will send the appraisal to HR for final processing.'
+            };
+            if (!confirm(confirmMessages[FILLER_ROLE] || 'Submit and advance the workflow?')) return;
+
+            clearHighlights();
+
+            var spinLabels = {
+                Employee:     'Submitting self appraisal…',
+                RM:           'Submitting RM review…',
+                HOD:          'Submitting HOD review…',
+                UnitHead:     'Submitting Unit Head review…',
+                ModCommittee: 'Submitting Moderation Committee review…',
+                JMD:          'Submitting JMD review…'
+            };
+            document.getElementById('overlayTxt').textContent = spinLabels[FILLER_ROLE] || 'Submitting…';
+            document.getElementById('overlay').classList.add('on');
+
+            var btn = document.getElementById('btnSubmit');
+            if (btn) btn.disabled = true;
+
+            var payload;
+
+            if (FILLER_ROLE === 'ModCommittee') {
+                var mcInp = document.getElementById('mcOverallRatingInput');
+                var mcRem = document.getElementById('mcOverallRemarksInput');
+                var mcRowRemarks = collectRowRemarks('mc-row-remarks');
+                payload = {
+                    mappingId:        MAPPING_ID,
+                    fillerRole:       FILLER_ROLE,
+                    rows:             mcRowRemarks.map(function(r){ return { empKpiRowId:r.empKpiRowId, actual:null, rating:0, remarks:r.remarks }; }),
+                    mcOverallRating:  mcInp ? parseFloat(mcInp.value) : null,
+                    mcOverallRemarks: mcRem ? mcRem.value.trim() : ''
+                };
+            } else if (FILLER_ROLE === 'JMD') {
+                var jmdInp = document.getElementById('jmdOverallRatingInput');
+                var jmdRem = document.getElementById('jmdOverallRemarksInput');
+                var jmdRowRemarks = collectRowRemarks('jmd-row-remarks');
+                payload = {
+                    mappingId:         MAPPING_ID,
+                    fillerRole:        FILLER_ROLE,
+                    rows:              jmdRowRemarks.map(function(r){ return { empKpiRowId:r.empKpiRowId, actual:null, rating:0, remarks:r.remarks }; }),
+                    jmdOverallRating:  jmdInp ? parseFloat(jmdInp.value) : null,
+                    jmdOverallRemarks: jmdRem ? jmdRem.value.trim() : ''
+                };
+            } else {
+                var rows = collectRows();
+                if (!rows.length) {
+                    document.getElementById('overlay').classList.remove('on');
+                    if (btn) btn.disabled = false;
+                    toast('No KPI rows found.', 'err');
+                    return;
+                }
+                payload = { mappingId: MAPPING_ID, fillerRole: FILLER_ROLE, rows: rows };
+            }
+
+            fetch(SUBMIT_URL, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify(payload)
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                document.getElementById('overlay').classList.remove('on');
+                if (btn) btn.disabled = false;
+                if (res.success) {
+                    toast(res.message || 'Submitted successfully.', 'ok');
+                    setTimeout(function () { window.location.href = res.redirectUrl || '/Pms/Index'; }, 2400);
+                } else {
+                    toast(res.message || 'Submission failed. Please try again.', 'err');
+                }
+            })
+            .catch(function (err) {
+                document.getElementById('overlay').classList.remove('on');
+                if (btn) btn.disabled = false;
+                toast('Network error: ' + err.message, 'err');
+            });
+        }
+
+        /* ── TOAST ── */
+        function toast(msg, type) {
+            var wrap = document.getElementById('toasts');
+            var el   = document.createElement('div');
+            el.className = 'toast ' + (type || 'ok');
+            el.innerHTML = (type === 'err' ? '✖ ' : '✔ ') + esc(msg);
+            wrap.appendChild(el);
+            setTimeout(function () {
+                el.style.transition = 'opacity .35s';
+                el.style.opacity    = '0';
+                setTimeout(function () { el.remove(); }, 380);
+            }, 4500);
+        }
+
+        function esc(s) {
+            return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        /* ══ DOCUMENT UPLOAD ══ */
+        var UPLOAD_KPI_DOC_URL = '@Url.Action("UploadKpiDoc", "Pms")';
+        var DELETE_KPI_DOC_URL = '@Url.Action("DeleteKpiDoc", "Pms")';
+        var ALLOWED_EXTS       = ['jpg','jpeg','pdf','doc','docx'];
+        var MAX_FILE_BYTES     = 10 * 1024 * 1024;
+
+        var ROLE_BADGE = {
+            Employee:     { label:'EMP', color:'#92400e', bg:'#fef9ee' },
+            RM:           { label:'RM',  color:'#1e40af', bg:'#eff6ff' },
+            HOD:          { label:'HOD', color:'#5b21b6', bg:'#f5f3ff' },
+            UnitHead:     { label:'UH',  color:'#0f766e', bg:'#f0fdfa' },
+            ModCommittee: { label:'MC',  color:'#c2410c', bg:'#fff7ed' },
+            JMD:          { label:'JMD', color:'#9d174d', bg:'#fdf2f8' },
+            HR:           { label:'HR',  color:'#047857', bg:'#ecfdf5' }
+        };
+
+        function fileIcon(name) {
+            var ext = (name || '').split('.').pop().toLowerCase();
+            return ext === 'pdf' ? '📄' : (ext === 'jpg' || ext === 'jpeg') ? '🖼' : '📝';
+        }
+
+        function handleDocUpload(evt, rowId) {
+            var files = Array.from(evt.target.files || []);
+            evt.target.value = '';
+            if (!files.length) return;
+            var invalid = files.filter(function(f){ var ext=f.name.split('.').pop().toLowerCase(); return ALLOWED_EXTS.indexOf(ext)<0; });
+            if (invalid.length) { toast('Only JPEG, PDF, DOC/DOCX files allowed.', 'err'); return; }
+            var tooBig = files.filter(function(f){ return f.size > MAX_FILE_BYTES; });
+            if (tooBig.length) { toast('File must be under 10 MB.', 'err'); return; }
+            files.forEach(function(file){ uploadOneDoc(file, rowId); });
+        }
+
+        function uploadOneDoc(file, rowId) {
+            var pillsEl = document.getElementById('docpills-' + rowId);
+            var warnEl  = document.getElementById('docwarn-'  + rowId);
+            var zoneEl  = document.getElementById('doczone-'  + rowId);
+
+            var spinnerId = 'spin-' + rowId + '-' + Date.now();
+            var spinPill  = document.createElement('div');
+            spinPill.id   = spinnerId;
+            spinPill.className = 'doc-uploading';
+            spinPill.innerHTML = '<div class="doc-spin"></div> Uploading ' + esc(file.name) + '…';
+            pillsEl.appendChild(spinPill);
+
+            var fd = new FormData();
+            fd.append('file',         file);
+            fd.append('empKpiRowId',  rowId);
+            fd.append('mappingId',    MAPPING_ID);
+            fd.append('uploaderRole', FILLER_ROLE);
+
+            fetch(UPLOAD_KPI_DOC_URL, { method:'POST', body:fd })
+                .then(function(r){ return r.json(); })
+                .then(function(res){
+                    var sp = document.getElementById(spinnerId);
+                    if (sp) sp.remove();
+                    if (!res.success) { toast(res.message || 'Upload failed.', 'err'); return; }
+                    var badge = ROLE_BADGE[FILLER_ROLE] || ROLE_BADGE.HR;
+                    var pill  = document.createElement('div');
+                    pill.className = 'doc-pill';
+                    pill.id        = 'docpill-' + res.docId;
+                    pill.innerHTML =
+                        '<span class="doc-pill-icon">' + fileIcon(res.fileName) + '</span>' +
+                        '<span class="doc-pill-name" title="' + esc(res.fileName) + '">' + esc(res.fileName) + '</span>' +
+                        '<span class="doc-pill-role" style="color:' + badge.color + ';background:' + badge.bg + '">' + badge.label + '</span>' +
+                        '<a href="/Pms/DownloadKpiDoc?id=' + res.docId + '" target="_blank" class="doc-pill-view">View</a>' +
+                        '<button type="button" class="doc-pill-del" onclick="deleteKpiDoc(' + res.docId + ',' + rowId + ')" title="Remove">✕</button>';
+                    pillsEl.appendChild(pill);
+                    if (zoneEl) zoneEl.classList.remove('doc-required-err');
+                    if (warnEl) warnEl.style.display = 'none';
+                    toast('Document attached.', 'ok');
+                    onAnyInput();
+                })
+                .catch(function(e){
+                    var sp = document.getElementById(spinnerId);
+                    if (sp) sp.remove();
+                    toast('Upload error: ' + e.message, 'err');
+                });
+        }
+
+        function deleteKpiDoc(docId, rowId) {
+            if (!confirm('Remove this attachment?')) return;
+            fetch(DELETE_KPI_DOC_URL + '?id=' + docId, { method:'POST' })
+                .then(function(r){ return r.json(); })
+                .then(function(res){
+                    if (res.success) {
+                        var pill = document.getElementById('docpill-' + docId);
+                        if (pill) pill.remove();
+                        toast('Attachment removed.', 'ok');
+                        onAnyInput();
+                    } else { toast(res.message || 'Delete failed.', 'err'); }
+                }).catch(function(e){ toast('Error: ' + e.message, 'err'); });
+        }
+
+        function countDocsForRow(rowId) {
+            return document.querySelectorAll('#docpills-' + rowId + ' .doc-pill').length;
+        }
+
+        let justificationTimers = {};
+
+        function onJustificationInput(el) {
+            const id = el.dataset.id;
+            const val = el.value;
+
+            document.getElementById('justcountval-' + id).textContent = val.length;
+
+            const warn = document.getElementById('justwarn-' + id);
+            if (warn) warn.style.display = val.trim().length === 0 ? 'block' : 'none';
+
+            clearTimeout(justificationTimers[id]);
+            justificationTimers[id] = setTimeout(() => {
+                saveJustification(id, val);
+            }, 800);
+        }
+
+        function saveJustification(id, val) {
+            fetch('/PMS/SaveJustification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `empKpiRowId=${encodeURIComponent(id)}&justification=${encodeURIComponent(val)}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) console.error('Save failed:', data.message);
+            })
+            .catch(err => console.error('Save error:', err));
+        }
+    </script>
+</body>
+</html>

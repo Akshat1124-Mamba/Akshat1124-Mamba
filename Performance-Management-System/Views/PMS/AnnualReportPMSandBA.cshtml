@@ -1,0 +1,1739 @@
+﻿@using vgl.Models
+@model List<AnnualReportRow>
+@{
+    Layout = null;
+    var activeVersion = ViewBag.ActiveVersion as PasRatingVersionRow;
+
+    string RatingBg(int r) => r switch {
+        5 => "#fef3c7", 4 => "#eff4ff", 3 => "#f1f4f9", 2 => "#fff1f2", 1 => "#fff1f2", _ => "#f1f4f9"
+    };
+    string RatingTxt(int r) => r switch {
+        5 => "#92400e", 4 => "#1e4ed8", 3 => "#334155", 2 => "#e11d48", 1 => "#be123c", _ => "#334155"
+    };
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Annual Increment Report — Vandana Global Limited</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+    --navy:#0f1c3f;--navy2:#1a2d5a;--navy3:#253d75;
+    --cobalt:#1e4ed8;--cobalt-lt:#eff4ff;--cobalt-md:#c7d7fd;
+    --gold:#d97706;--gold-lt:#fef3c7;
+    --emerald:#059669;--emerald-lt:#d1fae5;
+    --rose:#e11d48;--rose-lt:#fff1f2;--violet:#7c3aed;
+    --bg:#f0f4fa;--bg2:#e8edf7;--white:#ffffff;
+    --border:#d8e0ef;--border2:#e8edf7;
+    --ink:#0f172a;--ink2:#334155;--ink3:#64748b;--ink4:#94a3b8;
+    --font:'Plus Jakarta Sans','Segoe UI',system-ui,sans-serif;
+    --mono:'JetBrains Mono','Courier New',monospace;
+    --shadow:0 2px 12px rgba(15,28,63,.07);
+    --shadow-md:0 4px 20px rgba(15,28,63,.10);
+    --shadow-lg:0 8px 40px rgba(15,28,63,.14);
+    --radius:10px;--radius-lg:14px;--radius-xl:18px;
+    --sel-blue:#2563eb;
+
+    --pms-bg:#f0fdf4;--pms-border:#a7f3d0;--pms-hdr:#065f46;--pms-avg:#d1fae5;
+    --ba-bg:#eff6ff;--ba-border:#93c5fd;--ba-hdr:#1e40af;--ba-avg:#dbeafe;
+    --wt-bg:#fef9c3;--wt-border:#fde047;--wt-hdr:#854d0e;
+    --mc-bg:#fff7ed;--mc-border:#fdba74;--mc-hdr:#9a3412;
+    --jmd-bg:#fdf2f8;--jmd-border:#f9a8d4;--jmd-hdr:#831843;
+    --fin-bg:#1e3a6e;--fin-txt:#f8fafc;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:13px;min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ══ TOOLBAR ══ */
+.toolbar{position:sticky;top:0;z-index:600;background:var(--navy);padding:0 24px;display:flex;align-items:center;gap:10px;height:58px;box-shadow:0 2px 20px rgba(15,28,63,.35);flex-wrap:wrap}
+.toolbar-logo{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.logo-badge{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#3b82f6,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;font-weight:800;flex-shrink:0;letter-spacing:-.5px}
+.toolbar-title{font-size:.80rem;font-weight:700;color:#fff;letter-spacing:.01em;white-space:nowrap}
+.toolbar-sub{font-size:.60rem;color:rgba(255,255,255,.4);margin-top:1px;letter-spacing:.07em;text-transform:uppercase}
+.toolbar-actions{display:flex;gap:7px;align-items:center;flex-shrink:0}
+.btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 15px;border-radius:8px;font-family:var(--font);font-size:.74rem;font-weight:700;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;text-decoration:none}
+.btn-close{background:rgba(255,255,255,.1);color:rgba(255,255,255,.75);border:1px solid rgba(255,255,255,.14)}
+.btn-close:hover{background:rgba(255,255,255,.18);color:#fff}
+.btn-print{background:var(--cobalt);color:#fff;box-shadow:0 2px 8px rgba(30,78,216,.3)}
+.btn-print:hover{background:#1740bf}
+.btn-excel{background:linear-gradient(135deg,#15803d,#059669);color:#fff;box-shadow:0 2px 8px rgba(5,150,105,.3)}
+.btn-excel:hover{background:linear-gradient(135deg,#166534,#047857)}
+.search-wrap{display:flex;align-items:center;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);border-radius:8px;overflow:hidden}
+.search-wrap input{height:34px;background:none;border:none;outline:none;padding:0 12px;font-family:var(--font);font-size:.78rem;color:#fff;width:200px}
+.search-wrap input::placeholder{color:rgba(255,255,255,.35)}
+
+/* ══ SELECTION CONTROL BAR ══ */
+.sel-bar{background:var(--white);border-bottom:1.5px solid var(--border);padding:0 24px;height:46px;display:flex;align-items:center;gap:14px;position:sticky;top:58px;z-index:500;box-shadow:0 2px 8px rgba(15,28,63,.06)}
+.sel-chk-wrap{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.sel-chk-wrap input[type=checkbox]{width:16px;height:16px;accent-color:var(--sel-blue);cursor:pointer;flex-shrink:0}
+.sel-chk-label{font-size:.75rem;font-weight:700;color:var(--ink2)}
+.sel-count-badge{background:var(--cobalt-lt);border:1.5px solid var(--cobalt-md);color:var(--cobalt);font-family:var(--mono);font-size:.62rem;font-weight:700;border-radius:20px;padding:2px 11px;display:none}
+.sel-count-badge.visible{display:inline-flex}
+.sel-divider{width:1px;height:22px;background:var(--border)}
+.sel-action-btn{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 12px;border-radius:7px;font-size:.72rem;font-weight:700;cursor:pointer;border:none;font-family:var(--font);transition:all .15s}
+.sel-act-export{background:var(--emerald-lt);color:var(--emerald);border:1.5px solid #a7f3d0}
+.sel-act-export:hover{background:#a7f3d0}
+.sel-act-export:disabled{opacity:.4;cursor:not-allowed}
+.sel-act-clear{background:var(--bg2);color:var(--ink3);border:1.5px solid var(--border)}
+.sel-act-clear:hover{background:var(--border);color:var(--ink2)}
+.sel-bar-right{margin-left:auto;font-size:.70rem;color:var(--ink3)}
+.sel-bar-right strong{font-family:var(--mono);color:var(--ink2)}
+
+/* Print selected button */
+.btn-print-sel{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,.3);display:none}
+.btn-print-sel.visible{display:inline-flex}
+.btn-print-sel:hover{background:linear-gradient(135deg,#6d28d9,#5b21b6)}
+
+/* ══ PAGE ══ */
+.page{max-width:1800px;margin:0 auto;padding:24px 24px 80px}
+
+/* ══ LETTERHEAD ══ */
+.letterhead{background:linear-gradient(135deg,var(--navy) 0%,#162550 60%,#1e3a6e 100%);border-radius:var(--radius-xl);padding:26px 32px;margin-bottom:20px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;position:relative;overflow:hidden}
+.letterhead::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.025'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;pointer-events:none}
+.lh-badge{width:62px;height:62px;border-radius:15px;flex-shrink:0;background:linear-gradient(135deg,#3b82f6,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;font-weight:800;box-shadow:0 6px 20px rgba(79,70,229,.45);letter-spacing:-1px;position:relative;z-index:1}
+.lh-text{position:relative;z-index:1}
+.lh-company{font-size:1.05rem;font-weight:800;color:#fff;letter-spacing:.05em;text-transform:uppercase}
+.lh-sub{font-size:.62rem;color:rgba(255,255,255,.42);letter-spacing:.12em;text-transform:uppercase;margin-top:4px}
+.lh-right{margin-left:auto;text-align:right;position:relative;z-index:1}
+.lh-doc-type{font-size:.88rem;font-weight:800;color:#f59e0b;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.lh-meta{font-size:.64rem;color:rgba(255,255,255,.48);font-family:var(--mono);line-height:1.8}
+
+/* ══ STATS ══ */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.stat{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);transition:border-color .15s,box-shadow .15s;position:relative;overflow:hidden}
+.stat:hover{border-color:var(--cobalt-md);box-shadow:var(--shadow-md)}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+.s-blue::after{background:var(--cobalt)}.s-green::after{background:var(--emerald)}.s-gold::after{background:var(--gold)}.s-navy::after{background:var(--navy)}.s-violet::after{background:var(--violet)}
+.stat-icon{font-size:1.5rem;flex-shrink:0}
+.stat-val{font-size:1.6rem;font-weight:800;color:var(--navy);font-family:var(--mono);line-height:1}
+.stat-lbl{font-size:.65rem;color:var(--ink3);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+
+/* ══ NOTICE / FORMULA ══ */
+.notice{background:#fffbeb;border:1.5px solid #fde68a;border-left:3px solid var(--gold);border-radius:var(--radius);padding:10px 16px;margin-bottom:14px;font-size:.75rem;color:#92400e;display:flex;align-items:center;gap:9px}
+.formula-box{background:var(--cobalt-lt);border:1.5px solid var(--cobalt-md);border-radius:var(--radius);padding:11px 18px;margin-bottom:18px;font-size:.74rem;color:#1e3a6e;line-height:1.8;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+
+/* ══ FILTER BAR ══ */
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.fpill{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 13px;border-radius:20px;border:1.5px solid var(--border);background:var(--white);font-size:.71rem;font-weight:700;color:var(--ink3);cursor:pointer;transition:all .15s;font-family:var(--font)}
+.fpill:hover{border-color:var(--cobalt-md);color:var(--cobalt);background:var(--cobalt-lt)}
+.fpill.active{border-color:var(--cobalt);color:var(--cobalt);background:var(--cobalt-lt)}
+
+/* ══ TABLE CARD ══ */
+.tbl-card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;box-shadow:var(--shadow-lg);margin-bottom:20px}
+.tbl-head{background:linear-gradient(90deg,var(--navy) 0%,var(--navy3) 100%);padding:13px 20px;display:flex;align-items:center;gap:10px}
+.tbl-head-title{font-size:.74rem;font-weight:700;color:rgba(255,255,255,.9);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em}
+.rec-badge{font-size:.62rem;font-weight:600;background:rgba(255,255,255,.1);color:rgba(255,255,255,.65);padding:3px 11px;border-radius:20px;font-family:var(--mono);border:1px solid rgba(255,255,255,.15)}
+.tbl-scroll{overflow-x:auto}
+
+/* ══ MAIN TABLE ══ */
+table.rpt{width:100%;border-collapse:collapse;font-size:.74rem;white-space:nowrap}
+
+table.rpt thead tr.hr1 th{background:#1e3162;color:rgba(255,255,255,.92);padding:9px 10px;font-size:.60rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;border-right:1px solid rgba(255,255,255,.10);text-align:center;vertical-align:middle}
+table.rpt thead tr.hr2 th{padding:7px 10px;font-size:.58rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;border-right:1px solid rgba(255,255,255,.12);text-align:center;vertical-align:middle;color:#fff}
+
+.hdr-info{background:#162550 !important}
+.hdr-pms{background:#065f46 !important}
+.hdr-ba{background:#1e3a8a !important}
+.hdr-wt{background:#78350f !important}
+.hdr-mc{background:#7c2d12 !important}
+.hdr-jmd{background:#701a75 !important}
+.hdr-fin{background:#1e3a6e !important}
+.hdr-misc{background:#1e3162 !important}
+
+table.rpt tbody tr{border-bottom:1px solid var(--border2);transition:background .12s}
+table.rpt tbody tr:last-child{border-bottom:none}
+table.rpt tbody tr:hover{background:#f5f8ff}
+table.rpt tbody tr.row-selected{background:#eff6ff!important;border-left:3px solid var(--sel-blue)}
+table.rpt tbody td{padding:9px 10px;color:var(--ink2);border-right:1px solid var(--border2);vertical-align:middle;text-align:center}
+table.rpt tbody td.td-left{text-align:left}
+table.rpt tbody td.mono{font-family:var(--mono);font-size:.70rem}
+table.rpt tbody td.chk-td{text-align:center;padding:9px 6px}
+.row-chk{width:15px;height:15px;accent-color:var(--sel-blue);cursor:pointer}
+
+td.pms-cell{background:var(--pms-bg) !important;color:#065f46;font-family:var(--mono);font-weight:600}
+td.pms-avg-cell{background:var(--pms-avg) !important;color:#065f46;font-family:var(--mono);font-weight:800;border:1.5px solid var(--pms-border) !important}
+td.ba-cell{background:var(--ba-bg) !important;color:#1e40af;font-family:var(--mono);font-weight:600}
+td.ba-avg-cell{background:var(--ba-avg) !important;color:#1e40af;font-family:var(--mono);font-weight:800;border:1.5px solid var(--ba-border) !important}
+td.wt-cell{background:var(--wt-bg) !important;color:#854d0e;font-family:var(--mono);font-weight:800;font-size:.80rem;border:2px solid var(--wt-border) !important}
+
+td.ic{padding:5px 7px;min-width:100px}
+.sal-inp{height:32px;width:100%;background:var(--cobalt-lt);border:1.5px solid var(--cobalt-md);border-radius:7px;padding:0 8px;font-family:var(--mono);font-size:.76rem;color:var(--ink);outline:none;transition:all .15s}
+.sal-inp:focus{border-color:var(--cobalt);background:var(--white);box-shadow:0 0 0 3px rgba(30,78,216,.1)}
+.sal-inp.last-inp{background:#f0fdf4;border-color:#a7f3d0}
+.sal-inp.last-inp:focus{border-color:var(--emerald);box-shadow:0 0 0 3px rgba(5,150,105,.1)}
+
+.mc-inp{height:32px;width:72px;background:var(--mc-bg);border:1.5px solid var(--mc-border);border-radius:7px;padding:0 6px;font-family:var(--mono);font-size:.80rem;color:#9a3412;font-weight:700;outline:none;text-align:center;transition:all .15s}
+.mc-inp:focus{border-color:#ea580c;background:#fff;box-shadow:0 0 0 3px rgba(234,88,12,.12)}
+.jmd-inp{height:32px;width:72px;background:var(--jmd-bg);border:1.5px solid var(--jmd-border);border-radius:7px;padding:0 6px;font-family:var(--mono);font-size:.80rem;color:#831843;font-weight:700;outline:none;text-align:center;transition:all .15s}
+.jmd-inp:focus{border-color:#db2777;background:#fff;box-shadow:0 0 0 3px rgba(219,39,119,.12)}
+
+td.cc{font-family:var(--mono);font-weight:700;font-size:.78rem;text-align:right}
+td.cc.incr{background:var(--cobalt-lt);color:var(--cobalt)}
+td.cc.rev{background:#f0fdf4;color:var(--emerald)}
+
+td.fin-rating{background:#1e3a6e !important;color:#f59e0b !important;font-family:var(--mono);font-weight:800;font-size:.84rem}
+td.fin-incr{background:#1e3a6e !important;color:#34d399 !important;font-family:var(--mono);font-weight:700}
+
+.rat-badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;font-weight:700;font-family:var(--mono);font-size:.78rem}
+.score-badge{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:20px;font-family:var(--mono);font-weight:700;font-size:.72rem;background:var(--cobalt-lt);color:var(--cobalt);border:1px solid var(--cobalt-md)}
+.ba-done{background:var(--emerald-lt);color:var(--emerald);border:1px solid #a7f3d0;border-radius:12px;padding:2px 9px;font-size:.60rem;font-weight:700;font-family:var(--mono)}
+.ba-pend{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:12px;padding:2px 9px;font-size:.60rem;font-weight:700;font-family:var(--mono)}
+
+td.sig{min-width:100px;padding:7px 10px;vertical-align:bottom}
+.sig-line{border-bottom:1.5px solid var(--ink3);height:26px;margin-bottom:3px;width:85px}
+.sig-lbl{font-size:.58rem;color:var(--ink4)}
+
+.empty td{padding:52px;text-align:center;color:var(--ink4)}
+.empty-icon{font-size:2.5rem;display:block;margin-bottom:14px;opacity:.3}
+
+tr.dg td{background:linear-gradient(90deg,var(--bg2),var(--white))!important;color:var(--navy)!important;font-weight:800!important;font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;border-top:2px solid var(--cobalt-md)!important;padding:7px 12px!important;border-left:3px solid var(--cobalt)!important}
+
+.rating-legend{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:18px 22px;margin-bottom:18px;box-shadow:var(--shadow)}
+.rating-legend-title{font-size:.62rem;font-weight:800;letter-spacing:.10em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px;border-left:3px solid var(--cobalt);padding-left:10px}
+
+.legend-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.legend-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:8px;font-size:.66rem;font-weight:700}
+
+.sig-footer{display:flex;gap:20px;margin-top:24px;padding-top:20px;border-top:1.5px solid var(--border);flex-wrap:wrap}
+.sig-block{flex:1;min-width:130px;text-align:center}
+.sig-block-line{height:1px;background:var(--ink3);margin-bottom:8px}
+.sig-block-name{font-size:.70rem;font-weight:700;color:var(--ink3);letter-spacing:.05em;text-transform:uppercase}
+.sig-block-date{font-size:.60rem;color:var(--ink4);margin-top:3px}
+
+.tbl-footer{background:var(--navy);padding:13px 20px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.tfl{font-size:.60rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.07em}
+.tfv{font-family:var(--mono);font-size:.90rem;font-weight:700;color:#fff}
+
+.avg-box{display:inline-flex;align-items:center;justify-content:center;padding:3px 10px;border-radius:8px;font-family:var(--mono);font-weight:800;font-size:.80rem}
+.avg-box-pms{background:var(--pms-avg);color:#065f46;border:1.5px solid var(--pms-border)}
+.avg-box-ba{background:var(--ba-avg);color:#1e40af;border:1.5px solid var(--ba-border)}
+.avg-box-wt{background:var(--wt-bg);color:#854d0e;border:2px solid var(--wt-border)}
+
+/* ══ PRINT STYLES ══ */
+@@media print{
+    body{background:#fff;font-size:10px}
+    .toolbar,.notice,.filter-bar,.sel-bar{display:none!important}
+    .page{padding:0;max-width:none}
+    .tbl-card{box-shadow:none!important;border:1px solid #ccc!important;overflow:visible!important}
+    .tbl-scroll{overflow:visible!important}
+    table.rpt{width:100%!important;table-layout:fixed!important;font-size:6.5px!important;white-space:normal!important;word-break:break-word}
+    table.rpt thead tr th{padding:4px!important;font-size:6px!important;white-space:normal!important}
+    table.rpt tbody td{padding:4px!important;font-size:6.5px!important;white-space:normal!important}
+    .mc-inp,.jmd-inp,.sal-inp{border:none!important;background:transparent!important;box-shadow:none!important;font-size:6px!important;padding:0!important}
+    .no-print{display:none!important}
+    .tbl-footer{display:none!important}
+    .chk-td,.chk-th{display:none!important}
+    /* Hide non-selected rows when printing selected */
+    .print-hidden{display:none!important}
+}
+@@page{size:landscape;margin:6mm}
+
+/* ── 2-row employee layout ── */
+table.rpt tbody tr.pms-tr td { border-bottom: 0 !important; }
+table.rpt tbody tr.ba-tr td  { border-bottom: 1px solid var(--border2); }
+table.rpt tbody tr.ba-tr:hover, table.rpt tbody tr.pms-tr:hover { background: #f5f8ff; }
+table.rpt tbody tr.ba-tr[style*="display: none"] { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ══ TOOLBAR ══ -->
+<div class="toolbar">
+    <div class="toolbar-logo">
+        <div class="logo-badge">VG</div>
+        <div>
+            <div class="toolbar-title">Vandana Global Limited — Annual Increment Report</div>
+            <div class="toolbar-sub">PMS &amp; Behavioural Audit — Annual Appraisal Cycle</div>
+        </div>
+    </div>
+    <div class="search-wrap no-print">
+        <input type="text" id="rptSearch" placeholder="🔍 Search employee, dept…" oninput="filterTable()"/>
+    </div>
+    <div class="toolbar-actions">
+        <button type="button" class="btn btn-close no-print" onclick="window.close()">✕ Close</button>
+        <button type="button" class="btn btn-excel no-print" id="toolbarExcelBtn" onclick="exportExcel(false)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Export All Excel
+        </button>
+        <button type="button" class="btn btn-print no-print" id="btnPrintAll" onclick="printReport(false)">🖨 Print All</button>
+        <button type="button" class="btn btn-print-sel no-print" id="btnPrintSel" onclick="printReport(true)">🖨 Print Selected</button>
+    </div>
+</div>
+
+<!-- ══ SELECTION CONTROL BAR ══ -->
+<div class="sel-bar no-print">
+    <label class="sel-chk-wrap">
+        <input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this.checked)" />
+        <span class="sel-chk-label">Select All</span>
+    </label>
+    <span class="sel-count-badge" id="selCountBadge">0 selected</span>
+    <div class="sel-divider"></div>
+    <button class="sel-action-btn sel-act-export" id="selExportBtn" onclick="exportExcel(true)" disabled>
+        📥 Export Selected
+    </button>
+    <button class="sel-action-btn sel-act-clear" onclick="clearSelection()">✕ Clear</button>
+    <div class="sel-divider"></div>
+    <div class="sel-bar-right" id="selBarInfo">
+        Showing <strong id="visCount">@Model.Count</strong> of <strong>@Model.Count</strong> employees
+    </div>
+</div>
+
+<div class="page">
+
+    <!-- ══ LETTERHEAD ══ -->
+    <div class="letterhead">
+        <div class="lh-badge">VG</div>
+        <div class="lh-text">
+            <div class="lh-company">Vandana Global Limited</div>
+            <div class="lh-sub">Performance Appraisal &amp; Salary Increment — Annual Cycle Report</div>
+        </div>
+        <div class="lh-right">
+            <div class="lh-doc-type">📊 Annual Increment Register</div>
+            <div class="lh-meta">
+                Generated: @DateTime.Now.ToString("dd-MMM-yyyy HH:mm") &nbsp;|&nbsp; Total Employees: @Model.Count
+                @if (activeVersion != null) {
+                    <br/>@:Rating Matrix: @activeVersion.VersionName &nbsp;|&nbsp; Eff: @activeVersion.EffectiveDate.ToString("dd-MMM-yyyy")
+                }
+                <br/>Financial Year: @(Model.FirstOrDefault()?.AppraisalYear)-@((Model.FirstOrDefault()?.AppraisalYear + 1) ?? DateTime.Now.Year + 1) &nbsp;|&nbsp; Effective: 01-Apr-@(Model.FirstOrDefault()?.AppraisalYear + 1 ?? DateTime.Now.Year + 1)
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ STAT CARDS ══ -->
+    <div class="stats">
+        <div class="stat s-blue">
+            <span class="stat-icon">👥</span>
+            <div><div class="stat-val">@Model.Count</div><div class="stat-lbl">Total Employees</div></div>
+        </div>
+        <div class="stat s-green">
+            <span class="stat-icon">✅</span>
+            <div><div class="stat-val">@Model.Count(r => r.BehaviouralCompleted)</div><div class="stat-lbl">BA Completed</div></div>
+        </div>
+        <div class="stat s-gold">
+            <span class="stat-icon">⭐</span>
+            <div>
+                <div class="stat-val">@(Model.Any() ? Model.GroupBy(r=>r.CalcRating).OrderByDescending(g=>g.Count()).First().Key.ToString() : "—")</div>
+                <div class="stat-lbl">Most Common Rating</div>
+            </div>
+        </div>
+        <div class="stat s-navy">
+            <span class="stat-icon">📈</span>
+            <div>
+                <div class="stat-val">@(Model.Any() ? Model.Where(r=>r.FinalIncrPct>0).DefaultIfEmpty().Average(r=>r?.FinalIncrPct ?? 0).ToString("0.##")+"%" : "—")</div>
+                <div class="stat-lbl">Avg Increment %</div>
+            </div>
+        </div>
+        <div class="stat s-violet">
+            <span class="stat-icon">🏢</span>
+            <div><div class="stat-val">@Model.Select(r=>r.Department).Distinct().Count()</div><div class="stat-lbl">Departments</div></div>
+        </div>
+    </div>
+
+    <!-- ══ LEGEND BAR ══ -->
+    <div class="legend-bar no-print">
+        <span class="legend-pill" style="background:var(--pms-avg);color:#065f46;border:1.5px solid var(--pms-border)">🟢 PMS Scores (Self/RM/HOD/UH)</span>
+        <span class="legend-pill" style="background:var(--ba-avg);color:#1e40af;border:1.5px solid var(--ba-border)">🔵 BA Scores (RM/HOD)</span>
+        <span class="legend-pill" style="background:var(--wt-bg);color:#854d0e;border:1.5px solid var(--wt-border)">🟡 Weighted Rating (PMS×80% + BA×20%)</span>
+        <span class="legend-pill" style="background:var(--mc-bg);color:#9a3412;border:1.5px solid var(--mc-border)">🟠 MC Rating (input)</span>
+        <span class="legend-pill" style="background:var(--jmd-bg);color:#831843;border:1.5px solid var(--jmd-border)">🟣 JMD Rating (input → Final)</span>
+    </div>
+
+    <!-- ══ NOTICE ══ -->
+    <div class="notice no-print">
+        ✏️ Enter <strong>Gross Salary</strong> and <strong>Last Increment</strong> in the editable cells. &nbsp;
+        Fill <strong>MC Rating</strong> and <strong>JMD Rating</strong> (1–5) — Final Increment % is calculated from JMD rating.
+        Use checkboxes to select employees before exporting or printing selected.
+    </div>
+
+
+    <!-- ══ FILTER BAR ══ -->
+    <div class="filter-bar no-print" id="filterBar">
+        <span style="font-size:.70rem;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em">Filter:</span>
+        <button class="fpill active" id="fpill-all" onclick="setFilter('all',this)">All Depts <span id="cnt-all">@Model.Count</span></button>
+        @foreach (var dept in Model.Select(r=>r.Department).Distinct().OrderBy(d=>d)) {
+            var dc = Model.Count(r=>r.Department==dept);
+            var dk = System.Text.RegularExpressions.Regex.Replace(dept ?? "unknown", @"[^a-zA-Z0-9]", "_");
+            <button class="fpill" id="fpill-@dk" onclick="setFilter('@dept',this)">@dept (@dc)</button>
+        }
+    </div>
+
+    <!-- ══ MAIN TABLE ══ -->
+    <div class="tbl-card">
+        <div class="tbl-head">
+            <span style="font-size:1rem">📋</span>
+            <span class="tbl-head-title">
+                Annual Increment Register — FY @(Model.FirstOrDefault()?.AppraisalYear)-@((Model.FirstOrDefault()?.AppraisalYear+1)%100)
+                (Effective 01-Apr-@(Model.FirstOrDefault()?.AppraisalYear+1 ?? DateTime.Now.Year+1))
+            </span>
+            <span class="rec-badge" id="tblBadge">@Model.Count employee(s)</span>
+        </div>
+        <div class="tbl-scroll">
+          <table class="rpt" id="mainTable">
+            <thead>
+                <!-- Row 1: Group headers -->
+                <tr class="hr1">
+                    <th class="chk-th hdr-info no-print" rowspan="3"></th>
+                    <th class="hdr-info" rowspan="3" style="width:36px">#</th>
+                    <th class="hdr-info" rowspan="3" style="min-width:88px">Emp Code</th>
+                    <th class="hdr-info" rowspan="3" style="min-width:155px">Employee Name</th>
+                    <th class="hdr-info" rowspan="3" style="min-width:120px">Department</th>
+                  <th class="hdr-info" rowspan="3" style="min-width:130px">Designation</th>
+<th class="hdr-info" rowspan="3" style="min-width:110px">Unit</th>
+<th class="hdr-info" rowspan="3" style="min-width:105px">Date of Joining</th>
+<!-- PMS group -->
+<th colspan="5" style="background:#1e3162;padding:9px 10px;font-size:.60rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.92);border-right:1px solid rgba(255,255,255,.10);text-align:center;vertical-align:middle">📊 PMS &amp; BA SCORES</th>
+                    <!-- Weighted -->
+                    <th class="hdr-wt" rowspan="3" style="min-width:95px">⚖️ Weighted<br/><span style="font-size:.52rem;opacity:.85">PMS×0.8+BA×0.2</span></th>
+                    <!-- MC -->
+                    <th class="hdr-mc" rowspan="3" style="min-width:95px">⚖️ MC Rating<br/><span style="font-size:.52rem;opacity:.85">Input 1–5</span></th>
+                    <!-- JMD -->
+                    <th class="hdr-jmd" rowspan="3" style="min-width:95px">👑 JMD Rating<br/><span style="font-size:.52rem;opacity:.85">Input 1–5</span></th>
+                    <!-- Final -->
+                    <th class="hdr-fin" rowspan="3" style="min-width:65px">Final<br/>Rating</th>
+                    <th class="hdr-fin" rowspan="3" style="min-width:72px">Incr %</th>
+                    <!-- Salary -->
+                    <th class="hdr-misc" rowspan="3" style="min-width:145px">Gross Salary (₹)</th>
+                    <th class="hdr-misc" rowspan="3" style="min-width:125px">Incr. Amount (₹)</th>
+                    <th class="hdr-misc" rowspan="3" style="min-width:132px">Revised Gross (₹)</th>
+                    <th class="hdr-misc" rowspan="3" style="min-width:130px">Last Increment</th>
+                    <th class="hdr-misc" rowspan="3" style="min-width:120px">JMD Signature</th>
+<th class="hdr-misc" rowspan="3" style="min-width:160px">JMD Remark</th>
+<th class="hdr-misc" rowspan="3" style="min-width:100px">Signature</th>
+                </tr>
+                <!-- Row 2: PMS / BA labels -->
+                <tr class="hr2">
+                    <th class="hdr-pms" colspan="5" style="background:#065f46 !important;font-size:.60rem;font-weight:700;color:#fff;padding:6px 8px;text-align:center;letter-spacing:.06em;text-transform:uppercase;border-right:1px solid rgba(255,255,255,.12)">🟢 PMS Score (BSC)</th>
+                </tr>
+                <!-- Row 3: Sub-headers -->
+                <tr class="hr2">
+                    <th class="hdr-pms" style="min-width:58px;font-size:.58rem">Self</th>
+                    <th class="hdr-pms" style="min-width:58px;font-size:.58rem">RM</th>
+                    <th class="hdr-pms" style="min-width:58px;font-size:.58rem">HOD</th>
+                    <th class="hdr-pms" style="min-width:58px;font-size:.58rem">UH</th>
+                    <th style="background:#047857 !important;min-width:68px;padding:6px 8px;font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;text-align:center;border-right:1px solid rgba(255,255,255,.12)">Avg ▣</th>
+                </tr>
+            </thead>
+            <tbody id="rptBody">
+                @if (!Model.Any()) {
+                    <tr class="empty">
+                      <td colspan="24">
+    <span class="empty-icon">📊</span>
+                            No employees with completed Annual appraisal found.
+                        </td>
+                    </tr>
+                } else {
+                    var byDept = Model.GroupBy(r=>r.Department??"—").OrderBy(g=>g.Key);
+                    int sno = 1;
+                    foreach (var dg in byDept) {
+                        <tr class="dg" data-dept="@dg.Key">
+                         <td colspan="24">🏢 @dg.Key &nbsp;·&nbsp; @dg.Count() employee(s)</td>
+                        </tr>
+                        foreach (var row in dg) {
+                            var gid    = $"gross_{row.MappingId}";
+                            var iid    = $"incr_{row.MappingId}";
+                            var rid    = $"rev_{row.MappingId}";
+                            var liid   = $"li_{row.MappingId}";
+                            var mcid   = $"mc_{row.MappingId}";
+                            var jmdid  = $"jmd_{row.MappingId}";
+                            var frateid   = $"frate_{row.MappingId}";
+                            var fincrpctid = $"fincrpct_{row.MappingId}";
+
+                            var savedMc  = row.McRating;
+                            var savedJmd = row.JmdRating;
+                            <!-- PMS ROW -->
+                            <tr class="dr pms-tr" data-id="@row.MappingId" data-dept="@dg.Key" data-name="@row.EmpName?.ToLower()" data-code="@row.EmpCode?.ToLower()" data-dlc="@dg.Key.ToLower()" style="border-bottom:0">
+                                <td class="chk-td no-print" rowspan="2">
+                                    <input type="checkbox" class="row-chk emp-chk" data-id="@row.MappingId" onchange="onRowChkChange()" />
+                                </td>
+                                <td class="mono" style="color:var(--ink4)" rowspan="2">@(sno++)</td>
+                                <td class="mono td-left" style="font-weight:600" rowspan="2">@row.EmpCode</td>
+                                <td class="td-left" rowspan="2">
+                                    <div style="font-weight:700;font-size:.78rem;color:var(--navy)">@row.EmpName</div>
+                                </td>
+                                <td class="td-left" rowspan="2">@row.Department</td>
+                               <td class="td-left" rowspan="2">@row.Designation</td>
+                                <td class="td-left" rowspan="2" style="font-size:.72rem;color:#475569">
+                                    @(string.IsNullOrWhiteSpace(row.UnitName) ? "—" : row.UnitName)
+                                </td>
+                                <td class="mono" rowspan="2" style="color:#475569;font-size:.70rem">
+                                    @(row.DateOfJoining.HasValue ? row.DateOfJoining.Value.ToString("dd-MMM-yy") : "—")
+                                </td>
+
+                                <!-- PMS Scores -->
+
+                                <!-- PMS Scores -->
+                                <td class="pms-cell" id="pms_self_@row.MappingId">—</td>
+                                <td class="pms-cell" id="pms_rm_@row.MappingId">—</td>
+                                <td class="pms-cell" id="pms_hod_@row.MappingId">—</td>
+                                <td class="pms-cell" id="pms_uh_@row.MappingId">—</td>
+                                <td class="pms-avg-cell" id="pms_avg_@row.MappingId">
+                                    <span class="avg-box avg-box-pms" id="pms_avg_box_@row.MappingId">—</span>
+                                </td>
+
+                                <!-- Weighted Rating — rowspan=2 -->
+                                <td class="wt-cell" id="wt_@row.MappingId" rowspan="2">
+                                    <span class="avg-box avg-box-wt" id="wt_box_@row.MappingId">@row.FinalScore.ToString("0.##")</span>
+                                </td>
+
+                                <!-- MC input — rowspan=2 -->
+                                <td class="ic" style="background:var(--mc-bg)" rowspan="2">
+                                    @if (savedMc.HasValue) {
+                                        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                                            <span style="font-family:var(--mono);font-size:.90rem;font-weight:800;
+                                                         color:#9a3412;background:#fff7ed;border:1.5px solid #fdba74;
+                                                         border-radius:7px;padding:4px 14px;display:inline-block">
+                                                @savedMc.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
+                                            </span>
+                                            <span style="font-size:.55rem;color:#c2410c;font-weight:700;
+                                                         letter-spacing:.06em;text-transform:uppercase">🔒 MC Rating</span>
+                                            <input type="hidden" id="mc_@row.MappingId" value="@savedMc.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" />
+                                        </div>
+                                    } else {
+                                        <span style="font-size:.70rem;color:#d1d5db;font-style:italic">Not set</span>
+                                        <input type="hidden" id="mc_@row.MappingId" value="" />
+                                    }
+                                </td>
+
+                                <!-- JMD input — rowspan=2 -->
+                                <td class="ic" style="background:var(--jmd-bg)" rowspan="2">
+                                    @if (savedJmd.HasValue) {
+                                        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                                            <span style="font-family:var(--mono);font-size:.90rem;font-weight:800;
+                                                         color:#831843;background:#fdf2f8;border:1.5px solid #f9a8d4;
+                                                         border-radius:7px;padding:4px 14px;display:inline-block">
+                                                @savedJmd.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
+                                            </span>
+                                            <span style="font-size:.55rem;color:#9d174d;font-weight:700;
+                                                         letter-spacing:.06em;text-transform:uppercase">🔒 JMD Rating</span>
+                                            <input type="hidden" id="jmd_@row.MappingId" value="@savedJmd.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" />
+                                        </div>
+                                    } else {
+                                        <span style="font-size:.70rem;color:#d1d5db;font-style:italic">Not set</span>
+                                        <input type="hidden" id="jmd_@row.MappingId" value="" />
+                                    }
+                                </td>
+
+                                <!-- Final Rating — rowspan=2 -->
+                                <td class="fin-rating" id="@frateid" rowspan="2">—</td>
+
+                                <!-- Final Increment % — rowspan=2 -->
+                                <td class="fin-incr" id="@fincrpctid" rowspan="2">—</td>
+
+                                <!-- Gross Salary input — rowspan=2 -->
+                               <!-- NEW -->
+<!-- Gross Salary — DISPLAY ONLY (auto-fetched, not editable) -->
+<td class="ic" rowspan="2">
+    <div id="@gid" class="sal-inp" data-id="@row.MappingId" data-empid="@row.EmpId"
+        style="display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+               font-size:.78rem;font-weight:700;color:var(--ink);background:var(--cobalt-lt);
+               border:1.5px solid var(--cobalt-md);border-radius:7px;height:32px;padding:0 8px;">
+        Loading…
+    </div>
+    <input type="hidden" id="@(gid)_val" value="" />
+    <div id="gross_src_@row.MappingId" style="font-size:.58rem;color:#94a3b8;margin-top:2px"></div>
+</td>
+                                <td class="cc incr" id="@iid" rowspan="2">—</td>
+                                <td class="cc rev" id="@rid" rowspan="2">—</td>
+                                <td class="ic" rowspan="2">
+                                    <input type="text" id="@liid" class="sal-inp last-inp" placeholder="e.g. ₹15,000"/>
+                                </td>
+
+                                <!-- JMD Remark — rowspan=2 -->
+                               <!-- JMD Signature — rowspan=2 -->
+                                <td class="sig" rowspan="2" style="min-width:120px">
+                                    <div class="sig-line"></div>
+                                    <div class="sig-lbl">JMD</div>
+                                </td>
+
+                                <!-- JMD Remark — rowspan=2 -->
+                                <td class="td-left" style="min-width:160px;max-width:200px" rowspan="2">
+                                    <div style="font-size:.70rem;color:var(--ink2);white-space:normal;line-height:1.5;word-break:break-word">
+                                        @(string.IsNullOrWhiteSpace(row.JmdRemark) ? "—" : row.JmdRemark)
+                                    </div>
+                                </td>
+
+                                <!-- Signature — rowspan=2 -->
+                                <td class="sig" rowspan="2">
+                                    <div class="sig-line"></div>
+                                    <div class="sig-lbl">Employee</div>
+                                </td>
+                            </tr>
+                            <!-- BA ROW -->
+                            <tr class="dr ba-tr" data-id="@row.MappingId" data-dept="@dg.Key"
+                                data-name="@row.EmpName?.ToLower()" data-code="@row.EmpCode?.ToLower()"
+                                data-dlc="@dg.Key.ToLower()">
+                                <!-- BA label in Self column -->
+                                <td style="background:#eff6ff;text-align:center;padding:4px 6px">
+                                    <span style="font-size:.56rem;font-weight:800;letter-spacing:.08em;
+                                        text-transform:uppercase;color:#1e40af;background:#dbeafe;
+                                        border:1px solid #93c5fd;border-radius:10px;padding:2px 8px">
+                                        🔵 BA
+                                    </span>
+                                </td>
+                                <!-- BA RM -->
+                                <td class="ba-cell" id="ba_rm_@row.MappingId">—</td>
+                                <!-- BA HOD -->
+                                <td class="ba-cell" id="ba_hod_@row.MappingId">—</td>
+                                <td style="background:#f1f5f9;text-align:center;color:#94a3b8;font-size:.65rem">
+                                    <span style="font-size:.55rem;color:#cbd5e1;font-style:italic">N/A<br/>BA only<br/>RM+HOD</span>
+                                </td>
+                                <!-- BA Avg -->
+                                <td class="ba-avg-cell" id="ba_avg_@row.MappingId">
+                                    <span class="avg-box avg-box-ba" id="ba_avg_box_@row.MappingId">
+                                        @(row.BehaviouralCompleted ? "Loading…" : "N/A")
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    }
+                }
+            </tbody>
+          </table>
+        </div>
+
+        @if (Model.Any()) {
+            <div class="tbl-footer">
+                <div class="tfl">Summary</div>
+                <div><div class="tfl">Employees</div><div class="tfv">@Model.Count</div></div>
+                <div><div class="tfl">Avg Score</div><div class="tfv" style="color:#f59e0b">@(Model.Any() ? Model.Average(r=>r.FinalScore).ToString("0.##") : "—")</div></div>
+                <div><div class="tfl">BA Done</div><div class="tfv" style="color:#34d399">@Model.Count(r=>r.BehaviouralCompleted)/@Model.Count</div></div>
+                <div style="margin-left:auto">
+                    <span class="tfl">Total Gross: </span>
+                    <span class="tfv" style="color:#a5b4fc" id="totGross">₹—</span>
+                    &nbsp;&nbsp;
+                    <span class="tfl">Total Increment: </span>
+                    <span class="tfv" style="color:#34d399" id="totIncr">₹—</span>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- ══ RATING LEGEND ══ -->
+    @if (activeVersion?.DetailRows?.Any() == true) {
+        <div class="rating-legend">
+            <div class="rating-legend-title">Rating Distribution Matrix — Active Version: @activeVersion.VersionName</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+                @foreach (var d in activeVersion.DetailRows.OrderByDescending(x=>x.Rating)) {
+                    <div style="background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--radius);padding:10px 16px;min-width:150px;flex:1">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                            <span style="width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--mono);font-size:.78rem;background:@RatingBg(d.Rating);color:@RatingTxt(d.Rating)">@d.Rating</span>
+                            <span style="font-weight:700;font-size:.75rem;color:var(--navy)">@d.RatingLabel</span>
+                        </div>
+                        <div style="font-size:.65rem;color:var(--ink3)">
+                            Hike: <strong style="color:@(d.HikeOverBasePercent>=0?"var(--emerald)":"var(--rose)")">@(d.HikeOverBasePercent>=0?"+":"")@d.HikeOverBasePercent.ToString("0.##")%</strong>
+                            &nbsp;|&nbsp; Dist: <strong style="color:var(--cobalt)">@d.DistributionPercent.ToString("0.##")%</strong>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- ══ AUTHORITY SIGNATURES ══ -->
+    <div class="sig-footer">
+        @foreach (var s in new[]{"HR Manager","Unit Head","JMD Approval","MD / Director"}) {
+            <div class="sig-block">
+                <div class="sig-block-line"></div>
+                <div class="sig-block-name">@s</div>
+                <div class="sig-block-date">Date: ____________</div>
+            </div>
+        }
+    </div>
+
+</div><!-- /.page -->
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   DATA — serialised from server
+   ═══════════════════════════════════════════════════════════════ */
+var _data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.Select(r => new {
+        id           = r.MappingId,
+        empId        = r.EmpId,
+        empCode      = r.EmpCode,
+        empName      = r.EmpName,
+        department   = r.Department,
+        designation  = r.Designation,
+        unitHead     = r.UnitName       ?? "",
+        unitHeadName = r.UnitHeadName   ?? "",
+        doj          = r.DateOfJoining.HasValue
+                           ? r.DateOfJoining.Value.ToString("dd-MMM-yyyy")
+                           : "—",
+        finalScore   = r.FinalScore,
+        calcRating   = r.CalcRating,
+        ratingLabel  = r.RatingLabel,
+        basePercent  = r.BasePercent,
+        hikeOverBase = r.HikeOverBase,
+        finalIncrPct = r.FinalIncrPct,
+        baCompleted  = r.BehaviouralCompleted,
+        jmdRemark    = r.JmdRemark ?? "",
+        mcRating     = (object)r.McRating,
+        jmdRating    = (object)r.JmdRating
+    })
+));
+
+/* Rating-version lookup table */
+var _ratingVersionRows = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    activeVersion?.DetailRows?.Select(d => new {
+        rating              = d.Rating,
+        ratingLabel         = d.RatingLabel,
+        hikeOverBasePercent = d.HikeOverBasePercent
+    }) ?? Enumerable.Empty<object>()
+));
+
+var _fyLabel    = '@(Model.FirstOrDefault()?.AppraisalYear)-@((Model.FirstOrDefault()?.AppraisalYear+1)%100)';
+var _effDate    = '01-Apr-@(Model.FirstOrDefault()?.AppraisalYear+1 ?? DateTime.Now.Year+1)';
+var _totalCount = _data.length;
+
+/* ═══════════════════════════════════════════════════════════════
+   PER-ROW RUNTIME STATE
+   ═══════════════════════════════════════════════════════════════ */
+var _rowState = {};
+_data.forEach(function (r) {
+    var mcEl  = document.getElementById('mc_'  + r.id);
+    var jmdEl = document.getElementById('jmd_' + r.id);
+
+    var savedMc  = (mcEl  && mcEl.value  !== '') ? parseFloat(mcEl.value)  : null;
+    var savedJmd = (jmdEl && jmdEl.value !== '') ? parseFloat(jmdEl.value) : null;
+
+    r.mcRating  = savedMc;
+    r.jmdRating = savedJmd;
+
+    _rowState[r.id] = {
+        pmsSelf : null, pmsRM : null, pmsHOD : null, pmsUH : null,
+        pmsAvg  : r.finalScore,
+        baRM    : null, baHOD : null, baAvg  : null,
+        wtRating     : r.finalScore,
+        mcRating     : savedMc,
+        jmdRating    : savedJmd,
+        finalRating  : null,
+        finalIncrPct : 0,
+        gross        : 0,
+        incrAmt      : 0,
+        revGross     : 0
+    };
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   DEBOUNCED SAVE
+   ═══════════════════════════════════════════════════════════════ */
+var _saveTimers = {};
+function scheduleSave(id) {
+    clearTimeout(_saveTimers[id]);
+    _saveTimers[id] = setTimeout(function () { persistMcJmd(id); }, 800);
+}
+function persistMcJmd(id) {
+    var state = _rowState[id];
+    if (!state) return;
+    if (state.mcRating === null && state.jmdRating === null) return;
+    var payload = { mappingId: id, mcRating: state.mcRating !== null ? state.mcRating : null, jmdRating: state.jmdRating !== null ? state.jmdRating : null };
+    fetch('/Pms/SaveMcJmdRatings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (!res.success) console.warn('[PMS Annual] SaveMcJmdRatings failed id=' + id, res.message);
+        })
+        .catch(function (err) { console.warn('[PMS Annual] SaveMcJmdRatings network error id=' + id, err); });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MATH HELPERS
+   ═══════════════════════════════════════════════════════════════ */
+function _clampRating(rawRating) {
+    if (rawRating === null || rawRating === undefined || isNaN(rawRating)) return null;
+    return Math.min(5, Math.max(1, Math.round(parseFloat(rawRating))));
+}
+function getHikeForRating(rawRating) {
+    var r = _clampRating(rawRating);
+    if (r === null || !_ratingVersionRows || !_ratingVersionRows.length) return 0;
+    var match = _ratingVersionRows.find(function (d) { return d.rating === r; });
+    return match ? match.hikeOverBasePercent : 0;
+}
+function computeIncrPct(rawRating, basePercent) {
+    if (!basePercent || basePercent <= 0) return 0;
+    var hike   = getHikeForRating(rawRating);
+    var result = basePercent * (1 + hike / 100);
+    return Math.round(result * 10000) / 10000;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SELECTION STATE
+   ═══════════════════════════════════════════════════════════════ */
+var _selectedIds = new Set();
+
+function onRowChkChange() {
+    _selectedIds.clear();
+    document.querySelectorAll('.emp-chk').forEach(function (c) {
+        var tr = c.closest('tr');
+        if (c.checked) { _selectedIds.add(parseInt(c.dataset.id)); tr.classList.add('row-selected'); }
+        else           { tr.classList.remove('row-selected'); }
+    });
+    updateSelectionUI();
+}
+
+function toggleSelectAll(checked) {
+    document.getElementById('selectAllChk').checked = checked;
+    _selectedIds.clear();
+    document.querySelectorAll('.emp-chk').forEach(function (c) {
+        var tr = c.closest('tr');
+        if (!tr || tr.style.display === 'none') return;
+        c.checked = checked;
+        if (checked) { _selectedIds.add(parseInt(c.dataset.id)); tr.classList.add('row-selected'); }
+        else          { tr.classList.remove('row-selected'); }
+    });
+    updateSelectionUI();
+}
+
+function clearSelection() { toggleSelectAll(false); }
+
+function updateSelectionUI() {
+    var count     = _selectedIds.size;
+    var badge     = document.getElementById('selCountBadge');
+    var exportBtn = document.getElementById('selExportBtn');
+    var printSelBtn = document.getElementById('btnPrintSel');
+    badge.textContent = count + ' selected';
+    badge.classList.toggle('visible', count > 0);
+    exportBtn.disabled = count === 0;
+    if (printSelBtn) printSelBtn.classList.toggle('visible', count > 0);
+
+    var visibleTotal = 0;
+    document.querySelectorAll('.emp-chk').forEach(function (c) {
+        if (c.closest('tr') && c.closest('tr').style.display !== 'none') visibleTotal++;
+    });
+    var selAllChk           = document.getElementById('selectAllChk');
+    selAllChk.indeterminate = count > 0 && count < visibleTotal;
+    selAllChk.checked       = count === visibleTotal && visibleTotal > 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRINT — supports printing selected rows only
+   ═══════════════════════════════════════════════════════════════ */
+function printReport(selectedOnly) {
+    if (selectedOnly && _selectedIds.size === 0) {
+        alert('Please select at least one employee to print.');
+        return;
+    }
+
+    // Collect which employee IDs to print
+    var printIds = selectedOnly ? new Set(_selectedIds) : null;
+
+    // Apply print-hidden class to rows that should NOT be printed
+    var allDrRows = document.querySelectorAll('tr.dr');
+    allDrRows.forEach(function (tr) {
+        var id = parseInt(tr.dataset.id);
+        if (printIds && !printIds.has(id)) {
+            tr.classList.add('print-hidden');
+        } else {
+            tr.classList.remove('print-hidden');
+        }
+    });
+
+    // Also hide dept group rows that have no visible employees
+    var dgRows = document.querySelectorAll('tr.dg');
+    dgRows.forEach(function (dg) {
+        var dept = dg.dataset.dept;
+        var hasVisible = false;
+        allDrRows.forEach(function (tr) {
+            if (tr.dataset.dept === dept && !tr.classList.contains('print-hidden')) {
+                hasVisible = true;
+            }
+        });
+        if (!hasVisible) {
+            dg.classList.add('print-hidden');
+        } else {
+            dg.classList.remove('print-hidden');
+        }
+    });
+
+    window.print();
+
+    // Restore after print
+    setTimeout(function () {
+        document.querySelectorAll('.print-hidden').forEach(function (el) {
+            el.classList.remove('print-hidden');
+        });
+    }, 1000);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CORE CALC: calcFinal(id, silent)
+   ═══════════════════════════════════════════════════════════════ */
+function calcFinal(id, silent) {
+    var mcEl  = document.getElementById('mc_'  + id);
+    var jmdEl = document.getElementById('jmd_' + id);
+    if (!mcEl || !jmdEl) return;
+
+    var mcVal  = mcEl.value  !== '' ? parseFloat(mcEl.value)  : null;
+    var jmdVal = jmdEl.value !== '' ? parseFloat(jmdEl.value) : null;
+
+    var state = _rowState[id];
+    if (!state) return;
+
+    state.mcRating  = mcVal;
+    state.jmdRating = jmdVal;
+
+    var rec = _data.find(function (r) { return r.id == id; });
+    if (!rec) return;
+
+    // ── JMD rating is mandatory. MC input alone must NEVER drive
+    //    Final Rating / Incr % / increment amounts. ──
+    if (jmdVal === null || isNaN(jmdVal)) {
+        state.finalRating  = null;
+        state.finalIncrPct = 0;
+
+        var frateEl = document.getElementById('frate_' + id);
+        if (frateEl) {
+            frateEl.textContent    = mcVal !== null ? '⏳ Awaiting JMD' : '—';
+            frateEl.style.fontSize = '.62rem';
+            frateEl.style.color    = '#c2410c';
+        }
+        var fincrEl = document.getElementById('fincrpct_' + id);
+        if (fincrEl) { fincrEl.textContent = '—'; fincrEl.style.color = ''; }
+
+        calcIncrement(id);
+        if (!silent) scheduleSave(id);
+        return;
+    }
+
+    var effectiveRating = jmdVal;
+    state.finalRating = effectiveRating;
+
+    var basePercent = rec.basePercent || 0;
+    var incrPct = 0;
+    if (basePercent > 0 && effectiveRating > 0) {
+        incrPct = computeIncrPct(effectiveRating, basePercent);
+    }
+    state.finalIncrPct = incrPct;
+
+    var frateEl = document.getElementById('frate_' + id);
+    if (frateEl) {
+        var cr = _clampRating(effectiveRating);
+        if (cr !== null) {
+            var ratingRow = _ratingVersionRows.find(function (d) { return d.rating === cr; });
+            var lbl = ratingRow ? ratingRow.ratingLabel : ('Rating ' + cr);
+            frateEl.textContent    = cr + ' – ' + lbl;
+            frateEl.style.fontSize = '.68rem';
+            frateEl.style.color    = '';
+        } else {
+            frateEl.textContent = '—';
+        }
+    }
+
+    var fincrEl = document.getElementById('fincrpct_' + id);
+    if (fincrEl) {
+        if (incrPct > 0) { fincrEl.textContent = incrPct.toFixed(4) + '%'; fincrEl.style.color = '#34d399'; }
+        else              { fincrEl.textContent = '—'; }
+    }
+
+    calcIncrement(id);
+    if (!silent) scheduleSave(id);
+}
+/* ═══════════════════════════════════════════════════════════════
+   SALARY CALC
+   ═══════════════════════════════════════════════════════════════ */
+function calcIncrement(id) {
+    var gValEl = document.getElementById('gross_' + id + '_val');
+    var iEl = document.getElementById('incr_'  + id);
+    var rEl = document.getElementById('rev_'   + id);
+    if (!gValEl || !iEl || !rEl) return;
+    var state = _rowState[id];
+    if (!state) return;
+
+    var gross = parseFloat(gValEl.value) || 0;
+    state.gross = gross;
+
+    // No increment can be finalised without a JMD rating.
+    if (state.finalRating == null) {
+        state.incrAmt  = 0;
+        state.revGross = 0;
+        iEl.textContent = '⏳ Awaiting JMD';
+        rEl.textContent = '⏳ Awaiting JMD';
+        updateTotals();
+        return;
+    }
+
+    var pct = state.finalIncrPct || 0;
+    var amt = (gross > 0 && pct > 0) ? Math.round(gross * pct / 100) : 0;
+    state.incrAmt  = amt;
+    state.revGross = gross + amt;
+    iEl.textContent = gross > 0 && amt > 0 ? '₹' + amt.toLocaleString('en-IN') : gross > 0 ? '₹0' : '—';
+    rEl.textContent = gross > 0 ? '₹' + (gross + amt).toLocaleString('en-IN') : '—';
+    updateTotals();
+}
+
+function updateTotals() {
+    var tg = 0, ti = 0, any = false;
+    _data.forEach(function (r) {
+        var s = _rowState[r.id];
+        if (s && s.gross > 0) { any = true; tg += s.gross; ti += s.incrAmt; }
+    });
+    var totG = document.getElementById('totGross');
+    var totI = document.getElementById('totIncr');
+    if (totG) totG.textContent = any ? '₹' + Math.round(tg).toLocaleString('en-IN') : '₹—';
+    if (totI) totI.textContent = any ? '₹' + Math.round(ti).toLocaleString('en-IN') : '₹—';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FILTER / SEARCH
+   ═══════════════════════════════════════════════════════════════ */
+var _deptFilter = 'all';
+var _search     = '';
+
+function setFilter(dept, btn) {
+    _deptFilter = dept;
+    document.querySelectorAll('.fpill').forEach(function (b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    applyFilters();
+}
+
+function filterTable() {
+    _search = (document.getElementById('rptSearch').value || '').toLowerCase().trim();
+    applyFilters();
+}
+
+function applyFilters() {
+    var rows = document.querySelectorAll('.dr');
+    var grps = document.querySelectorAll('.dg');
+    var vis  = 0;
+    rows.forEach(function (r) {
+        var dm = _deptFilter === 'all' || r.dataset.dept === _deptFilter;
+        var sm = !_search ||
+            (r.dataset.name || '').indexOf(_search) >= 0 ||
+            (r.dataset.code || '').indexOf(_search) >= 0 ||
+            (r.dataset.dlc  || '').indexOf(_search) >= 0;
+        r.style.display = (dm && sm) ? '' : 'none';
+        if (dm && sm) vis++;
+    });
+    grps.forEach(function (gh) {
+        var dept = gh.dataset.dept;
+        var hv   = false;
+        rows.forEach(function (r) {
+            if (r.dataset.dept === dept && r.style.display !== 'none') hv = true;
+        });
+        gh.style.display = hv ? '' : 'none';
+    });
+    var vc = document.getElementById('visCount'); if (vc) vc.textContent = vis;
+    var tb = document.getElementById('tblBadge'); if (tb) tb.textContent = vis + ' employee(s)';
+    updateSelectionUI();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ASYNC LOADERS
+   ═══════════════════════════════════════════════════════════════ */
+function loadPmsScores() {
+    _data.forEach(function (rec) {
+        fetch('/Pms/GetPmsScoresForAnnualReport?mappingId=' + rec.id)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.error) return;
+                var id    = rec.id;
+                var state = _rowState[id];
+                if (!state) return;
+
+                var pmsSelf = data.empScore != null ? Math.round(parseFloat(data.empScore) * 100) / 100 : null;
+                var pmsRM   = data.rmScore  != null ? Math.round(parseFloat(data.rmScore)  * 100) / 100 : null;
+                var pmsHOD  = data.hodScore != null ? Math.round(parseFloat(data.hodScore) * 100) / 100 : null;
+                var pmsUH   = data.uhScore  != null ? Math.round(parseFloat(data.uhScore)  * 100) / 100 : null;
+
+                var bscScore = data.bscScore != null
+                    ? Math.round(parseFloat(data.bscScore) * 100) / 100
+                    : rec.finalScore;
+
+                state.pmsSelf  = pmsSelf;
+                state.pmsRM    = pmsRM;
+                state.pmsHOD   = pmsHOD;
+                state.pmsUH    = pmsUH;
+                state.pmsAvg   = bscScore;
+                state.bscScore = bscScore;  // ← store authoritative BSC score
+
+                function setCell(elId, val) {
+                    var el = document.getElementById(elId);
+                    if (el) el.textContent = val != null ? val.toFixed(2) : '—';
+                }
+                setCell('pms_self_' + id, pmsSelf);
+                setCell('pms_rm_'   + id, pmsRM);
+                setCell('pms_hod_'  + id, pmsHOD);
+                setCell('pms_uh_'   + id, pmsUH);
+
+                // AVG ▣ box = server bscScore (normalized weighted sum)
+                var avgBox = document.getElementById('pms_avg_box_' + id);
+                if (avgBox) avgBox.textContent = bscScore.toFixed(2);
+
+                // Also update wt_box immediately with correct bscScore (before BA loads)
+                var wtBox = document.getElementById('wt_box_' + id);
+                if (wtBox) wtBox.textContent = bscScore.toFixed(2);
+
+                // ── FIXED: pass NO extra args — updateWeighted(id, baAvg)
+                //    baAvg comes from state (may be null if BA not loaded yet — that's correct)
+                updateWeighted(id, state.baAvg != null ? state.baAvg : null);
+            })
+            .catch(function () {});
+    });
+}
+function loadBaScores() {
+    _data.forEach(function (rec) {
+        fetch('/Pms/GetBaScoresForAnnualReport?mappingId=' + rec.id + '&empId=' + (rec.empId || 0))
+            .then(function (r) { return r.json(); })
+            .then(function (ba) {
+                var baRM  = ba.rmScore  != null ? Math.round(ba.rmScore  * 100) / 100 : null;
+                var baHOD = ba.hodScore != null ? Math.round(ba.hodScore * 100) / 100 : null;
+                var baAvg = null;
+                if      (baRM !== null && baHOD !== null) baAvg = Math.round((baRM + baHOD) / 2 * 100) / 100;
+                else if (baRM !== null)                   baAvg = baRM;
+                else if (baHOD !== null)                  baAvg = baHOD;
+
+                var state = _rowState[rec.id];
+                if (state) { state.baRM = baRM; state.baHOD = baHOD; state.baAvg = baAvg; }
+
+                function setBA(elId, val) {
+                    var el = document.getElementById(elId);
+                    if (el) el.textContent = val != null ? val.toFixed(2) : '—';
+                }
+                setBA('ba_rm_'  + rec.id, baRM);
+                setBA('ba_hod_' + rec.id, baHOD);
+                var baAvgBox = document.getElementById('ba_avg_box_' + rec.id);
+                if (baAvgBox) baAvgBox.textContent = baAvg != null ? baAvg.toFixed(2) : '—';
+
+                // CRITICAL: always use state.bscScore (server value) — never pmsAvg from _data
+                updateWeighted(rec.id, baAvg);
+            })
+            .catch(function () {});
+    });
+}
+function updateWeighted(id, baAvg) {
+    var state = _rowState[id];
+    if (!state) return;
+
+    var rec = _data.find(function (r) { return r.id == id; });
+    var bsc = 0;
+    if (state.bscScore != null && state.bscScore > 0) {
+        bsc = state.bscScore;
+    } else if (rec && rec.finalScore > 0 && rec.finalScore <= 5) {
+        bsc = rec.finalScore;
+    }
+
+    if (baAvg != null) state.baAvg = baAvg;
+
+    // ── CHANGE: wt = bscScore only, no BA mixing ──
+ var wt;
+if (state.baAvg != null && state.baAvg > 0) {
+    wt = Math.round((0.8 * bsc + 0.2 * state.baAvg) * 100) / 100;
+} else {
+    wt = Math.round(bsc * 100) / 100;
+}
+    state.wtRating = wt;
+
+    var wtBox = document.getElementById('wt_box_' + id);
+    if (wtBox) wtBox.textContent = wt > 0 ? wt.toFixed(2) : '—';
+
+    var avgBox = document.getElementById('pms_avg_box_' + id);
+    if (avgBox && bsc > 0) avgBox.textContent = bsc.toFixed(2);
+
+    calcFinal(id, true);
+}
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════ */
+(function () {
+    applyFilters();
+    _data.forEach(function (r) { calcFinal(r.id, true); });
+    loadPmsScores();
+    loadBaScores();
+    loadGrossSalaries();
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   EXCEL EXPORT — All or Selected
+   ═══════════════════════════════════════════════════════════════ */
+function exportExcel(selectedOnly) {
+    if (typeof XLSX === 'undefined') { alert('XLSX library not loaded.'); return; }
+
+    var rows = _data;
+    if (selectedOnly && _selectedIds.size > 0) {
+        rows = _data.filter(function (r) { return _selectedIds.has(r.id); });
+    }
+    if (!rows.length) { alert('No employees to export.'); return; }
+
+    var wb = XLSX.utils.book_new();
+
+    /* ── Colour palette ── */
+    var NAVY    = 'FF0F1C3F', NAVY2   = 'FF1A2D5A', COBALT = 'FF1E4ED8';
+    var WHITE   = 'FFFFFFFF', DEPTBG  = 'FF253D75';
+    var INKTEXT = 'FF0F172A';
+    var GREEN   = 'FF059669', LTGREEN = 'FFD1FAE5';
+    var LTBLUE  = 'FFBFDBFE', LTBLUE2 = 'FFE0EFFE', BG2 = 'FFE8EDF7';
+    var PMS_BG  = 'FFF0FDF4', PMS_HDR = 'FF065F46', PMS_AVG = 'FFD1FAE5';
+    var BA_BG   = 'FFEFF6FF', BA_HDR  = 'FF1E3A8A', BA_AVG  = 'FFDBEAFE';
+    var WT_BG   = 'FFFEF9C3', WT_HDR  = 'FF78350F';
+    var MC_BG   = 'FFFFF7ED', MC_HDR  = 'FF7C2D12';
+    var JMD_BG  = 'FFFDF2F8', JMD_HDR = 'FF701A75';
+    var FIN_BG  = 'FF1E3A6E';
+    var AMBER   = 'FFF59E0B', EMERALD2 = 'FF34D399', VIOLET = 'FFA5B4FC';
+    var GOLD    = 'FFFBBF24';
+
+    /* ── Shared border ── */
+    var thinBorder = {
+        top    : { style: 'thin',   color: { rgb: 'FFCBD5E1' } },
+        bottom : { style: 'thin',   color: { rgb: 'FFCBD5E1' } },
+        left   : { style: 'thin',   color: { rgb: 'FFCBD5E1' } },
+        right  : { style: 'thin',   color: { rgb: 'FFCBD5E1' } }
+    };
+    var medBorder = {
+        top    : { style: 'medium', color: { rgb: NAVY } },
+        bottom : { style: 'medium', color: { rgb: NAVY } },
+        left   : { style: 'thin',   color: { rgb: 'FF4472C4' } },
+        right  : { style: 'thin',   color: { rgb: 'FF4472C4' } }
+    };
+
+    function mkCell(v, bold, bg, color, sz, hz, wrap, numFmt) {
+        var t = (typeof v === 'number') ? 'n' : 's';
+        if (v === '' || v === null || v === undefined) { v = ''; t = 's'; }
+        return {
+            v: v, t: t,
+            s: {
+                font      : { name: 'Verdana', sz: sz || 9, bold: !!bold, color: { rgb: color || INKTEXT } },
+                fill      : { patternType: 'solid', fgColor: { rgb: bg || WHITE } },
+                alignment : { horizontal: hz || 'left', vertical: 'center', wrapText: !!wrap },
+                border    : thinBorder
+            },
+            z: numFmt || undefined
+        };
+    }
+
+    function blankCell(bg) {
+        return {
+            v: '', t: 's',
+            s: {
+                fill      : { patternType: 'solid', fgColor: { rgb: bg || WHITE } },
+                font      : { name: 'Verdana', sz: 9 },
+                alignment : {},
+                border    : thinBorder
+            }
+        };
+    }
+
+    function hdrCell(v, bg, color, sz, wrap) {
+        return {
+            v: v, t: 's',
+            s: {
+                font      : { name: 'Verdana', sz: sz || 9, bold: true, color: { rgb: color || WHITE } },
+                fill      : { patternType: 'solid', fgColor: { rgb: bg || COBALT } },
+                alignment : { horizontal: 'center', vertical: 'center', wrapText: !!wrap },
+                border    : medBorder
+            }
+        };
+    }
+
+    function setSpanRow(ws, rn, val, style, spanBg, colCount) {
+        ws[XLSX.utils.encode_cell({ r: rn, c: 0 })] = Object.assign({ v: val, t: 's' }, { s: style });
+        for (var ci = 1; ci <= (colCount || 22); ci++)
+            ws[XLSX.utils.encode_cell({ r: rn, c: ci })] = blankCell(spanBg);
+    }
+
+/* ════════════════════════════════════
+   SHEET 1: Annual Increment Register
+   ════════════════════════════════════ */
+var ws         = {};
+var R          = 0;
+var TOTAL_COLS = 25;   // was 22; +Unit +DOJ +JMD Signature = 25
+
+setSpanRow(ws, R, 'VANDANA GLOBAL LIMITED', {
+    font: { name: 'Verdana', sz: 20, bold: true, color: { rgb: WHITE } },
+    fill: { patternType: 'solid', fgColor: { rgb: NAVY } },
+    alignment: { horizontal: 'center', vertical: 'center' }, border: {}
+}, NAVY, TOTAL_COLS); R++;
+
+setSpanRow(ws, R, 'Performance Appraisal & Salary Increment — Annual Cycle Report', {
+    font: { name: 'Verdana', sz: 10, color: { rgb: 'FFB0C4DE' } },
+    fill: { patternType: 'solid', fgColor: { rgb: 'FF152040' } },
+    alignment: { horizontal: 'center', vertical: 'center' }, border: {}
+}, 'FF152040', TOTAL_COLS); R++;
+
+setSpanRow(ws, R,
+    'Financial Year: ' + _fyLabel + '   |   Effective Date: ' + _effDate +
+    '   |   Generated: ' + new Date().toLocaleDateString('en-IN') +
+    '   |   Total Employees: ' + rows.length, {
+    font: { name: 'Verdana', sz: 9, color: { rgb: 'FFD0D8E8' } },
+    fill: { patternType: 'solid', fgColor: { rgb: NAVY2 } },
+    alignment: { horizontal: 'center', vertical: 'center' }, border: {}
+}, NAVY2, TOTAL_COLS); R++;
+
+setSpanRow(ws, R, '', {
+    font: { name: 'Verdana', sz: 9 },
+    fill: { patternType: 'solid', fgColor: { rgb: BG2 } },
+    alignment: {}, border: {}
+}, BG2, TOTAL_COLS); R++;
+
+// ── Column layout (0-based) ──────────────────────────────────────────
+//  0  #                       7  PMS Self      12 BA-RM
+//  1  EMP Code                8  PMS RM        13 BA-HOD
+//  2  Employee Name           9  PMS HOD       14 BA Avg
+//  3  Department             10  PMS UH        15 Weighted
+//  4  Designation            11  PMS Avg       16 MC Rating
+//  5  Unit        ← NEW                        17 JMD Rating
+//  6  Date of Joining ← NEW                   18 Final Rating
+//                                              19 Incr %
+//                                              20 Gross Salary
+//                                              21 Incr Amount
+//                                              22 Revised Gross
+//                                              23 Last Increment
+//                                              24 JMD Signature ← NEW
+//                                              25 JMD Remark
+
+var groupHeaderRow = R;
+['#', 'EMP Code', 'Employee Name', 'Department', 'Designation', 'Unit', 'Date of Joining'].forEach(function (lbl, ci) {
+    ws[XLSX.utils.encode_cell({ r: R, c: ci })] = hdrCell(lbl, NAVY2, WHITE, 9, true);
+});
+ws[XLSX.utils.encode_cell({ r: R, c: 7  })] = hdrCell('PMS Score (BSC)',               PMS_HDR, WHITE, 9, false);
+for (var ci = 8;  ci <= 11; ci++) ws[XLSX.utils.encode_cell({ r: R, c: ci })] = blankCell(PMS_HDR);
+ws[XLSX.utils.encode_cell({ r: R, c: 12 })] = hdrCell('Behavioural Audit (BA)',        BA_HDR,  WHITE, 9, false);
+for (var ci = 13; ci <= 14; ci++) ws[XLSX.utils.encode_cell({ r: R, c: ci })] = blankCell(BA_HDR);
+ws[XLSX.utils.encode_cell({ r: R, c: 15 })] = hdrCell('Weighted\nPMS x0.8 + BA x0.2', WT_HDR,  WHITE, 9, true);
+ws[XLSX.utils.encode_cell({ r: R, c: 16 })] = hdrCell('MC Rating\n(Input 1-5)',        MC_HDR,  WHITE, 9, true);
+ws[XLSX.utils.encode_cell({ r: R, c: 17 })] = hdrCell('JMD Rating\n(Final Auth.)',     JMD_HDR, WHITE, 9, true);
+ws[XLSX.utils.encode_cell({ r: R, c: 18 })] = hdrCell('Final Rating\n(1-5)',           FIN_BG,  WHITE, 9, true);
+ws[XLSX.utils.encode_cell({ r: R, c: 19 })] = hdrCell('Incr %\nBase x (1+Hike/100)',  FIN_BG,  WHITE, 9, true);
+ws[XLSX.utils.encode_cell({ r: R, c: 20 })] = hdrCell('Gross Salary (Rs)',             NAVY2,   WHITE, 9, true);
+ws[XLSX.utils.encode_cell({ r: R, c: 21 })] = hdrCell('Incr Amount (Rs)',              NAVY2,   WHITE, 9, true);
+ws[XLSX.utils.encode_cell({ r: R, c: 22 })] = hdrCell('Revised Gross (Rs)',            NAVY2,   WHITE, 9, true);
+ws[XLSX.utils.encode_cell({ r: R, c: 23 })] = hdrCell('Last Increment',                NAVY2,   WHITE, 9, true);
+ws[XLSX.utils.encode_cell({ r: R, c: 24 })] = hdrCell('JMD Signature',                 NAVY2,   WHITE, 9, true);
+ws[XLSX.utils.encode_cell({ r: R, c: 25 })] = hdrCell('JMD Remark',                   NAVY2,   WHITE, 9, true);
+R++;
+
+var pmsHeaderRow = R;
+for (var ci = 0; ci <= 6;  ci++) ws[XLSX.utils.encode_cell({ r: R, c: ci })] = hdrCell('', NAVY2, WHITE, 8, false);
+ws[XLSX.utils.encode_cell({ r: R, c: 7  })] = hdrCell('PMS Score (BSC)', PMS_HDR, WHITE, 8, false);
+for (var ci = 8;  ci <= 11; ci++) ws[XLSX.utils.encode_cell({ r: R, c: ci })] = blankCell(PMS_HDR);
+ws[XLSX.utils.encode_cell({ r: R, c: 12 })] = hdrCell('BA Scores',       BA_HDR,  WHITE, 8, false);
+for (var ci = 13; ci <= 14; ci++) ws[XLSX.utils.encode_cell({ r: R, c: ci })] = blankCell(BA_HDR);
+for (var ci = 15; ci <= 25; ci++) ws[XLSX.utils.encode_cell({ r: R, c: ci })] = hdrCell('', NAVY2, WHITE, 8, false);
+R++;
+
+var subHeaderRow = R;
+for (var ci = 0; ci <= 6; ci++) ws[XLSX.utils.encode_cell({ r: R, c: ci })] = hdrCell('', NAVY2, WHITE, 8, false);
+[['Self', PMS_HDR], ['RM', PMS_HDR], ['HOD', PMS_HDR], ['UH', PMS_HDR], ['PMS Avg', 'FF047857']].forEach(function (h, idx) {
+    ws[XLSX.utils.encode_cell({ r: R, c: 7 + idx })] = hdrCell(h[0], h[1], WHITE, 8, false);
+});
+[['BA-RM', BA_HDR], ['BA-HOD', BA_HDR], ['BA Avg', BA_HDR]].forEach(function (h, idx) {
+    ws[XLSX.utils.encode_cell({ r: R, c: 12 + idx })] = hdrCell(h[0], h[1], WHITE, 8, false);
+});
+for (var ci = 15; ci <= 25; ci++) ws[XLSX.utils.encode_cell({ r: R, c: ci })] = hdrCell('', NAVY2, WHITE, 8, false);
+R++;
+
+var deptMap   = {};
+var deptOrder = [];
+rows.forEach(function (r) {
+    var d = r.department || '—';
+    if (!deptMap[d]) { deptMap[d] = []; deptOrder.push(d); }
+    deptMap[d].push(r);
+});
+
+var sno = 1, tg2 = 0, ti2 = 0;
+
+var allMerges = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: TOTAL_COLS } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: TOTAL_COLS } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: TOTAL_COLS } },
+    { s: { r: 3, c: 0 }, e: { r: 3, c: TOTAL_COLS } },
+    { s: { r: groupHeaderRow, c: 7  }, e: { r: groupHeaderRow, c: 11 } },
+    { s: { r: groupHeaderRow, c: 12 }, e: { r: groupHeaderRow, c: 14 } },
+    { s: { r: pmsHeaderRow,   c: 7  }, e: { r: pmsHeaderRow,   c: 11 } },
+    { s: { r: pmsHeaderRow,   c: 12 }, e: { r: pmsHeaderRow,   c: 14 } }
+];
+
+deptOrder.forEach(function (dept) {
+    setSpanRow(ws, R,
+        '  ' + dept.toUpperCase() + '   -   ' + deptMap[dept].length + ' EMPLOYEE(S)', {
+        font      : { name: 'Verdana', sz: 9, bold: true, color: { rgb: WHITE } },
+        fill      : { patternType: 'solid', fgColor: { rgb: DEPTBG } },
+        alignment : { horizontal: 'left', vertical: 'center' },
+        border    : { top: { style: 'medium', color: { rgb: COBALT } } }
+    }, DEPTBG, TOTAL_COLS);
+    allMerges.push({ s: { r: R, c: 0 }, e: { r: R, c: TOTAL_COLS } });
+    R++;
+
+    deptMap[dept].forEach(function (r, idx) {
+        var evenBg = idx % 2 === 0 ? WHITE : LTBLUE2;
+        var state  = _rowState[r.id] || {};
+
+  var gValEl = document.getElementById('gross_' + r.id + '_val');
+        var liEl   = document.getElementById('li_'    + r.id);
+        var g      = gValEl ? (parseFloat(gValEl.value) || '') : '';
+        var li     = liEl   ? (liEl.value                || '') : '';
+
+// JMD rating is mandatory for export too — MC alone never produces a figure.
+var hasJmd  = state.jmdRating != null;
+var incrPct = hasJmd
+    ? (state.finalIncrPct || computeIncrPct(state.jmdRating, r.basePercent))
+    : 0;
+
+var amt = (hasJmd && g !== '' && incrPct > 0) ? Math.round(parseFloat(g) * incrPct / 100) : '';
+var rev = (hasJmd && g !== '' && amt !== '')   ? (parseFloat(g) + amt)                      : '';
+if (g)   tg2 += parseFloat(g);
+if (amt) ti2 += amt;
+
+var clampedFR = hasJmd ? (_clampRating(state.jmdRating) || '') : '';
+
+        // Format DOJ as dd-MMM-yy if available
+ // DOJ already formatted server-side as "dd-MMM-yyyy" in _data.doj
+        var dojDisplay = r.doj || '';
+
+        var rowData = [
+            sno++,                                                           // 0  #
+            r.empCode       || '',                                           // 1  EMP Code
+            r.empName       || '',                                           // 2  Employee Name
+            r.department    || '',                                           // 3  Department
+            r.designation   || '',                                           // 4  Designation
+            r.unitName      || '',                                           // 5  Unit          ← NEW
+            dojDisplay,                                                      // 6  Date of Joining ← NEW
+            state.pmsSelf   != null ? state.pmsSelf   : '',                 // 7  PMS Self
+            state.pmsRM     != null ? state.pmsRM     : '',                 // 8  PMS RM
+            state.pmsHOD    != null ? state.pmsHOD    : '',                 // 9  PMS HOD
+            state.pmsUH     != null ? state.pmsUH     : '',                 // 10 PMS UH
+            state.pmsAvg    != null ? state.pmsAvg    : (r.finalScore || ''),// 11 PMS Avg
+            state.baRM      != null ? state.baRM      : '',                 // 12 BA-RM
+            state.baHOD     != null ? state.baHOD     : '',                 // 13 BA-HOD
+            state.baAvg     != null ? state.baAvg     : '',                 // 14 BA Avg
+            state.wtRating  != null ? state.wtRating  : (r.finalScore || ''),// 15 Weighted
+            state.mcRating  != null ? state.mcRating  : (r.mcRating  != null ? parseFloat(r.mcRating)  : ''), // 16 MC Rating
+            state.jmdRating != null ? state.jmdRating : (r.jmdRating != null ? parseFloat(r.jmdRating) : ''), // 17 JMD Rating
+            clampedFR,                                                       // 18 Final Rating
+            incrPct > 0 ? incrPct : '',                                     // 19 Incr %
+            g   !== '' ? parseFloat(g)  : '',                               // 20 Gross Salary
+            amt !== '' ? amt             : '',                               // 21 Incr Amount
+            rev !== '' ? parseFloat(rev) : '',                              // 22 Revised Gross
+            li,                                                              // 23 Last Increment
+            '',                                                              // 24 JMD Signature ← NEW (blank — for manual sign)
+            r.jmdRemark || '—'                                              // 25 JMD Remark
+        ];
+
+        rowData.forEach(function (v, ci) {
+            var bold = false, hz = 'left', bg = evenBg, color = INKTEXT, numFmt;
+            if (ci === 0)               { hz = 'center'; color = 'FF64748B'; }
+            if (ci === 1)               { bold = true; }
+            if (ci === 2)               { bold = true; color = NAVY; }
+            if (ci === 5)               { color = 'FF475569'; }                         // Unit
+            if (ci === 6)               { hz = 'center'; color = 'FF475569'; }         // DOJ
+            if (ci >= 7 && ci <= 10)    { bg = PMS_BG;  color = 'FF065F46'; hz = 'center'; }
+            if (ci === 11)              { bg = PMS_AVG; color = 'FF065F46'; bold = true; hz = 'center'; }
+            if (ci === 12 || ci === 13) { bg = BA_BG;   color = 'FF1E40AF'; hz = 'center'; }
+            if (ci === 14)              { bg = BA_AVG;  color = 'FF1E40AF'; bold = true; hz = 'center'; }
+            if (ci === 15)              { bg = WT_BG;   color = 'FF854D0E'; bold = true; hz = 'center'; }
+            if (ci === 16)              { bg = MC_BG;   color = 'FF7C2D12'; bold = true; hz = 'center'; }
+            if (ci === 17)              { bg = JMD_BG;  color = 'FF701A75'; bold = true; hz = 'center'; }
+            if (ci === 18)              { bg = FIN_BG;  color = 'FFF59E0B'; bold = true; hz = 'center'; }
+            if (ci === 19)              { bg = FIN_BG;  color = 'FF34D399'; bold = true; hz = 'center'; }
+            if (ci === 20)              { bg = LTBLUE2; color = NAVY;   bold = true; hz = 'right'; numFmt = '#,##0'; }
+            if (ci === 21)              { bg = LTBLUE;  color = COBALT; bold = true; hz = 'right'; numFmt = '#,##0'; }
+            if (ci === 22)              { bg = LTGREEN; color = GREEN;  bold = true; hz = 'right'; numFmt = '#,##0'; }
+            // 23 Last Increment, 24 JMD Signature, 25 JMD Remark — default styling
+            ws[XLSX.utils.encode_cell({ r: R, c: ci })] = mkCell(v, bold, bg, color, 9, hz, ci === 25, numFmt);
+        });
+        R++;
+    });
+});
+
+/* Grand total row */
+var totRow = new Array(TOTAL_COLS + 1).fill('');
+totRow[2]  = 'GRAND TOTAL';
+totRow[11] = rows.length + ' emp';
+totRow[20] = tg2 || '';
+totRow[21] = ti2 || '';
+totRow[22] = (tg2 + ti2) || '';
+totRow.forEach(function (v, ci) {
+    var color = WHITE, hz = 'left', numFmt;
+    if (ci === 20) { hz = 'right'; color = VIOLET;   numFmt = '#,##0'; }
+    if (ci === 21) { hz = 'right'; color = EMERALD2; numFmt = '#,##0'; }
+    if (ci === 22) { hz = 'right'; color = GOLD;     numFmt = '#,##0'; }
+    ws[XLSX.utils.encode_cell({ r: R, c: ci })] = {
+        v: v === '' ? '' : v, t: typeof v === 'number' ? 'n' : 's',
+        s: {
+            font      : { name: 'Verdana', sz: 9.5, bold: true, color: { rgb: color } },
+            fill      : { patternType: 'solid', fgColor: { rgb: NAVY } },
+            alignment : { horizontal: hz, vertical: 'center' },
+            border    : { top: { style: 'medium', color: { rgb: COBALT } } }
+        },
+        z: numFmt || undefined
+    };
+});
+allMerges.push({ s: { r: R, c: 2 }, e: { r: R, c: 14 } });
+
+ws['!ref']    = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: R, c: TOTAL_COLS } });
+ws['!merges'] = allMerges;
+ws['!cols']   = [
+    { wch: 5  }, { wch: 11 }, { wch: 26 }, { wch: 17 }, { wch: 20 },
+    { wch: 14 }, { wch: 13 },                              // Unit, DOJ ← NEW
+    { wch: 9  }, { wch: 9  }, { wch: 9  }, { wch: 9  }, { wch: 11 }, // PMS cols
+    { wch: 9  }, { wch: 9  }, { wch: 11 },                            // BA cols
+    { wch: 14 },
+    { wch: 10 }, { wch: 10 },
+    { wch: 12 }, { wch: 14 },
+    { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 },
+    { wch: 18 },                                           // JMD Signature ← NEW
+    { wch: 26 }                                            // JMD Remark
+];
+ws['!rows'] = [{ hpx: 38 }, { hpx: 20 }, { hpx: 18 }, { hpx: 8 }];
+ws['!rows'][groupHeaderRow] = { hpx: 26 };
+ws['!rows'][pmsHeaderRow]   = { hpx: 20 };
+ws['!rows'][subHeaderRow]   = { hpx: 22 };
+ws['!freeze'] = { xSplit: 7, ySplit: subHeaderRow + 1 };  // freeze through DOJ column
+
+XLSX.utils.book_append_sheet(wb, ws, 'Annual Increment Register');
+
+    /* ════════════════════════════════════
+       SHEET 2: Summary (fully styled)
+       ════════════════════════════════════ */
+    var sumWs = {};
+    var SR = 0;
+    var SUM_COLS = 3;
+
+    /* Helper for summary cells */
+    function sumCell(v, bold, bg, color, sz, hz) {
+        var t = (typeof v === 'number') ? 'n' : 's';
+        if (v === '' || v === null || v === undefined) { v = ''; t = 's'; }
+        return {
+            v: v, t: t,
+            s: {
+                font      : { name: 'Verdana', sz: sz || 10, bold: !!bold, color: { rgb: color || INKTEXT } },
+                fill      : { patternType: 'solid', fgColor: { rgb: bg || WHITE } },
+                alignment : { horizontal: hz || 'left', vertical: 'center', wrapText: false },
+                border    : thinBorder
+            }
+        };
+    }
+    function sumSpan(ws, rn, val, bg, color, sz, bold, cols) {
+        ws[XLSX.utils.encode_cell({ r: rn, c: 0 })] = sumCell(val, bold !== false, bg, color, sz, 'center');
+        for (var c = 1; c <= (cols || SUM_COLS); c++)
+            ws[XLSX.utils.encode_cell({ r: rn, c: c })] = blankCell(bg);
+    }
+    function sumBlankRow(ws, rn) {
+        for (var c = 0; c <= SUM_COLS; c++) ws[XLSX.utils.encode_cell({ r: rn, c: c })] = blankCell(WHITE);
+    }
+    function sumSectionHdr(ws, rn, label) {
+        ws[XLSX.utils.encode_cell({ r: rn, c: 0 })] = sumCell(label, true, NAVY2, WHITE, 10, 'left');
+        for (var c = 1; c <= SUM_COLS; c++) ws[XLSX.utils.encode_cell({ r: rn, c: c })] = blankCell(NAVY2);
+    }
+    function sumRow2(ws, rn, label, value, labelBg, valueBg, valueColor) {
+        ws[XLSX.utils.encode_cell({ r: rn, c: 0 })] = sumCell(label, true,  labelBg  || BG2,   INKTEXT,          10, 'left');
+        ws[XLSX.utils.encode_cell({ r: rn, c: 1 })] = sumCell(value, true,  valueBg  || WHITE, valueColor || GREEN, 10, 'center');
+        ws[XLSX.utils.encode_cell({ r: rn, c: 2 })] = sumCell('',    false, valueBg  || WHITE, INKTEXT,          10, 'left');
+        ws[XLSX.utils.encode_cell({ r: rn, c: 3 })] = sumCell('',    false, valueBg  || WHITE, INKTEXT,          10, 'left');
+    }
+
+    var sumMerges = [];
+
+    /* Title block */
+    sumSpan(sumWs, SR, 'VANDANA GLOBAL LIMITED', NAVY, WHITE, 16, true);
+    sumMerges.push({ s: { r: SR, c: 0 }, e: { r: SR, c: SUM_COLS } }); SR++;
+
+    sumSpan(sumWs, SR, 'ANNUAL INCREMENT SUMMARY REPORT', NAVY2, 'FFB0C4DE', 11, true);
+    sumMerges.push({ s: { r: SR, c: 0 }, e: { r: SR, c: SUM_COLS } }); SR++;
+
+    sumSpan(sumWs, SR, 'Financial Year: ' + _fyLabel + '  |  Effective: ' + _effDate + '  |  Generated: ' + new Date().toLocaleDateString('en-IN'), 'FF1E3162', 'FFD0D8E8', 9, false);
+    sumMerges.push({ s: { r: SR, c: 0 }, e: { r: SR, c: SUM_COLS } }); SR++;
+
+    sumBlankRow(sumWs, SR); SR++;
+
+    /* Report info rows */
+    sumSectionHdr(sumWs, SR, ' REPORT INFORMATION'); sumMerges.push({ s: { r: SR, c: 0 }, e: { r: SR, c: SUM_COLS } }); SR++;
+    sumRow2(sumWs, SR, 'Report Generated',  new Date().toLocaleDateString('en-IN'),  BG2, LTBLUE2, NAVY2); SR++;
+    sumRow2(sumWs, SR, 'Financial Year',    _fyLabel,   BG2, LTBLUE2, NAVY2); SR++;
+    sumRow2(sumWs, SR, 'Effective Date',    _effDate,   BG2, LTBLUE2, NAVY2); SR++;
+    sumBlankRow(sumWs, SR); SR++;
+
+    /* Employee metrics */
+    sumSectionHdr(sumWs, SR, ' EMPLOYEE METRICS'); sumMerges.push({ s: { r: SR, c: 0 }, e: { r: SR, c: SUM_COLS } }); SR++;
+    sumRow2(sumWs, SR, 'Total Employees',  rows.length,  BG2, PMS_BG,  'FF065F46'); SR++;
+    sumRow2(sumWs, SR, 'BA Completed',     rows.filter(function(r){return r.baCompleted;}).length,  BG2, PMS_AVG, 'FF065F46'); SR++;
+    sumRow2(sumWs, SR, 'BA Pending',       rows.filter(function(r){return !r.baCompleted;}).length, BG2, 'FFFFF7ED', 'FF9A3412'); SR++;
+    sumBlankRow(sumWs, SR); SR++;
+
+    /* Score & rating */
+    sumSectionHdr(sumWs, SR, ' SCORE & RATING'); sumMerges.push({ s: { r: SR, c: 0 }, e: { r: SR, c: SUM_COLS } }); SR++;
+    var avgScore = rows.length ? (rows.reduce(function(s,r){return s+r.finalScore;},0)/rows.length).toFixed(2) : '—';
+    sumRow2(sumWs, SR, 'Avg Final Score', avgScore, BG2, WT_BG, 'FF854D0E'); SR++;
+    var sumAvgRows = rows.filter(function(r){ return (_rowState[r.id]||{}).finalIncrPct > 0; });
+    var avgIncrPct = sumAvgRows.length
+        ? (sumAvgRows.reduce(function(s,r){return s+((_rowState[r.id]||{}).finalIncrPct||0);},0)/sumAvgRows.length).toFixed(4)+'%'
+        : '—';
+    sumRow2(sumWs, SR, 'Avg Increment %', avgIncrPct, BG2, WT_BG, 'FF854D0E'); SR++;
+    sumBlankRow(sumWs, SR); SR++;
+
+    /* Rating distribution */
+    sumSectionHdr(sumWs, SR, ' RATING DISTRIBUTION'); sumMerges.push({ s: { r: SR, c: 0 }, e: { r: SR, c: SUM_COLS } }); SR++;
+
+    var ratingDefs = [
+        { r: 5, lbl: 'Outstanding',    bg: 'FFFEF3C7', color: 'FF92400E' },
+        { r: 4, lbl: 'Exceeds Exp.',   bg: 'FFEFF4FF', color: 'FF1E4ED8' },
+        { r: 3, lbl: 'Meets Exp.',     bg: 'FFF1F4F9', color: 'FF334155' },
+        { r: 2, lbl: 'Below Exp.',     bg: 'FFFFF1F2', color: 'FFE11D48' },
+        { r: 1, lbl: 'Poor',           bg: 'FFFFF1F2', color: 'FFBE123C' }
+    ];
+    ratingDefs.forEach(function(rd) {
+        var cnt = rows.filter(function(r){ return r.calcRating === rd.r; }).length;
+        sumWs[XLSX.utils.encode_cell({ r: SR, c: 0 })] = sumCell('Rating ' + rd.r + ' — ' + rd.lbl, true, rd.bg, rd.color, 10, 'left');
+        sumWs[XLSX.utils.encode_cell({ r: SR, c: 1 })] = sumCell(cnt, true, rd.bg, rd.color, 11, 'center');
+        sumWs[XLSX.utils.encode_cell({ r: SR, c: 2 })] = sumCell(rows.length > 0 ? (cnt/rows.length*100).toFixed(1)+'%' : '0%', false, rd.bg, rd.color, 10, 'center');
+        sumWs[XLSX.utils.encode_cell({ r: SR, c: 3 })] = sumCell('', false, rd.bg, rd.color, 10, 'left');
+        SR++;
+    });
+    sumBlankRow(sumWs, SR); SR++;
+
+    /* Salary totals */
+    sumSectionHdr(sumWs, SR, ' SALARY TOTALS'); sumMerges.push({ s: { r: SR, c: 0 }, e: { r: SR, c: SUM_COLS } }); SR++;
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 0 })] = sumCell('Total Gross Salary',    true,  BG2,    INKTEXT, 10, 'left');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 1 })] = sumCell(tg2 || 0, true, LTBLUE2, NAVY2,   11, 'right');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 2 })] = sumCell('', false, LTBLUE2, INKTEXT, 10, 'left');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 3 })] = sumCell('', false, LTBLUE2, INKTEXT, 10, 'left');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 1 })].z = '#,##0'; SR++;
+
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 0 })] = sumCell('Total Increment Amount', true,  BG2,    INKTEXT, 10, 'left');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 1 })] = sumCell(ti2 || 0, true, LTGREEN, GREEN,   11, 'right');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 2 })] = sumCell('', false, LTGREEN, INKTEXT, 10, 'left');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 3 })] = sumCell('', false, LTGREEN, INKTEXT, 10, 'left');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 1 })].z = '#,##0'; SR++;
+
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 0 })] = sumCell('Total Revised Gross',   true,  BG2,    INKTEXT, 10, 'left');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 1 })] = sumCell((tg2+ti2)||0, true, 'FFFEF9C3', 'FF854D0E', 11, 'right');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 2 })] = sumCell('', false, 'FFFEF9C3', INKTEXT, 10, 'left');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 3 })] = sumCell('', false, 'FFFEF9C3', INKTEXT, 10, 'left');
+    sumWs[XLSX.utils.encode_cell({ r: SR, c: 1 })].z = '#,##0'; SR++;
+
+    sumWs['!ref']    = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: SR, c: SUM_COLS } });
+    sumWs['!merges'] = sumMerges;
+    sumWs['!cols']   = [{ wch: 30 }, { wch: 20 }, { wch: 12 }, { wch: 12 }];
+    sumWs['!rows']   = [{ hpx: 36 }, { hpx: 22 }, { hpx: 18 }, { hpx: 8 }];
+
+    XLSX.utils.book_append_sheet(wb, sumWs, 'Summary');
+
+    /* ════════════════════════════════════
+       SHEET 3: Dept Summary (fully styled)
+       ════════════════════════════════════ */
+    var deptWs = {};
+    var DR = 0;
+    var DEPT_COLS = 5;
+
+    function deptCell(v, bold, bg, color, sz, hz, numFmt) {
+        var t = (typeof v === 'number') ? 'n' : 's';
+        if (v === '' || v === null || v === undefined) { v = ''; t = 's'; }
+        return {
+            v: v, t: t,
+            s: {
+                font      : { name: 'Verdana', sz: sz || 10, bold: !!bold, color: { rgb: color || INKTEXT } },
+                fill      : { patternType: 'solid', fgColor: { rgb: bg || WHITE } },
+                alignment : { horizontal: hz || 'left', vertical: 'center', wrapText: false },
+                border    : thinBorder
+            },
+            z: numFmt || undefined
+        };
+    }
+
+    var deptMerges = [];
+
+    /* Title */
+    for (var c = 0; c <= DEPT_COLS; c++) deptWs[XLSX.utils.encode_cell({ r: DR, c: c })] = deptCell(c===0 ? 'VANDANA GLOBAL LIMITED — DEPARTMENT WISE SUMMARY' : '', true, NAVY, WHITE, 14, 'center');
+    deptMerges.push({ s: { r: DR, c: 0 }, e: { r: DR, c: DEPT_COLS } }); DR++;
+    for (var c = 0; c <= DEPT_COLS; c++) deptWs[XLSX.utils.encode_cell({ r: DR, c: c })] = deptCell(c===0 ? 'Financial Year: ' + _fyLabel + '  |  Effective: ' + _effDate : '', false, NAVY2, 'FFB0C4DE', 9, 'center');
+    deptMerges.push({ s: { r: DR, c: 0 }, e: { r: DR, c: DEPT_COLS } }); DR++;
+    for (var c = 0; c <= DEPT_COLS; c++) deptWs[XLSX.utils.encode_cell({ r: DR, c: c })] = deptCell('', false, BG2, INKTEXT, 8, 'left');
+    deptMerges.push({ s: { r: DR, c: 0 }, e: { r: DR, c: DEPT_COLS } }); DR++;
+
+    /* Column headers */
+    var deptHdrs = ['Department', 'Employees', 'Avg PMS Score', 'Avg Incr %', 'BA Done', 'BA Pending'];
+    var deptHdrBgs = [NAVY2, COBALT, PMS_HDR, WT_HDR, 'FF065F46', 'FF9A3412'];
+    deptHdrs.forEach(function(h, ci) {
+        deptWs[XLSX.utils.encode_cell({ r: DR, c: ci })] = deptCell(h, true, deptHdrBgs[ci], WHITE, 10, 'center');
+    });
+    DR++;
+
+    /* Data rows */
+    deptOrder.forEach(function(dept, idx) {
+        var dr2 = deptMap[dept];
+        var ds = dr2.reduce(function(s,r){return s+r.finalScore;},0) / dr2.length;
+        var da = dr2.filter(function(r){ return (_rowState[r.id]||{}).finalIncrPct > 0; });
+        var dp = da.length ? da.reduce(function(s,r){return s+((_rowState[r.id]||{}).finalIncrPct||0);},0)/da.length : 0;
+        var baDone    = dr2.filter(function(r){return  r.baCompleted;}).length;
+        var baPending = dr2.filter(function(r){return !r.baCompleted;}).length;
+        var rowBg = idx % 2 === 0 ? WHITE : BG2;
+
+        deptWs[XLSX.utils.encode_cell({ r: DR, c: 0 })] = deptCell(dept,                          true,  rowBg,   NAVY,    10, 'left');
+        deptWs[XLSX.utils.encode_cell({ r: DR, c: 1 })] = deptCell(dr2.length,                    true,  LTBLUE2, NAVY2,   11, 'center');
+        deptWs[XLSX.utils.encode_cell({ r: DR, c: 2 })] = deptCell(parseFloat(ds.toFixed(2)),     true,  PMS_BG,  'FF065F46', 10, 'center');
+        deptWs[XLSX.utils.encode_cell({ r: DR, c: 3 })] = deptCell(dp ? parseFloat(dp.toFixed(4)) : 0, true, WT_BG, 'FF854D0E', 10, 'center');
+        deptWs[XLSX.utils.encode_cell({ r: DR, c: 4 })] = deptCell(baDone,                        true,  LTGREEN, 'FF065F46', 10, 'center');
+        deptWs[XLSX.utils.encode_cell({ r: DR, c: 5 })] = deptCell(baPending,                     true,  baPending>0?'FFFFF7ED':LTGREEN, baPending>0?'FF9A3412':'FF065F46', 10, 'center');
+        DR++;
+    });
+
+    /* Totals row */
+    var totalEmps = rows.length;
+    var totalBaDone = rows.filter(function(r){return r.baCompleted;}).length;
+    deptWs[XLSX.utils.encode_cell({ r: DR, c: 0 })] = deptCell('GRAND TOTAL',          true, NAVY, WHITE,     10, 'left');
+    deptWs[XLSX.utils.encode_cell({ r: DR, c: 1 })] = deptCell(totalEmps,              true, NAVY, AMBER,     11, 'center');
+    deptWs[XLSX.utils.encode_cell({ r: DR, c: 2 })] = deptCell('',                     false,NAVY, WHITE,     10, 'center');
+    deptWs[XLSX.utils.encode_cell({ r: DR, c: 3 })] = deptCell('',                     false,NAVY, WHITE,     10, 'center');
+    deptWs[XLSX.utils.encode_cell({ r: DR, c: 4 })] = deptCell(totalBaDone,            true, NAVY, EMERALD2,  11, 'center');
+    deptWs[XLSX.utils.encode_cell({ r: DR, c: 5 })] = deptCell(totalEmps-totalBaDone,  true, NAVY, 'FFFB923C', 11, 'center');
+
+    deptWs['!ref']    = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: DR, c: DEPT_COLS } });
+    deptWs['!merges'] = deptMerges;
+    deptWs['!cols']   = [{ wch: 28 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 12 }];
+    deptWs['!rows']   = [{ hpx: 32 }, { hpx: 18 }, { hpx: 8 }];
+
+    XLSX.utils.book_append_sheet(wb, deptWs, 'Dept Summary');
+
+    /* ── Write file ── */
+    var d   = new Date();
+    var sfx = selectedOnly ? '_Selected' : '_All';
+    var fn  = 'VGL_AnnualIncrement_FY' + _fyLabel.replace('-', '_') + sfx + '_'
+            + d.getFullYear()
+            + ('0' + (d.getMonth() + 1)).slice(-2)
+            + ('0' + d.getDate()).slice(-2) + '.xlsx';
+    XLSX.writeFile(wb, fn);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTO-FETCH GROSS SALARIES
+   ═══════════════════════════════════════════════════════════════ */
+function loadGrossSalaries() {
+    _data.forEach(function (rec) {
+        var grossEl    = document.getElementById('gross_' + rec.id);
+        var grossValEl = document.getElementById('gross_' + rec.id + '_val');
+        if (!grossEl || !grossValEl) return;
+
+        fetch('/Pms/GetEmployeeGrossSalary?empId=' + rec.empId)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success && data.gross > 0) {
+                    grossValEl.value     = data.gross;
+                    grossEl.textContent  = '₹' + Math.round(data.gross).toLocaleString('en-IN');
+
+                    // Show source label
+                    var srcEl = document.getElementById('gross_src_' + rec.id);
+                    if (srcEl) {
+                        srcEl.textContent = data.source === 'increment'
+                            ? '✓ From last increment'
+                            : '✓ From salary record';
+                        srcEl.style.color = data.source === 'increment' ? '#059669' : '#1e4ed8';
+                    }
+
+                    calcIncrement(rec.id);
+                } else {
+                    grossEl.textContent = '—';
+                    grossEl.style.color = '#94a3b8';
+                    grossEl.style.fontStyle = 'italic';
+                }
+            })
+            .catch(function () {
+                grossEl.textContent = '—';
+                grossEl.style.color = '#94a3b8';
+                grossEl.style.fontStyle = 'italic';
+            });
+    });
+}
+</script>
+</body>
+</html>

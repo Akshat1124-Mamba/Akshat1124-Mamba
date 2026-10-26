@@ -1,0 +1,916 @@
+﻿@* Views/PMSBlueCollar/HODDashboard.cshtml *@
+@model List<vgl.Models.PMSBCHODDashboardModel>
+@{
+    ViewData["Title"] = "PMS Blue Collar — HOD Dashboard";
+    Layout = null;
+    string hodId = ViewBag.HODID ?? "";
+    string hodName = ViewBag.HODName ?? "Head of Department";
+
+    int total = Model.Count;
+    int pending = Model.Count(m => m.HODStatus == "Pending");
+    int submitted = Model.Count(m => m.HODStatus == "Submitted");
+    int completed = Model.Count(m => m.FinalStatus == "Completed");
+    int rmDone = Model.Count(m => m.RMStatus == "Done");
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+    <style>
+            :root {
+                --navy: #0f1c3f;
+                --navy2: #1a2d5a;
+                --navy3: #253d75;
+                --cobalt: #1e4ed8;
+                --cobalt-lt: #eff4ff;
+                --cobalt-md: #c7d7fd;
+                --indigo: #4f46e5;
+                --sky: #0ea5e9;
+                --teal: #0d9488;
+                --teal-lt: #f0fdfa;
+                --gold: #d97706;
+                --gold-lt: #fef3c7;
+                --emerald: #059669;
+                --emerald-lt: #d1fae5;
+                --rose: #e11d48;
+                --rose-lt: #fff1f2;
+                --amber: #b45309;
+                --violet: #7c3aed;
+                --violet-lt: #ede9fe;
+                --bg: #f8f9fc;
+                --bg2: #f1f4f9;
+                --white: #ffffff;
+                --border: #dde2ed;
+                --border2: #eaeef7;
+                --shadow-sm: 0 1px 3px rgba(15,28,63,.06), 0 1px 2px rgba(15,28,63,.04);
+                --shadow: 0 4px 16px rgba(15,28,63,.08), 0 1px 4px rgba(15,28,63,.05);
+                --shadow-md: 0 8px 32px rgba(15,28,63,.12), 0 2px 8px rgba(15,28,63,.06);
+                --shadow-lg: 0 20px 60px rgba(15,28,63,.18), 0 4px 16px rgba(15,28,63,.08);
+                --ink: #0f172a;
+                --ink2: #334155;
+                --ink3: #64748b;
+                --ink4: #94a3b8;
+                --font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+                --mono: 'JetBrains Mono', 'Courier New', monospace;
+                --serif: 'Instrument Serif', Georgia, serif;
+                --radius: 10px;
+                --radius-lg: 16px;
+                --radius-xl: 20px;
+                --tr: .18s cubic-bezier(.4,0,.2,1);
+            }
+
+            body {
+                font-family: var(--font);
+                background: var(--bg);
+                color: var(--ink);
+                font-size: 13px;
+                min-height: 100vh;
+                overflow-x: hidden;
+                -webkit-font-smoothing: antialiased;
+                line-height: 1.5;
+            }
+
+            a {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            /* ── HEADER ── */
+            .site-header {
+                position: sticky;
+                top: 0;
+                z-index: 500;
+                background: var(--navy);
+                padding: 0 32px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 62px;
+                box-shadow: 0 2px 16px rgba(15,28,63,.25);
+                gap: 16px;
+            }
+
+            .brand {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-shrink: 0;
+            }
+
+            .brand-icon {
+                width: 36px;
+                height: 36px;
+                background: linear-gradient(135deg, #3b82f6 0%, var(--indigo) 100%);
+                border-radius: 9px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: var(--serif);
+                font-size: 17px;
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(79,70,229,.4);
+                flex-shrink: 0;
+            }
+
+            .brand-name {
+                font-size: .88rem;
+                font-weight: 600;
+                color: #fff;
+                letter-spacing: .01em;
+                line-height: 1.2;
+            }
+
+            .brand-sub {
+                font-size: .63rem;
+                color: rgba(255,255,255,.45);
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                display: block;
+                margin-top: 1px;
+            }
+
+            /* HOD badge — violet tint matching Index's violet colour */
+            .hod-badge {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                background: rgba(124,58,237,.18);
+                border: 1px solid rgba(124,58,237,.35);
+                border-radius: 20px;
+                padding: 5px 14px;
+                font-size: .70rem;
+                color: #c4b5fd;
+                font-family: var(--mono);
+                letter-spacing: .03em;
+                font-weight: 600;
+            }
+
+            /* ── PAGE WRAP ── */
+            .page-wrap {
+                max-width: 1500px;
+                margin: 0 auto;
+                padding: 32px 32px 80px;
+            }
+
+            /* ── BREADCRUMB ── */
+            .breadcrumb {
+                font-size: 11px;
+                color: var(--ink4);
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+                .breadcrumb a {
+                    color: var(--cobalt);
+                }
+
+            /* ── PAGE HEADER ── */
+            .page-header-top {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-bottom: 24px;
+            }
+
+            .page-title {
+                font-family: var(--serif);
+                font-size: 1.9rem;
+                color: var(--navy);
+                font-style: italic;
+                line-height: 1.2;
+            }
+
+                .page-title em {
+                    color: var(--violet);
+                    font-style: normal;
+                }
+
+            .page-subtitle {
+                font-size: 12.5px;
+                color: var(--ink3);
+                margin-top: 5px;
+                line-height: 1.6;
+            }
+
+            /* ── STAT CARDS ── */
+            .stat-row {
+                display: grid;
+                grid-template-columns: repeat(5, 1fr);
+                gap: 14px;
+                margin-bottom: 24px;
+            }
+
+            .stat-card {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: var(--radius-lg);
+                padding: 18px 22px;
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                box-shadow: var(--shadow-sm);
+                transition: border-color var(--tr), box-shadow var(--tr);
+            }
+
+                .stat-card:hover {
+                    border-color: var(--cobalt-md);
+                    box-shadow: var(--shadow);
+                }
+
+                /* Stat card accent top-border variants */
+                .stat-card.accent-cobalt {
+                    border-top: 3px solid var(--cobalt);
+                }
+
+                .stat-card.accent-violet {
+                    border-top: 3px solid var(--violet);
+                }
+
+                .stat-card.accent-gold {
+                    border-top: 3px solid var(--gold);
+                }
+
+                .stat-card.accent-emerald {
+                    border-top: 3px solid var(--emerald);
+                }
+
+                .stat-card.accent-sky {
+                    border-top: 3px solid var(--sky);
+                }
+
+            .stat-icon {
+                width: 44px;
+                height: 44px;
+                border-radius: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                flex-shrink: 0;
+            }
+
+            .si-blue {
+                background: var(--cobalt-lt);
+            }
+
+            .si-green {
+                background: var(--emerald-lt);
+            }
+
+            .si-gold {
+                background: var(--gold-lt);
+            }
+
+            .si-violet {
+                background: var(--violet-lt);
+            }
+
+            .si-teal {
+                background: var(--teal-lt);
+            }
+
+            .stat-val {
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--navy);
+                font-family: var(--mono);
+                line-height: 1;
+            }
+
+            .stat-label {
+                font-size: 11.5px;
+                color: var(--ink3);
+                margin-top: 4px;
+            }
+
+            /* ── MAIN CARD ── */
+            .card {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: var(--radius-lg);
+                padding: 24px 28px;
+                margin-bottom: 18px;
+                box-shadow: var(--shadow);
+                transition: border-color var(--tr);
+            }
+
+                .card:hover {
+                    border-color: var(--cobalt-md);
+                }
+
+            /* ── TOOLBAR ── */
+            .toolbar {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                align-items: center;
+                margin-bottom: 16px;
+            }
+
+            .search-box {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: var(--bg);
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px;
+                flex: 1;
+                min-width: 220px;
+                max-width: 360px;
+                height: 40px;
+                transition: border-color var(--tr), background var(--tr);
+            }
+
+                .search-box:focus-within {
+                    border-color: var(--cobalt);
+                    background: var(--white);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1);
+                }
+
+                .search-box svg {
+                    color: var(--ink4);
+                    flex-shrink: 0;
+                }
+
+                .search-box input {
+                    border: none;
+                    background: transparent;
+                    font-family: var(--font);
+                    font-size: .83rem;
+                    color: var(--ink);
+                    outline: none;
+                    width: 100%;
+                }
+
+                    .search-box input::placeholder {
+                        color: var(--ink4);
+                    }
+
+            /* Filter pills */
+            .filter-btns {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+
+            .filter-btn {
+                height: 34px;
+                padding: 0 16px;
+                border-radius: 20px;
+                font-size: .72rem;
+                font-weight: 600;
+                border: 1.5px solid var(--border);
+                background: var(--white);
+                color: var(--ink3);
+                cursor: pointer;
+                transition: var(--tr);
+                font-family: var(--font);
+            }
+
+                .filter-btn:hover {
+                    border-color: var(--cobalt-md);
+                    color: var(--cobalt);
+                    background: var(--cobalt-lt);
+                }
+
+                .filter-btn.active {
+                    border-color: var(--cobalt);
+                    color: var(--cobalt);
+                    background: var(--cobalt-lt);
+                    font-weight: 700;
+                }
+
+            /* ── TABLE ── */
+            .table-outer {
+                width: 100%;
+                overflow: auto;
+                max-height: calc(100vh - 400px);
+                border-radius: var(--radius);
+                border: 1.5px solid var(--border);
+                scrollbar-width: thin;
+                scrollbar-color: var(--border) transparent;
+            }
+
+                .table-outer::-webkit-scrollbar {
+                    height: 6px;
+                    width: 6px;
+                }
+
+                .table-outer::-webkit-scrollbar-thumb {
+                    background: var(--border);
+                    border-radius: 3px;
+                }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: .78rem;
+                min-width: 1050px;
+            }
+
+            /* Dark sticky header */
+            thead {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+            }
+
+                thead tr {
+                    background: var(--navy);
+                }
+
+                thead th {
+                    padding: 11px 14px;
+                    font-size: .60rem;
+                    font-weight: 700;
+                    color: rgba(255,255,255,.65);
+                    text-transform: uppercase;
+                    letter-spacing: .09em;
+                    text-align: left;
+                    white-space: nowrap;
+                    border-right: 1px solid rgba(255,255,255,.08);
+                }
+
+                    thead th:last-child {
+                        border-right: none;
+                    }
+
+            tbody tr {
+                border-bottom: 1px solid var(--border2);
+                transition: background var(--tr);
+            }
+
+                tbody tr:last-child {
+                    border-bottom: none;
+                }
+
+                tbody tr:hover {
+                    background: var(--cobalt-lt);
+                }
+
+            tbody td {
+                padding: 11px 14px;
+                color: var(--ink2);
+                border-right: 1px solid var(--border2);
+                vertical-align: middle;
+            }
+
+                tbody td:last-child {
+                    border-right: none;
+                }
+
+            .emp-name {
+                font-weight: 600;
+                color: var(--navy);
+                font-size: .80rem;
+            }
+
+            .cell-sm {
+                font-size: .70rem;
+                color: var(--ink3);
+                font-family: var(--mono);
+            }
+
+            /* ── STATUS PILLS ── */
+            .pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 3px 11px;
+                border-radius: 20px;
+                font-size: .62rem;
+                font-weight: 700;
+                letter-spacing: .04em;
+                font-family: var(--mono);
+                white-space: nowrap;
+            }
+
+                .pill::before {
+                    content: '';
+                    width: 5px;
+                    height: 5px;
+                    border-radius: 50%;
+                    background: currentColor;
+                }
+
+            /* Status variants */
+            .pill-pending {
+                background: var(--gold-lt);
+                color: var(--gold);
+                border: 1px solid #fde68a;
+            }
+
+            .pill-submitted {
+                background: var(--violet-lt);
+                color: var(--violet);
+                border: 1px solid #c4b5fd;
+            }
+
+            .pill-done {
+                background: var(--cobalt-lt);
+                color: var(--cobalt);
+                border: 1px solid var(--cobalt-md);
+            }
+
+            .pill-completed {
+                background: var(--emerald-lt);
+                color: var(--emerald);
+                border: 1px solid #a7f3d0;
+            }
+
+            .pill-inprocess {
+                background: var(--bg2);
+                color: var(--ink3);
+                border: 1px solid var(--border);
+            }
+
+            /* ── SCORE CHIPS ── */
+            .score-chip {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 8px;
+                padding: 3px 12px;
+                font-size: .78rem;
+                font-weight: 700;
+                font-family: var(--mono);
+            }
+            /* RM score — cobalt */
+            .score-rm {
+                background: var(--cobalt-lt);
+                color: var(--cobalt);
+                border: 1.5px solid var(--cobalt-md);
+            }
+            /* HOD score — violet */
+            .score-hod {
+                background: var(--violet-lt);
+                color: var(--violet);
+                border: 1.5px solid #c4b5fd;
+            }
+
+            /* ── BUTTONS ── */
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 7px 16px;
+                border-radius: 8px;
+                font-family: var(--font);
+                font-size: .76rem;
+                font-weight: 600;
+                cursor: pointer;
+                border: none;
+                transition: var(--tr);
+                white-space: nowrap;
+                text-decoration: none;
+                letter-spacing: .01em;
+            }
+
+                .btn:active {
+                    transform: scale(.97);
+                }
+
+            /* HOD score action — violet */
+            .btn-score {
+                background: var(--violet);
+                color: #fff;
+                box-shadow: 0 2px 8px rgba(124,58,237,.3);
+            }
+
+                .btn-score:hover {
+                    background: #6d28d9;
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(124,58,237,.4);
+                }
+
+            .btn-sm {
+                padding: 5px 13px;
+                font-size: .70rem;
+                border-radius: 7px;
+            }
+
+            .btn-print {
+                background: var(--white);
+                color: var(--ink2);
+                border: 1.5px solid var(--border);
+            }
+
+                .btn-print:hover {
+                    border-color: var(--cobalt);
+                    color: var(--cobalt);
+                    background: var(--cobalt-lt);
+                }
+
+            .awaiting-rm {
+                font-size: .70rem;
+                color: var(--gold);
+                font-family: var(--mono);
+                font-weight: 600;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            /* ── TABLE FOOTER ── */
+            .table-footer {
+                padding: 10px 4px 2px;
+                font-size: .72rem;
+                color: var(--ink4);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            /* ── EMPTY STATE ── */
+            .empty-state {
+                text-align: center;
+                padding: 60px 20px;
+                color: var(--ink4);
+            }
+
+            .empty-icon {
+                font-size: 2.8rem;
+                display: block;
+                margin-bottom: 12px;
+                opacity: .3;
+            }
+
+            .empty-title {
+                font-size: .90rem;
+                font-weight: 600;
+                color: var(--ink3);
+                margin-bottom: 6px;
+            }
+
+            /* ── TOAST ── */
+            .toast-wrap {
+                position: fixed;
+                bottom: 22px;
+                right: 22px;
+                z-index: 9998;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .toast {
+                background: var(--navy);
+                border-radius: 9px;
+                padding: 11px 16px;
+                font-size: .81rem;
+                font-weight: 500;
+                color: rgba(255,255,255,.9);
+                min-width: 250px;
+                box-shadow: var(--shadow-md);
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                animation: toastIn .22s ease;
+            }
+
+                .toast.ok {
+                    border-left: 3px solid #34d399;
+                }
+
+                .toast.err {
+                    border-left: 3px solid var(--rose);
+                }
+
+                .toast.warn {
+                    border-left: 3px solid var(--gold);
+                }
+
+            @@keyframes toastIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(18px)
+                }
+
+                to {
+                    opacity: 1;
+                    transform: none
+                }
+            }
+
+            /* ── RESPONSIVE ── */
+            @@media (max-width: 1200px) {
+                .stat-row {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+            }
+            @@media (max-width: 900px) {
+                .site-header, .page-wrap {
+                    padding-left: 16px;
+                    padding-right: 16px;
+                }
+
+                .page-wrap {
+                    padding-top: 20px;
+                }
+
+                .stat-row {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 10px;
+                }
+
+                .page-title {
+                    font-size: 1.5rem;
+                }
+            }
+            @@media (max-width: 600px) {
+                .stat-row {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="brand">
+            <div class="brand-icon">V</div>
+            <div>
+                <div class="brand-name">Vandana Global Limited</div>
+                <div class="brand-sub">PMS — Non Management Cadre</div>
+            </div>
+        </div>
+        <div class="hod-badge">Head of Department Dashboard</div>
+    </header>
+
+    <main class="page-wrap">
+        <div class="breadcrumb">PMS Blue Collar / HOD Dashboard</div>
+        <div class="page-header-top">
+            <div>
+                <div class="page-title">Performance Appraisal — HOD Dashboard</div>
+                <div class="page-subtitle">Welcome, <strong>@hodName</strong>. Review RM scores and provide your HOD assessment.</div>
+            </div>
+        </div>
+
+       
+
+        <div class="card">
+            <div class="toolbar">
+                <div class="search-box">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+                    <input type="text" id="hodSearch" placeholder="Emp Code / Name…" oninput="filterTable()" autocomplete="off" />
+                </div>
+                <div class="filter-btns">
+                    <button class="filter-btn active" onclick="setFilter(this,'')">All</button>
+                    <button class="filter-btn" onclick="setFilter(this,'Pending')">HOD Pending</button>
+                    <button class="filter-btn" onclick="setFilter(this,'Submitted')">HOD Submitted</button>
+                    <button class="filter-btn" onclick="setFilter(this,'Completed')">Completed</button>
+                </div>
+            </div>
+
+            <div class="table-outer">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Emp Code</th>
+                            <th>Employee Name</th>
+                            <th>Designation</th>
+                            <th>Department</th>
+                            <th>Sub-Dept</th>
+                            <th>Reporting Manager</th>
+                            <th>RM Score</th>
+                            <th>HOD Score</th>
+                            <th>RM Stage</th>
+                            <th>HOD Stage</th>
+                            <th>Final Status</th>
+                            <th>Initiated On</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hodTableBody">
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="14">
+                                    <div class="empty-state">
+                                        <div class="empty-icon">📋</div>
+                                        <div class="empty-title">No employees assigned yet</div>
+                                        <div>You will see employees here once RM submits scores.</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        @{
+                            int rowNum = 0;
+                        }
+                        @foreach (var emp in Model)
+                        {
+                            rowNum++;
+                            string finalPill = emp.FinalStatus == "Completed" ? "pill-completed" : "pill-pending";
+                            string rmPill = emp.RMStatus == "Done" ? "pill-done" : "pill-pending";
+                            string hodPill = emp.HODStatus == "Submitted" ? "pill-submitted" : "pill-pending";
+                            bool canScore = emp.RMStatus == "Done" && emp.HODStatus == "Pending";
+                            <tr data-empcode="@emp.EmpCode.ToLower()"
+                                data-empname="@emp.EmpName.ToLower()"
+                                data-hodstatus="@emp.HODStatus"
+                                data-finalstatus="@emp.FinalStatus">
+                                <td class="cell-sm">@rowNum</td>
+                                <td class="cell-sm">@emp.EmpCode</td>
+                                <td><span class="emp-name">@emp.EmpName</span></td>
+                                <td>@emp.Designation</td>
+                                <td>@emp.Department</td>
+                                <td class="cell-sm">@emp.SubDepartment</td>
+                                <td class="cell-sm">@emp.RMName</td>
+                                <td>
+                                    @if (emp.RM_TotalScore > 0)
+                                    {
+                                        <span class="score-chip score-rm">@emp.RM_TotalScore</span>
+                                    }
+                                    else
+                                    {
+
+                                        <span class="cell-sm">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (emp.HOD_TotalScore > 0)
+                                    {
+                                        <span class="score-chip score-hod">@emp.HOD_TotalScore</span>
+                                    }
+                                    else
+                                    {
+
+                                        <span class="cell-sm">—</span>
+                                    }
+                                </td>
+                                <td><span class="pill @rmPill">@emp.RMStatus</span></td>
+                                <td><span class="pill @hodPill">@emp.HODStatus</span></td>
+                                <td><span class="pill @finalPill">@(string.IsNullOrEmpty(emp.FinalStatus) ? "In Process" : emp.FinalStatus)</span></td>
+                                <td class="cell-sm">@(emp.CreatedOn.HasValue ? emp.CreatedOn.Value.ToString("dd MMM yyyy") : "—")</td>
+                                <td>
+                                    <div style="display:flex;gap:5px;align-items:center">
+                                        @if (canScore)
+                                        {
+                                            <a class="btn btn-score btn-sm" href="/pmsbluecollar/hod-form?id=@emp.PmsID">
+                                                ✏ Score
+                                            </a>
+                                        }
+                                        else if (emp.HODStatus == "Submitted")
+                                        {
+                                            <span class="cell-sm">Submitted</span>
+                                            
+                                        }
+                                        else
+                                        {
+                                            <span class="cell-sm" style="color:var(--warn)">Awaiting RM</span>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-footer">
+                <span id="hodTableCount">Showing @Model.Count records</span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+            let _filterStatus = '';
+            function setFilter(btn, status){
+              _filterStatus = status;
+              document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+              btn.classList.add('active');
+              filterTable();
+            }
+            function filterTable(){
+              const q = document.getElementById('hodSearch').value.toLowerCase().trim();
+              const rows = document.querySelectorAll('#hodTableBody tr[data-empcode]');
+              let shown = 0;
+              rows.forEach(row=>{
+                const code   = row.dataset.empcode    ||'';
+                const name   = row.dataset.empname    ||'';
+                const hodSt  = row.dataset.hodstatus  ||'';
+                const finSt  = row.dataset.finalstatus||'';
+                const matchSearch = !q || code.includes(q) || name.includes(q);
+                let matchStatus = true;
+                if(_filterStatus==='Pending')   matchStatus = hodSt==='Pending';
+                if(_filterStatus==='Submitted') matchStatus = hodSt==='Submitted';
+                if(_filterStatus==='Completed') matchStatus = finSt==='Completed';
+                const show = matchSearch && matchStatus;
+                row.style.display = show?'':'none';
+                if(show) shown++;
+              });
+              document.getElementById('hodTableCount').textContent = `Showing ${shown} records`;
+            }
+    </script>
+</body>
+</html>

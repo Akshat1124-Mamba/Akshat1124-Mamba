@@ -1,0 +1,1464 @@
+﻿@* Views/PMSBlueCollar/Tracking.cshtml — UPDATED *@
+@model List<vgl.Models.PMSBCTrackingModel>
+@{
+    ViewData["Title"] = "PMS Blue Collar — Tracking";
+    Layout = null;
+
+    var depts = ViewBag.DepartmentList as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+    var units = ViewBag.UnitList as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+    var years = ViewBag.YearList as List<int> ?? new();
+
+    // ── CHANGE 1: stat counts are now passed directly from the controller
+    //    (controller already computes them correctly; we just read them)
+    int statTotal = (int?)ViewBag.StatTotal ?? Model.Count;
+    int statCompleted = (int?)ViewBag.StatCompleted ?? Model.Count(m => m.Status == "Completed");
+    int statAtRM = (int?)ViewBag.StatAtRM ?? Model.Count(m => m.Status == "Pending at RM");
+    int statAtHOD = (int?)ViewBag.StatAtHOD ?? Model.Count(m => m.Status == "Pending at HOD");
+    int statAtMCJMD = (int?)ViewBag.StatAtMCJMD ?? 0;
+
+
+    string q_search = (string?)ViewBag.SearchText ?? "";
+    string q_status = (string?)ViewBag.StatusFilter ?? "";
+    string q_cycle = (string?)ViewBag.SelectedCycle ?? "";
+    string q_year = ViewBag.SelectedYear != null ? ((int)ViewBag.SelectedYear).ToString() : "";
+    string q_dept = Context.Request.Query["deptId"].ToString();
+    string q_unit = Context.Request.Query["unitId"].ToString();
+
+    string prevCycleYear = (string?)ViewBag.PreviousCycleYear ?? "";
+    string prevCycleType = (string?)ViewBag.PreviousCycleType ?? "";
+    string prevCycleFrom = (string?)ViewBag.PreviousCycleFrom ?? "";
+    string prevCycleTo = (string?)ViewBag.PreviousCycleTo ?? "";
+
+    // CHANGE 3: by default hide completed rows unless status filter == "Completed"
+    bool showCompleted = (q_status == "Completed" ||
+                      q_status == "Pending at MC/JMD");
+
+    int rowNum = 0;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" rel="stylesheet" />
+    <style>
+            :root {
+                --navy: #0f1c3f;
+                --navy2: #1a2d5a;
+                --navy3: #253d75;
+                --cobalt: #1e4ed8;
+                --cobalt-lt: #eff4ff;
+                --cobalt-md: #c7d7fd;
+                --indigo: #4f46e5;
+                --sky: #0ea5e9;
+                --teal: #0d9488;
+                --teal-lt: #f0fdfa;
+                --gold: #d97706;
+                --gold-lt: #fef3c7;
+                --emerald: #059669;
+                --emerald-lt: #d1fae5;
+                --rose: #e11d48;
+                --rose-lt: #fff1f2;
+                --amber: #b45309;
+                --amber-lt: #fef3c7;
+                --violet: #7c3aed;
+                --violet-lt: #ede9fe;
+                --mc-color: #7c3400;
+                --mc-lt: #fff7ed;
+                --jmd-color: #0e3e5c;
+                --jmd-lt: #e3f2fd;
+                --bg: #f8f9fc;
+                --bg2: #f1f4f9;
+                --white: #fff;
+                --border: #dde2ed;
+                --border2: #eaeef7;
+                --shadow-sm: 0 1px 3px rgba(15,28,63,.06);
+                --shadow: 0 4px 16px rgba(15,28,63,.08),0 1px 4px rgba(15,28,63,.05);
+                --ink: #0f172a;
+                --ink2: #334155;
+                --ink3: #64748b;
+                --ink4: #94a3b8;
+                --font: 'Inter','Segoe UI',system-ui,sans-serif;
+                --mono: 'JetBrains Mono','Courier New',monospace;
+                --serif: 'Instrument Serif',Georgia,serif;
+                --radius: 10px;
+                --radius-lg: 16px;
+                --tr: .18s cubic-bezier(.4,0,.2,1);
+            }
+
+            *, *::before, *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0
+            }
+
+            body {
+                font-family: var(--font);
+                background: var(--bg);
+                color: var(--ink);
+                font-size: 13px;
+                min-height: 100vh;
+                overflow-x: hidden;
+                -webkit-font-smoothing: antialiased;
+                line-height: 1.5
+            }
+
+            a {
+                text-decoration: none;
+                color: inherit
+            }
+
+            /* HEADER */
+            .site-header {
+                position: sticky;
+                top: 0;
+                z-index: 500;
+                background: var(--navy);
+                padding: 0 32px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 62px;
+                box-shadow: 0 2px 16px rgba(15,28,63,.25);
+                gap: 16px
+            }
+
+            .brand {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-shrink: 0
+            }
+
+            .brand-icon {
+                width: 36px;
+                height: 36px;
+                background: linear-gradient(135deg,#3b82f6 0%,var(--indigo) 100%);
+                border-radius: 9px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: var(--serif);
+                font-size: 17px;
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(79,70,229,.4);
+                flex-shrink: 0
+            }
+
+            .brand-name {
+                font-size: .88rem;
+                font-weight: 600;
+                color: #fff;
+                letter-spacing: .01em;
+                line-height: 1.2
+            }
+
+            .brand-sub {
+                font-size: .63rem;
+                color: rgba(255,255,255,.45);
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                display: block;
+                margin-top: 1px
+            }
+
+            .nav {
+                display: flex;
+                gap: 2px;
+                flex-shrink: 0
+            }
+
+                .nav a {
+                    padding: 6px 14px;
+                    border-radius: 7px;
+                    font-size: .75rem;
+                    font-weight: 600;
+                    color: rgba(255,255,255,.65);
+                    transition: var(--tr);
+                    white-space: nowrap
+                }
+
+                    .nav a:hover {
+                        color: #fff;
+                        background: rgba(255,255,255,.09)
+                    }
+
+                    .nav a.active {
+                        color: #fff;
+                        background: rgba(255,255,255,.13)
+                    }
+
+            /* PAGE */
+            .page-wrap {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 32px 32px 80px
+            }
+
+            .breadcrumb {
+                font-size: 11px;
+                color: var(--ink4);
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                flex-wrap: wrap
+            }
+
+                .breadcrumb a {
+                    color: var(--cobalt)
+                }
+
+            .page-header-top {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-bottom: 24px
+            }
+
+            .page-title {
+                font-family: var(--serif);
+                font-size: 1.9rem;
+                color: var(--navy);
+                line-height: 1.2
+            }
+
+            .page-subtitle {
+                font-size: 12.5px;
+                color: var(--ink3);
+                margin-top: 5px;
+                line-height: 1.6
+            }
+
+            /* CYCLE FILTER CARD */
+            .cycle-filter-card {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: var(--radius-lg);
+                box-shadow: var(--shadow);
+                padding: 22px 24px 20px;
+                margin-bottom: 20px
+            }
+
+            .cycle-filter-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 14px
+            }
+
+            .cycle-step-badge {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: var(--cobalt);
+                color: #fff;
+                font-size: .75rem;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                box-shadow: 0 2px 8px rgba(30,78,216,.3)
+            }
+
+            .cycle-filter-title {
+                font-size: .92rem;
+                font-weight: 700;
+                color: var(--navy);
+                line-height: 1.2
+            }
+
+            .cycle-filter-subtitle {
+                font-size: .72rem;
+                color: var(--ink3);
+                margin-top: 2px
+            }
+
+            .prev-cycle-banner {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                background: #fffbeb;
+                border: 1px solid #fde68a;
+                border-radius: 8px;
+                padding: 9px 14px;
+                margin-bottom: 16px;
+                font-size: .75rem;
+                color: var(--amber);
+                flex-wrap: wrap
+            }
+
+                .prev-cycle-banner .banner-icon {
+                    font-size: 14px;
+                    flex-shrink: 0
+                }
+
+                .prev-cycle-banner .banner-text {
+                    color: var(--ink2);
+                    flex: 1;
+                    min-width: 0
+                }
+
+                    .prev-cycle-banner .banner-text strong {
+                        color: var(--navy)
+                    }
+
+            .prev-cycle-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 2px 9px;
+                border-radius: 20px;
+                font-size: .68rem;
+                font-weight: 700;
+                white-space: nowrap
+            }
+
+            .pct-green {
+                background: var(--emerald-lt);
+                color: var(--emerald);
+                border: 1px solid #6ee7b7
+            }
+
+            .pct-amber {
+                background: var(--gold-lt);
+                color: var(--gold);
+                border: 1px solid #fcd34d
+            }
+
+            .cycle-controls-row {
+                display: flex;
+                align-items: flex-end;
+                gap: 20px;
+                flex-wrap: wrap
+            }
+
+            .cycle-field-group {
+                display: flex;
+                flex-direction: column;
+                gap: 5px
+            }
+
+            .cycle-field-label {
+                font-size: .65rem;
+                font-weight: 700;
+                color: var(--ink3);
+                text-transform: uppercase;
+                letter-spacing: .09em;
+                display: flex;
+                align-items: center;
+                gap: 4px
+            }
+
+                .cycle-field-label .req {
+                    color: var(--rose);
+                    font-size: .75rem;
+                    line-height: 1
+                }
+
+            .year-input {
+                width: 100px;
+                height: 40px;
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px;
+                font-family: var(--mono);
+                font-size: .88rem;
+                font-weight: 700;
+                color: var(--navy);
+                outline: none;
+                transition: border-color var(--tr), box-shadow var(--tr)
+            }
+
+                .year-input:focus {
+                    border-color: var(--cobalt);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1)
+                }
+
+            .cycle-presets {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-wrap: wrap
+            }
+
+            .cycle-pill {
+                display: inline-flex;
+                align-items: center;
+                padding: 8px 18px;
+                border-radius: 8px;
+                font-size: .78rem;
+                font-weight: 600;
+                border: 1.5px solid var(--border);
+                background: var(--white);
+                color: var(--ink2);
+                cursor: pointer;
+                transition: border-color var(--tr), background var(--tr), color var(--tr), box-shadow var(--tr);
+                white-space: nowrap;
+                font-family: var(--font);
+                text-decoration: none
+            }
+
+                .cycle-pill:hover {
+                    border-color: var(--cobalt-md);
+                    background: var(--cobalt-lt);
+                    color: var(--cobalt)
+                }
+
+                .cycle-pill.active {
+                    border-color: var(--cobalt);
+                    background: var(--cobalt-lt);
+                    color: var(--cobalt);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1);
+                    font-weight: 700
+                }
+
+            /* STAT CARDS */
+            .stat-row {
+                display: grid;
+                grid-template-columns: repeat(6,1fr);
+                gap: 14px;
+                margin-bottom: 24px
+            }
+
+            @@media(max-width:1100px) {
+                .stat-row {
+                    grid-template-columns: repeat(3,1fr)
+                }
+            }
+
+            @@media(max-width:640px) {
+                .stat-row {
+                    grid-template-columns: repeat(2,1fr)
+                }
+            }
+
+            .stat-card {
+                background: var(--white);
+                border: 2px solid var(--border);
+                border-radius: var(--radius-lg);
+                padding: 18px 20px;
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                box-shadow: var(--shadow-sm);
+                cursor: pointer;
+                transition: border-color var(--tr), box-shadow var(--tr), transform var(--tr);
+                user-select: none;
+                text-decoration: none
+            }
+
+                .stat-card:hover {
+                    border-color: var(--cobalt-md);
+                    box-shadow: var(--shadow);
+                    transform: translateY(-1px)
+                }
+
+                .stat-card.active-stat {
+                    border-color: var(--cobalt);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.12),var(--shadow)
+                }
+
+                    .stat-card.active-stat .stat-val {
+                        color: var(--cobalt)
+                    }
+
+                .stat-card.stat-all {
+                    cursor: default
+                }
+
+            .stat-icon {
+                width: 44px;
+                height: 44px;
+                border-radius: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                flex-shrink: 0
+            }
+
+            .si-blue {
+                background: var(--cobalt-lt)
+            }
+
+            .si-green {
+                background: var(--emerald-lt)
+            }
+
+            .si-violet {
+                background: var(--violet-lt)
+            }
+
+            .si-pink {
+                background: #fce7f3
+            }
+
+            .si-amber {
+                background: #fff7ed
+            }
+
+            .si-sky {
+                background: #e0f2fe
+            }
+
+            .si-teal {
+                background: var(--teal-lt)
+            }
+
+            .si-gold {
+                background: var(--gold-lt)
+            }
+
+            .si-mc {
+                background: var(--mc-lt)
+            }
+
+            .si-jmd {
+                background: var(--jmd-lt)
+            }
+
+            .stat-val {
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--navy);
+                font-family: var(--mono);
+                line-height: 1
+            }
+
+            .stat-label {
+                font-size: 11.5px;
+                color: var(--ink3);
+                margin-top: 4px
+            }
+
+            /* CARD */
+            .card {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: var(--radius-lg);
+                box-shadow: var(--shadow);
+                overflow: hidden
+            }
+
+            /* TOOLBAR */
+            .toolbar {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                align-items: center;
+                padding: 14px 16px;
+                background: var(--bg2);
+                border-bottom: 1px solid var(--border);
+                position: relative;
+                z-index: 30
+            }
+
+            .search-box {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px;
+                flex: 1;
+                min-width: 200px;
+                max-width: 280px;
+                height: 38px;
+                transition: border-color var(--tr)
+            }
+
+                .search-box:focus-within {
+                    border-color: var(--cobalt);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1)
+                }
+
+                .search-box svg {
+                    color: var(--ink4);
+                    flex-shrink: 0
+                }
+
+                .search-box input {
+                    border: none;
+                    background: transparent;
+                    font-family: var(--font);
+                    font-size: .82rem;
+                    color: var(--ink);
+                    outline: none;
+                    width: 100%
+                }
+
+                    .search-box input::placeholder {
+                        color: var(--ink4)
+                    }
+
+            .ts-wrapper {
+                min-width: 130px;
+                max-width: 190px
+            }
+
+                .ts-wrapper .ts-control {
+                    background: var(--white) !important;
+                    border: 1.5px solid var(--border) !important;
+                    border-radius: 8px !important;
+                    padding: 0 12px !important;
+                    height: 38px !important;
+                    min-height: 38px !important;
+                    font-family: var(--font) !important;
+                    font-size: .80rem !important;
+                    color: var(--ink2) !important;
+                    box-shadow: none !important;
+                    display: flex;
+                    align-items: center
+                }
+
+                .ts-wrapper.focus .ts-control {
+                    border-color: var(--cobalt) !important;
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1) !important
+                }
+
+                .ts-wrapper .ts-control input {
+                    font-size: .80rem !important;
+                    color: var(--ink) !important;
+                    font-family: var(--font) !important
+                }
+
+            .ts-dropdown {
+                border: 1.5px solid var(--border) !important;
+                border-radius: 8px !important;
+                box-shadow: 0 8px 24px rgba(15,28,63,.15) !important;
+                font-size: .80rem !important;
+                font-family: var(--font) !important;
+                z-index: 9999 !important
+            }
+
+                .ts-dropdown .option {
+                    padding: 8px 12px !important
+                }
+
+                    .ts-dropdown .option:hover, .ts-dropdown .option.active {
+                        background: var(--cobalt-lt) !important;
+                        color: var(--cobalt) !important
+                    }
+
+                    .ts-dropdown .option.selected {
+                        background: var(--cobalt-lt) !important;
+                        font-weight: 600
+                    }
+
+            .filter-select-native {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px;
+                height: 38px;
+                font-family: var(--mono);
+                font-size: .80rem;
+                font-weight: 600;
+                color: var(--navy);
+                cursor: pointer;
+                outline: none;
+                transition: border-color var(--tr);
+                min-width: 110px
+            }
+
+                .filter-select-native:focus {
+                    border-color: var(--cobalt);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1)
+                }
+
+            .btn-outline {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: var(--white);
+                color: var(--ink2);
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 16px;
+                height: 38px;
+                font-size: .80rem;
+                font-family: var(--font);
+                font-weight: 600;
+                cursor: pointer;
+                transition: var(--tr);
+                text-decoration: none
+            }
+
+                .btn-outline:hover {
+                    border-color: var(--cobalt);
+                    color: var(--cobalt);
+                    background: var(--cobalt-lt)
+                }
+
+            .filter-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                background: var(--cobalt-lt);
+                color: var(--cobalt);
+                border: 1px solid var(--cobalt-md);
+                padding: 3px 10px;
+                border-radius: 20px;
+                font-size: .68rem;
+                font-weight: 700
+            }
+
+                .filter-badge a {
+                    color: var(--cobalt);
+                    font-weight: 900;
+                    margin-left: 2px
+                }
+
+            /* COMPLETED-HIDDEN BANNER */
+            .completed-hidden-banner {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                background: var(--emerald-lt);
+                border: 1px solid #6ee7b7;
+                border-radius: 8px;
+                padding: 9px 14px;
+                margin: 0 16px 0;
+                font-size: .76rem;
+                color: var(--emerald);
+                flex-wrap: wrap
+            }
+
+                .completed-hidden-banner a {
+                    color: var(--emerald);
+                    font-weight: 700;
+                    text-decoration: underline
+                }
+
+            /* TABLE */
+            .table-outer {
+                width: 100%;
+                overflow-x: auto;
+                overflow-y: auto;
+                max-height: 560px;
+                scrollbar-width: thin;
+                scrollbar-color: var(--border) transparent
+            }
+
+                .table-outer::-webkit-scrollbar {
+                    height: 6px;
+                    width: 6px
+                }
+
+                .table-outer::-webkit-scrollbar-thumb {
+                    background: var(--border);
+                    border-radius: 3px
+                }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: .78rem;
+                min-width: 960px
+            }
+
+            thead {
+                position: sticky;
+                top: 0;
+                z-index: 20
+            }
+
+                thead tr {
+                    background: var(--navy)
+                }
+
+                thead th {
+                    padding: 11px 14px;
+                    font-size: .60rem;
+                    font-weight: 700;
+                    color: rgba(255,255,255,.65);
+                    text-transform: uppercase;
+                    letter-spacing: .09em;
+                    text-align: left;
+                    white-space: nowrap;
+                    border-right: 1px solid rgba(255,255,255,.08)
+                }
+
+                    thead th:last-child {
+                        border-right: none
+                    }
+
+            tbody tr {
+                border-bottom: 1px solid var(--border2);
+                transition: background var(--tr)
+            }
+
+                tbody tr:last-child {
+                    border-bottom: none
+                }
+
+                tbody tr:hover {
+                    background: var(--cobalt-lt)
+                }
+
+            tbody td {
+                padding: 10px 14px;
+                color: var(--ink2);
+                border-right: 1px solid var(--border2);
+                vertical-align: middle;
+                white-space: nowrap
+            }
+
+                tbody td:last-child {
+                    border-right: none
+                }
+
+            .emp-name {
+                font-weight: 600;
+                color: var(--navy);
+                font-size: .80rem
+            }
+
+            .emp-code {
+                font-size: .72rem;
+                color: var(--ink3);
+                font-family: var(--mono)
+            }
+
+            .cell-sm {
+                font-size: .72rem;
+                color: var(--ink3)
+            }
+
+            .pill-cycle {
+                padding: 3px 10px;
+                border-radius: 20px;
+                font-size: .68rem;
+                font-weight: 700;
+                font-family: var(--mono);
+                display: inline-block;
+                border: 1px solid
+            }
+
+            .pc-annual {
+                background: #fff7ed;
+                color: #c2410c;
+                border-color: #fed7aa
+            }
+
+            .pc-mid-year {
+                background: #f0fdf4;
+                color: #166534;
+                border-color: #86efac
+            }
+
+            .pc-q1, .pc-q2, .pc-q3, .pc-q4 {
+                background: var(--cobalt-lt);
+                color: var(--cobalt);
+                border-color: var(--cobalt-md)
+            }
+
+            .pc-custom {
+                background: var(--violet-lt);
+                color: var(--violet);
+                border-color: #c4b5fd
+            }
+
+            /* ── CHANGE 2: Extended pipeline nodes for MC / JMD ── */
+            .node-pipe {
+                display: flex;
+                align-items: center;
+                gap: 0
+            }
+
+            .node-line {
+                width: 12px;
+                height: 2px;
+                background: var(--border);
+                flex-shrink: 0
+            }
+
+            .node-line-done {
+                background: var(--emerald)
+            }
+
+            .node-line-mc-done {
+                background: var(--emerald)
+            }
+
+            .node-line-jmd-done {
+                background: var(--emerald)
+            }
+
+            .node-c {
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 9px;
+                font-weight: 700;
+                flex-shrink: 0;
+                font-family: var(--mono)
+            }
+
+            .node-pending {
+                background: var(--white);
+                border: 2px solid var(--border);
+                color: var(--ink4)
+            }
+
+            .node-active {
+                background: var(--cobalt);
+                border: 2px solid var(--cobalt);
+                color: #fff;
+                box-shadow: 0 0 0 3px rgba(30,78,216,.2)
+            }
+
+            .node-done {
+                background: var(--emerald);
+                border: 2px solid var(--emerald);
+                color: #fff
+            }
+
+            .node-mc-active {
+                background: var(--emerald);
+                border: 2px solid var(--emerald);
+                color: #fff;
+                box-shadow: 0 0 0 3px rgba(5,150,105,.2)
+            }
+
+            .node-mc-done {
+                background: var(--emerald);
+                border: 2px solid var(--emerald);
+                color: #fff
+            }
+
+            .node-jmd-active {
+                background: var(--emerald);
+                border: 2px solid var(--emerald);
+                color: #fff;
+                box-shadow: 0 0 0 3px rgba(5,150,105,.2)
+            }
+
+            .node-jmd-done {
+                background: var(--emerald);
+                border: 2px solid var(--emerald);
+                color: #fff
+            }
+
+            .btn-xs {
+                display: inline-flex;
+                align-items: center;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: .68rem;
+                font-weight: 700;
+                border: 1.5px solid;
+                cursor: pointer;
+                transition: opacity var(--tr);
+                white-space: nowrap;
+                text-decoration: none;
+                font-family: var(--font)
+            }
+
+                .btn-xs:hover {
+                    opacity: .75
+                }
+
+            .btn-print {
+                border-color: var(--navy);
+                color: var(--navy);
+                background: var(--white)
+            }
+
+                .btn-print:hover {
+                    background: var(--cobalt-lt);
+                    border-color: var(--cobalt);
+                    color: var(--cobalt)
+                }
+
+            .table-footer {
+                padding: 10px 16px;
+                font-size: .72rem;
+                color: var(--ink4);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: var(--bg2);
+                border-top: 1px solid var(--border)
+            }
+
+            .empty-state {
+                text-align: center;
+                padding: 56px 24px;
+                color: var(--ink4);
+                font-size: .82rem
+            }
+
+                .empty-state a {
+                    color: var(--cobalt)
+                }
+
+            @@media(max-width:900px) {
+                .site-header, .page-wrap {
+                    padding-left: 16px;
+                    padding-right: 16px
+                }
+            }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="brand">
+            <div class="brand-icon">V</div>
+            <div>
+                <div class="brand-name">Vandana Global Limited</div>
+                <div class="brand-sub">PMS — Non Management Cadre</div>
+            </div>
+        </div>
+        <nav class="nav">
+            <a href="/pmsbluecollar/mc-jmd-dashboard">MC / JMD Review</a>
+            <a href="/pmsbluecollar/hr-dashboard" class="active">HR Dashboard</a>
+            <a href="/pmsbluecollar/index">Creteria Master</a>
+            <a href="/pmsbluecollar/tracking">PMS Tracking</a>
+        </nav>
+    </header>
+
+    <main class="page-wrap">
+
+        <div class="breadcrumb">
+            <a href="/pmsbluecollar/hr-dashboard">Home</a>
+            <span>/</span><span>PMS Blue Collar</span>
+            <span>/</span><span>Tracking</span>
+        </div>
+
+        <div class="page-header-top">
+            <div>
+                <div class="page-title">PMS Blue Collar — <em style="font-style:italic;color:var(--cobalt)">Tracking</em></div>
+                <div class="page-subtitle">Monitor RM → HOD → MC → JMD pipeline status and ratings across all employees.</div>
+            </div>
+            <a href="/pmsbluecollar/hr-dashboard" class="btn-outline">↺ Back to Dashboard</a>
+        </div>
+
+    
+        <div class="cycle-filter-card">
+            <div class="cycle-filter-header">
+                <div class="cycle-step-badge">1</div>
+                <div>
+                    <div class="cycle-filter-title">Appraisal Cycle Filter</div>
+                    <div class="cycle-filter-subtitle">Select the appraisal year and cycle type to filter records below.</div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(prevCycleYear))
+            {
+                <div class="prev-cycle-banner">
+                    <span class="banner-icon">🚀</span>
+                    <span class="banner-text">
+                        Previous Appraisal Cycle for This Year — Already assigned for <strong>@prevCycleYear</strong>:
+                    </span>
+                    @if (!string.IsNullOrEmpty(prevCycleType))
+                    {
+                        <span class="prev-cycle-tag pct-green">✓ @prevCycleType</span>
+                    }
+                    @if (!string.IsNullOrEmpty(prevCycleFrom) && !string.IsNullOrEmpty(prevCycleTo))
+                    {
+                        <span class="prev-cycle-tag pct-amber">✓ @prevCycleFrom — @prevCycleTo</span>
+                    }
+                </div>
+            }
+
+            <form method="get" action="/pmsbluecollar/tracking" id="cycleFilterForm">
+                <input type="hidden" name="searchText" value="@q_search" />
+                <input type="hidden" name="deptId" value="@q_dept" />
+                <input type="hidden" name="unitId" value="@q_unit" />
+                <input type="hidden" name="status" value="@q_status" />
+                <input type="hidden" name="cycleType" id="cycleTypeHidden" value="@q_cycle" />
+
+                <div class="cycle-controls-row">
+                    <div class="cycle-field-group">
+                        <div class="cycle-field-label">YEAR <span class="req">★</span></div>
+                        <input type="number" name="year" id="cycleYearInput"
+                               class="year-input"
+                               value="@(string.IsNullOrEmpty(q_year) ? DateTime.Now.Year.ToString() : q_year)"
+                               min="2000" max="2099"
+                               placeholder="@DateTime.Now.Year" />
+                    </div>
+
+                    <div class="cycle-field-group">
+                        <div class="cycle-field-label">CYCLE PRESET</div>
+                        <div class="cycle-presets">
+                            @{
+                                var cycleOptions = new[] { "Annual", "Mid-Year", "Q1", "Q2", "Q3", "Q4", "Custom" };
+                            }
+                            @foreach (var opt in cycleOptions)
+                            {
+                                bool isActive = q_cycle == opt;
+                                <button type="button"
+                                        class="cycle-pill @(isActive ? "active" : "")"
+                                        data-cycle="@opt"
+                                        onclick="selectCycle('@opt')">
+                                    @opt
+                                </button>
+                            }
+                            @if (!string.IsNullOrEmpty(q_cycle))
+                            {
+                                <button type="button" class="cycle-pill"
+                                        style="color:var(--rose);border-color:var(--rose)"
+                                        onclick="selectCycle('')">
+                                    ✕ Clear
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+    
+        <div class="stat-row">
+            <a class="stat-card stat-all"
+               href="/pmsbluecollar/tracking?year=@q_year&cycleType=@q_cycle&searchText=@q_search&deptId=@q_dept&unitId=@q_unit">
+                <div class="stat-icon si-blue">📋</div>
+                <div>
+                    <div class="stat-val">@statTotal</div>
+                    <div class="stat-label">Total Records</div>
+                </div>
+            </a>
+            <a class="stat-card @(q_status == "Pending at RM" ? "active-stat" : "")"
+               href="/pmsbluecollar/tracking?status=Pending+at+RM&year=@q_year&cycleType=@q_cycle&searchText=@q_search&deptId=@q_dept&unitId=@q_unit">
+                <div class="stat-icon si-violet">⏳</div>
+                <div>
+                    <div class="stat-val">@statAtRM</div>
+                    <div class="stat-label">Pending RM</div>
+                </div>
+            </a>
+            <a class="stat-card @(q_status == "Pending at HOD" ? "active-stat" : "")"
+               href="/pmsbluecollar/tracking?status=Pending+at+HOD&year=@q_year&cycleType=@q_cycle&searchText=@q_search&deptId=@q_dept&unitId=@q_unit">
+                <div class="stat-icon si-pink">⏳</div>
+                <div>
+                    <div class="stat-val">@statAtHOD</div>
+                    <div class="stat-label">Pending HOD</div>
+                </div>
+            </a>
+            <a class="stat-card @(q_status == "Pending at MC/JMD" ? "active-stat" : "")"
+               href="/pmsbluecollar/tracking?status=Pending+at+MC%2FJMD&year=@q_year&cycleType=@q_cycle&searchText=@q_search&deptId=@q_dept&unitId=@q_unit">
+                <div class="stat-icon si-mc">🏛️</div>
+                <div>
+                    <div class="stat-val">@statAtMCJMD</div>
+                    <div class="stat-label">Pending MC / JMD</div>
+                </div>
+            </a>
+            <a class="stat-card @(q_status == "Completed" ? "active-stat" : "")"
+               href="/pmsbluecollar/tracking?status=Completed&year=@q_year&cycleType=@q_cycle&searchText=@q_search&deptId=@q_dept&unitId=@q_unit">
+                <div class="stat-icon si-green">✅</div>
+                <div>
+                    <div class="stat-val">@statCompleted</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </a>
+        </div>
+
+        <div class="card">
+            <form method="get" action="/pmsbluecollar/tracking" id="filterForm">
+                <input type="hidden" name="searchText" id="searchHidden" value="@q_search" />
+                <input type="hidden" name="year" value="@q_year" />
+                <input type="hidden" name="cycleType" value="@q_cycle" />
+
+                <div class="toolbar">
+                    <div class="search-box">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.35-4.35" />
+                        </svg>
+                        <input type="text" id="trackSearch" placeholder="Emp Code / Name" value="@q_search" autocomplete="off" />
+                    </div>
+
+                    <select name="unitId" id="unitSelect">
+                        <option value="">All Units</option>
+                        @foreach (var u in units)
+                        {
+                            <option value="@u.Value" selected="@(u.Value == q_unit ? "selected" : null)">@u.Text</option>
+                        }
+                    </select>
+
+                    <select name="deptId" id="deptSelect">
+                        <option value="">All Departments</option>
+                        @foreach (var d in depts)
+                        {
+                            <option value="@d.Value" selected="@(d.Value == q_dept ? "selected" : null)">@d.Text</option>
+                        }
+                    </select>
+
+                    <select name="status" id="statusSelect" class="filter-select-native">
+                        <option value="">All Statuses</option>
+                        <option value="Pending at RM" selected="@(q_status == "Pending at RM" ? "selected" : null)">Pending at RM</option>
+                        <option value="Pending at HOD" selected="@(q_status == "Pending at HOD" ? "selected" : null)">Pending at HOD</option>
+                        <option value="Pending at MC/JMD"
+                                selected="@(q_status == "Pending at MC/JMD" ? "selected" : null)">
+                            Pending at MC / JMD
+                        </option>
+                        <option value="Completed" selected="@(q_status == "Completed" ? "selected" : null)">Completed</option>
+                    </select>
+
+                    @if (!string.IsNullOrEmpty(q_year))
+                    {
+                        <span class="filter-badge">
+                            📅 @q_year
+                            <a href="/pmsbluecollar/tracking?cycleType=@q_cycle&status=@q_status&searchText=@q_search&deptId=@q_dept&unitId=@q_unit">✕</a>
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(q_cycle))
+                    {
+                        <span class="filter-badge">
+                            🔄 @q_cycle
+                            <a href="/pmsbluecollar/tracking?year=@q_year&status=@q_status&searchText=@q_search&deptId=@q_dept&unitId=@q_unit">✕</a>
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(q_status))
+                    {
+                        <span class="filter-badge">
+                            ⚡ @q_status
+                            <a href="/pmsbluecollar/tracking?year=@q_year&cycleType=@q_cycle&searchText=@q_search&deptId=@q_dept&unitId=@q_unit">✕</a>
+                        </span>
+                    }
+
+
+                    <a href="/pmsbluecollar/tracking" class="btn-outline" style="margin-left:auto">↺ Reset</a>
+                </div>
+            </form>
+@* 
+            @* CHANGE 3: show banner when completed rows are hidden 
+            @if (!showCompleted && statCompleted > 0)
+            {
+                <div class="completed-hidden-banner">
+                    <span>✅ <strong>@statCompleted completed</strong> record(s) are hidden from this view.</span>
+                    <a href="/pmsbluecollar/tracking?status=Completed&year=@q_year&cycleType=@q_cycle&searchText=@q_search&deptId=@q_dept&unitId=@q_unit">
+                        Show Completed →
+                    </a>
+                </div>
+            } *@
+
+            <div class="table-outer">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:38px">#</th>
+                            <th>Employee</th>
+                            <th>Emp Code</th>
+                            <th>Department</th>
+                            <th>Cycle</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Year</th>
+                            <th>Stage Progress</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="10" class="empty-state">
+                                    No PMS records found.
+                                    <a href="/pmsbluecollar/hr-dashboard">Go to HR Dashboard</a> to initiate.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var item in Model)
+                        {
+                            // Skip truly-completed rows unless user explicitly filtered for them
+                            bool isTrulyComplete = item.Status == "Completed" &&
+                                (!string.Equals(item.CycleType, "Annual", StringComparison.OrdinalIgnoreCase) ||
+                                 (item.MC_SubmitDate.HasValue && item.JMD_SubmitDate.HasValue));
+
+                            if (isTrulyComplete && !showCompleted)
+                            {
+                                continue;
+                            }
+
+                            rowNum++;
+
+                            bool hasHOD = !string.IsNullOrWhiteSpace(item.HODID) && item.HODID != "0";
+                            bool isAnnual = string.Equals(item.CycleType, "Annual", StringComparison.OrdinalIgnoreCase);
+
+                            // RM stage
+                            bool rmDone = item.Status != "Pending at RM";
+                            bool rmActive = item.Status == "Pending at RM";
+
+                            // HOD stage
+                            bool hodDone = hasHOD && (item.Status == "Completed" || item.Status == "Pending at MC" || item.Status == "Pending at JMD" || item.MC_SubmitDate.HasValue);
+                            bool hodActive = item.Status == "Pending at HOD";
+
+                            // CHANGE 2: MC / JMD stage booleans (only meaningful for Annual)
+                            bool mcDone = isAnnual && item.MC_SubmitDate.HasValue;
+                            bool mcActive = isAnnual && !item.MC_SubmitDate.HasValue && hodDone && rmDone;
+                            bool jmdDone = isAnnual && item.JMD_SubmitDate.HasValue;
+                            bool jmdActive = isAnnual && !item.JMD_SubmitDate.HasValue && mcDone;
+
+                            string cycleClass = (item.CycleType ?? "").ToLower().Replace("-", "") switch
+                            {
+                                "annual" => "pc-annual",
+                                "midyear" => "pc-mid-year",
+                                "q1" => "pc-q1",
+                                "q2" => "pc-q2",
+                                "q3" => "pc-q3",
+                                "q4" => "pc-q4",
+                                "custom" => "pc-custom",
+                                _ => "pc-annual"
+                            };
+
+                            <tr>
+                                <td class="cell-sm">@rowNum</td>
+                                <td>
+                                    <span class="emp-name">@item.EmpName</span>
+                                    <div class="emp-code" style="margin-top:2px">@item.Designation</div>
+                                </td>
+                                <td><span class="emp-code">@item.EmpCode</span></td>
+                                <td class="cell-sm">@item.Department</td>
+                                <td>
+                                    <span class="pill-cycle @cycleClass">
+                                        @(string.IsNullOrEmpty(item.CycleType) ? "—" : item.CycleType)
+                                    </span>
+                                </td>
+                                <td class="cell-sm">@(item.FromDate.HasValue ? item.FromDate.Value.ToString("dd-MMM-yy") : "—")</td>
+                                <td class="cell-sm">@(item.ToDate.HasValue ? item.ToDate.Value.ToString("dd-MMM-yy") : "—")</td>
+                                <td class="cell-sm">@(item.Year > 0 ? item.Year.ToString() : "—")</td>
+                                <td>
+
+                                    <div class="node-pipe">
+
+                                        <div class="node-c @(rmDone ? "node-done" : rmActive ? "node-active" : "node-pending")">
+                                            <span>@(rmDone ? "✓" : "R")</span>
+                                        </div>
+
+                                        @if (hasHOD)
+                                        {
+                                            <div class="node-line @(rmDone ? "node-line-done" : "")"></div>
+                                            <div class="node-c @(hodDone ? "node-done" : hodActive ? "node-active" : "node-pending")">
+                                                <span>@(hodDone ? "✓" : "H")</span>
+                                            </div>
+                                        }
+
+                                        @if (isAnnual)
+                                        {
+                                            <div class="node-line @(hodDone || (!hasHOD && rmDone) ? "node-line-mc-done" : "")"></div>
+                                            <div class="node-c @(mcDone ? "node-mc-done" : mcActive ? "node-mc-active" : "node-pending")" title="MC">
+                                                <span>@(mcDone ? "✓" : "M")</span>
+                                            </div>
+                                            <div class="node-line @(mcDone ? "node-line-jmd-done" : "")"></div>
+                                            <div class="node-c @(jmdDone ? "node-jmd-done" : jmdActive ? "node-jmd-active" : "node-pending")" title="JMD">
+                                                <span>@(jmdDone ? "✓" : "J")</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <a href="/pmsbluecollar/print?id=@item.PmsID" target="_blank" class="btn-xs btn-print">🖨 Print</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-footer">
+                <span>
+                    Showing <strong>@rowNum</strong> of <strong>@statTotal</strong> records
+                    @if (!string.IsNullOrEmpty(q_status) || !string.IsNullOrEmpty(q_year) || !string.IsNullOrEmpty(q_cycle) || !string.IsNullOrEmpty(q_search))
+                    {
+                        <span style="color:var(--amber);font-weight:600"> · filtered</span>
+                    }
+                    @if (q_status != "Completed" && q_status != "Pending at MC/JMD" && statCompleted > 0)
+                    {
+                        <span style="color:var(--emerald);font-weight:600"> · @statCompleted completed hidden</span>
+                    }
+
+                </span>
+                <span>Scroll ↔ to see all columns</span>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        // ── Cycle pill selection ──
+        function selectCycle(val) {
+        var hidden = document.getElementById('cycleTypeHidden');
+        hidden.value = val;
+        document.querySelectorAll('.cycle-pill[data-cycle]').forEach(function(btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-cycle') === val && val !== '');
+        });
+        clearTimeout(window._cycleTimer);
+        window._cycleTimer = setTimeout(function() {
+        document.getElementById('cycleFilterForm').submit();
+        }, 80);
+        }
+
+        // ── Year input: submit on change ──
+        (function() {
+        var yearInp = document.getElementById('cycleYearInput');
+        if (yearInp) {
+        yearInp.addEventListener('change', function() {
+        clearTimeout(window._yearTimer);
+        window._yearTimer = setTimeout(function() {
+        document.getElementById('cycleFilterForm').submit();
+        }, 300);
+        });
+        yearInp.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); document.getElementById('cycleFilterForm').submit(); }
+        });
+        }
+        })();
+
+        (function () {
+        var form   = document.getElementById('filterForm');
+        var hidden = document.getElementById('searchHidden');
+        var inp    = document.getElementById('trackSearch');
+
+        new TomSelect('#unitSelect', {
+        allowEmptyOption: true,
+        placeholder: 'All Units',
+        dropdownParent: 'body',
+        onChange: function() { hidden.value = inp ? inp.value : ''; form.submit(); }
+        });
+        new TomSelect('#deptSelect', {
+        allowEmptyOption: true,
+        placeholder: 'All Departments',
+        dropdownParent: 'body',
+        onChange: function() { hidden.value = inp ? inp.value : ''; form.submit(); }
+        });
+
+        ['statusSelect'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('change', function() {
+        hidden.value = inp ? inp.value : '';
+        form.submit();
+        });
+        });
+
+        var timer, lastVal = inp ? inp.value : '';
+        if (inp) {
+        inp.addEventListener('input', function () {
+        hidden.value = inp.value;
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+        if (inp.value !== lastVal) { lastVal = inp.value; form.submit(); }
+        }, 480);
+        });
+        inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); hidden.value = inp.value; form.submit(); }
+        });
+        }
+        })();
+    </script>
+</body>
+</html>

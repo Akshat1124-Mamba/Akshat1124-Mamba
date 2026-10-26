@@ -1,0 +1,988 @@
+﻿@model vgl.Models.ReviewerDashboardVM
+@{
+    Layout = null;
+    int pendingCount = Model.Mappings.Count(m => m.Status == "EmployeeFilled" || m.Status == "RMReview");
+    int reviewedCount = Model.Mappings.Count(m => m.Status != "EmployeeFilled" && m.Status != "RMReview" && m.Status != "Draft");
+    int draftCount = Model.Mappings.Count(m => m.Status == "Draft");
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RM Appraisal Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --navy: #0f1c3f;
+            --navy2: #1a2d5a;
+            --rc: #1e4ed8;
+            --rlt: #eff4ff;
+            --rbd: #93c5fd;
+            --ink: #0f172a;
+            --ink2: #334155;
+            --ink3: #64748b;
+            --ink4: #94a3b8;
+            --bg: #f8f9fc;
+            --white: #fff;
+            --border: #e2e8f0;
+            --emerald: #059669;
+            --emerald-lt: #d1fae5;
+            --rose: #e11d48;
+            --rose-lt: #fff1f2;
+            --gold: #d97706;
+            --gold-lt: #fef9ee;
+            --font: 'DM Sans', sans-serif;
+            --mono: 'DM Mono', monospace;
+            --rad: 12px;
+            --rad-lg: 18px;
+            --sh: 0 1px 3px rgba(15,28,63,.06), 0 4px 16px rgba(15,28,63,.06);
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--ink);
+            font-size: 13px;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── NAV ── */
+        .nav {
+            height: 58px;
+            background: var(--navy);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            position: sticky;
+            top: 0;
+            z-index: 500;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-logo {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg,#3b82f6,#6366f1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            font-family: Georgia,serif;
+            font-style: italic;
+            flex-shrink: 0;
+        }
+
+        .nav-title {
+            font-size: .85rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+            .nav-title span {
+                display: block;
+                font-size: .60rem;
+                color: rgba(255,255,255,.4);
+                text-transform: uppercase;
+                letter-spacing: .1em;
+                margin-top: 1px;
+            }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .role-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: .70rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            background: var(--rlt);
+            color: var(--rc);
+            border: 1px solid var(--rbd);
+        }
+
+        .btn-nav {
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 7px;
+            border: 1px solid rgba(255,255,255,.15);
+            background: rgba(255,255,255,.08);
+            color: rgba(255,255,255,.75);
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            font-family: var(--font);
+            transition: .15s;
+        }
+
+            .btn-nav:hover {
+                background: rgba(255,255,255,.16);
+                color: #fff;
+            }
+
+        /* ── HERO ── */
+        .hero {
+            background: linear-gradient(120deg,var(--navy) 0%,var(--navy2) 100%);
+            padding: 28px 32px 24px;
+        }
+
+        .hero-role {
+            font-size: .70rem;
+            font-weight: 600;
+            color: rgba(255,255,255,.45);
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .hero-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .hero-sub {
+            font-size: .78rem;
+            color: rgba(255,255,255,.55);
+            margin-top: 5px;
+        }
+
+        /* ── LAYOUT ── */
+        .content {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 28px 28px 80px;
+        }
+
+        /* ── STATS ── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--rad);
+            padding: 16px 20px;
+            box-shadow: var(--sh);
+        }
+
+        .stat-label {
+            font-size: .60rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: var(--ink4);
+            margin-bottom: 6px;
+        }
+
+        .stat-val {
+            font-size: 1.5rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            line-height: 1;
+        }
+
+        .stat-sub {
+            font-size: .70rem;
+            color: var(--ink3);
+            margin-top: 4px;
+        }
+
+        .stat-card.c-blue {
+            border-top: 2.5px solid var(--rc);
+        }
+
+        .stat-card.c-amber {
+            border-top: 2.5px solid var(--gold);
+        }
+
+        .stat-card.c-green {
+            border-top: 2.5px solid var(--emerald);
+        }
+
+        .stat-card.c-rose {
+            border-top: 2.5px solid var(--rose);
+        }
+
+        /* ── SECTION LABEL ── */
+        .section-lbl {
+            font-size: .60rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: var(--ink3);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+            .section-lbl::after {
+                content: '';
+                flex: 1;
+                height: 1px;
+                background: var(--border);
+            }
+
+        /* ── TABLE CARD ── */
+        .pms-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--rad-lg);
+            padding: 20px 22px;
+            margin-bottom: 22px;
+            box-shadow: var(--sh);
+        }
+
+        /* ── FILTER TOOLBAR ── */
+        .filter-toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            margin-bottom: 16px;
+        }
+
+        .ftb-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+            .ftb-group label {
+                font-size: .60rem;
+                font-weight: 700;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                color: var(--ink3);
+            }
+
+        .ftb-input, .ftb-select {
+            height: 36px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0 12px;
+            font-size: .78rem;
+            font-family: var(--font);
+            background: var(--white);
+            outline: none;
+            min-width: 150px;
+        }
+
+            .ftb-input:focus, .ftb-select:focus {
+                border-color: var(--rc);
+            }
+
+        /* ── STATUS TABS ── */
+        .status-tabs {
+            display: flex;
+            gap: 6px;
+        }
+
+        .stab {
+            height: 36px;
+            padding: 0 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--white);
+            font-size: .76rem;
+            font-weight: 600;
+            color: var(--ink3);
+            cursor: pointer;
+            font-family: var(--font);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: .15s;
+        }
+
+            .stab:hover {
+                border-color: var(--rc);
+                color: var(--rc);
+            }
+
+            .stab.active {
+                border-color: var(--rc);
+                color: var(--rc);
+                background: var(--rlt);
+            }
+
+                .stab.active.is-pending {
+                    border-color: var(--gold);
+                    color: var(--gold);
+                    background: var(--gold-lt);
+                }
+
+                .stab.active.is-done {
+                    border-color: var(--emerald);
+                    color: var(--emerald);
+                    background: var(--emerald-lt);
+                }
+
+                .stab.active.is-awaiting {
+                    border-color: #4338ca;
+                    color: #4338ca;
+                    background: #eef2ff;
+                }
+
+                    .stab.active.is-awaiting .stab-count {
+                        background: #4338ca;
+                        color: #fff;
+                    }
+
+                .stab.active.is-waiting {
+                    border-color: var(--rose);
+                    color: var(--rose);
+                    background: var(--rose-lt);
+                }
+
+                    .stab.active.is-waiting .stab-count {
+                        background: var(--rose);
+                        color: #fff;
+                    }
+        .stab-count {
+            font-family: var(--mono);
+            font-size: .62rem;
+            background: var(--border);
+            padding: 1px 6px;
+            border-radius: 8px;
+        }
+
+        .stab.active .stab-count {
+            background: var(--rc);
+            color: #fff;
+        }
+
+        .stab.active.is-pending .stab-count {
+            background: var(--gold);
+            color: #fff;
+        }
+
+        .stab.active.is-done .stab-count {
+            background: var(--emerald);
+            color: #fff;
+        }
+
+        /* ── SEARCH ── */
+        .reviewer-search {
+            position: relative;
+            flex: 1;
+            max-width: 280px;
+        }
+
+            .reviewer-search input {
+                padding-left: 32px;
+                width: 100%;
+            }
+
+        .reviewer-search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--ink4);
+            font-size: .78rem;
+            pointer-events: none;
+        }
+
+        /* ── TABLE ── */
+        table.rev-tbl {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .78rem;
+        }
+
+            table.rev-tbl thead th {
+                background: #f8faff;
+                color: var(--ink3);
+                padding: 9px 12px;
+                text-align: left;
+                font-size: .60rem;
+                font-weight: 700;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                border-bottom: 1.5px solid var(--border);
+                white-space: nowrap;
+            }
+
+            table.rev-tbl tbody tr {
+                border-bottom: 1px solid #eaeef7;
+                transition: background .12s;
+            }
+
+                table.rev-tbl tbody tr:hover {
+                    background: #f8faff;
+                }
+
+            table.rev-tbl tbody td {
+                padding: 10px 12px;
+                color: var(--ink2);
+                vertical-align: middle;
+            }
+
+        .rev-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--ink4);
+        }
+
+        .rev-empty-icon {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 8px;
+            opacity: .3;
+        }
+
+        .rev-loading {
+            text-align: center;
+            padding: 36px;
+            color: var(--ink4);
+            font-size: .82rem;
+        }
+
+        /* ── ACTION BUTTONS ── */
+        .link-btns {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Primary: full PMS review (first submission) */
+        .btn-link-pms {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 7px;
+            font-size: .72rem;
+            font-weight: 600;
+            text-decoration: none;
+            font-family: var(--font);
+            border: 1px solid transparent;
+            white-space: nowrap;
+            transition: .15s;
+            background: var(--rc);
+            color: #fff;
+            box-shadow: 0 1px 6px rgba(30,78,216,.22);
+        }
+
+            .btn-link-pms:hover {
+                background: #1740bf;
+            }
+
+        /* Secondary: edit already-submitted PMS (outlined) */
+        .btn-link-edit {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 7px;
+            font-size: .72rem;
+            font-weight: 600;
+            text-decoration: none;
+            font-family: var(--font);
+            white-space: nowrap;
+            transition: .15s;
+            background: var(--rlt);
+            color: var(--rc);
+            border: 1px solid var(--rbd);
+        }
+
+            .btn-link-edit:hover {
+                background: #dbeafe;
+            }
+
+        /* BA form button */
+        .btn-link-ba {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 7px;
+            font-size: .72rem;
+            font-weight: 600;
+            text-decoration: none;
+            font-family: var(--font);
+            border: 1px solid transparent;
+            white-space: nowrap;
+            transition: .15s;
+            background: var(--gold);
+            color: #fff;
+            box-shadow: 0 1px 6px rgba(217,119,6,.22);
+        }
+
+            .btn-link-ba:hover {
+                background: #b45309;
+            }
+
+        /* Locked / waiting */
+        .btn-link-locked {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 7px;
+            font-size: .72rem;
+            font-weight: 600;
+            font-family: var(--font);
+            white-space: nowrap;
+            background: #f1f5f9;
+            color: var(--ink4);
+            border: 1px solid var(--border);
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* ── PILLS ── */
+        .pill-pending {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: .65rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            background: var(--gold-lt);
+            color: var(--gold);
+            border: 1px solid #fde68a;
+            white-space: nowrap;
+        }
+
+        .pill-editable {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: .65rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            background: #eff6ff;
+            color: var(--rc);
+            border: 1px solid var(--rbd);
+            white-space: nowrap;
+        }
+
+        .pill-other {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: .65rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            background: #f1f5f9;
+            color: var(--ink3);
+            border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .pill-done {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: .65rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            background: var(--emerald-lt);
+            color: var(--emerald);
+            border: 1px solid #a7f3d0;
+            white-space: nowrap;
+        }
+
+        .pill-awaiting {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: .65rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            background: #eef2ff;
+            color: #4338ca;
+            border: 1px solid #c7d2fe;
+            white-space: nowrap;
+        }
+
+        .cycle-chip-sm {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 9px;
+            border-radius: 10px;
+            font-size: .65rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            background: var(--rlt);
+            color: var(--rc);
+            border: 1px solid var(--rbd);
+            white-space: nowrap;
+        }
+
+        .ba-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: .60rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            background: #fef9ee;
+            color: var(--gold);
+            border: 1px solid #fde68a;
+            white-space: nowrap;
+        }
+
+        @@media (max-width:768px) {
+            .content, .hero {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+        }
+
+        .btn-nav-logout {
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 7px;
+            border: 1px solid rgba(239,68,68,.45);
+            background: rgba(239,68,68,.12);
+            color: rgba(255,180,180,.9);
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-family: var(--font);
+            transition: .15s;
+        }
+
+            .btn-nav-logout:hover {
+                background: rgba(239,68,68,.28);
+                color: #fff;
+                border-color: rgba(239,68,68,.7);
+            }
+    </style>
+</head>
+<body>
+
+    <nav class="nav">
+        <div class="nav-brand">
+            <div class="nav-logo">V</div>
+            <div class="nav-title">VGL — PMS<span>Reporting Manager Dashboard</span></div>
+        </div>
+        <div class="nav-right">
+            <div class="role-chip">👔 RM</div>
+            <a href="javascript:history.back()" class="btn-nav">← Back</a>
+            <form asp-area="Identity" asp-page="/Account/Logout" style="margin:0">
+                <button type="submit" class="btn-nav-logout">⏻ Logout</button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <div class="hero-role">👔 Reporting Manager</div>
+        <div class="hero-name">@Model.ReviewerName</div>
+        <div class="hero-sub">Review and rate your direct reports' appraisals</div>
+    </div>
+
+    <div class="content">
+
+        <!-- ── STATS (no "Draft/Awaiting Employee" card) ── -->
+        <div class="stats-row">
+            <div class="stat-card c-amber">
+                <div class="stat-label">Pending / Editable</div>
+                <div class="stat-val" id="statPending" style="color:var(--gold)">@pendingCount</div>
+                <div class="stat-sub">Action required or still editable</div>
+            </div>
+            <div class="stat-card c-blue">
+                <div class="stat-label">Total Reportees</div>
+                <div class="stat-val">@Model.Mappings.Count</div>
+                <div class="stat-sub">Mapped employees</div>
+            </div>
+            <div class="stat-card c-green">
+                <div class="stat-label">Forwarded to HOD+</div>
+                <div class="stat-val" style="color:var(--emerald)">@reviewedCount</div>
+                <div class="stat-sub">Past your review stage</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Awaiting Employee</div>
+                <div class="stat-val" style="color:var(--ink3)">@draftCount</div>
+                <div class="stat-sub">Employee yet to submit</div>
+            </div>
+        </div>
+
+        <!-- ── SINGLE CENTRAL NOTIFICATIONS TABLE ── -->
+        <div class="section-lbl">📋 Assigned Appraisals</div>
+        <div class="pms-card">
+            <div class="filter-toolbar">
+                <div class="ftb-group">
+                    <label>Financial Year</label>
+                    <select class="ftb-select" id="revYearFilter" onchange="loadReviewerMappings()">
+                        <option value="">All Years</option>
+                    </select>
+                </div>
+                <div class="status-tabs">
+                    <button type="button" class="stab active is-pending" id="revtab-pending" onclick="setRevStatusFilter('pending',this)">
+                        ⏳ Pending <span class="stab-count" id="revcount-pending">0</span>
+                    </button>
+                    <button type="button" class="stab is-waiting" id="revtab-waiting" onclick="setRevStatusFilter('waiting',this)">
+                        🕓 Waiting <span class="stab-count" id="revcount-waiting">0</span>
+                    </button>
+                    <button type="button" class="stab is-awaiting" id="revtab-awaiting" onclick="setRevStatusFilter('awaiting',this)">
+                        ⏩ Awaiting HOD <span class="stab-count" id="revcount-awaiting">0</span>
+                    </button>
+                    <button type="button" class="stab is-done" id="revtab-completed" onclick="setRevStatusFilter('completed',this)">
+                        ✔ Completed <span class="stab-count" id="revcount-completed">0</span>
+                    </button>
+                    <button type="button" class="stab" id="revtab-all" onclick="setRevStatusFilter('all',this)">
+                        All <span class="stab-count" id="revcount-all">0</span>
+                    </button>
+                </div>
+                <div class="reviewer-search">
+                    <span class="reviewer-search-icon">🔍</span>
+                    <input type="text" class="ftb-input" id="revSearch" placeholder="Search name or EMP code…" oninput="filterRevTable()" />
+                </div>
+            </div>
+            <div style="overflow-x:auto">
+                <table class="rev-tbl">
+                    <thead>
+                        <tr>
+                            <th style="width:40px">#</th>
+                            <th>Employee</th>
+                            <th>EMP Code</th>
+                            <th>Designation</th>
+                            <th>Department</th>
+                            <th>Cycle</th>
+                            <th style="width:70px;text-align:center">Year</th>
+                            <th>Period</th>
+                            <th style="width:100px;text-align:center">KPIs</th>
+                            <th style="width:160px">Status</th>
+                            <th style="width:260px">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="revTableBody">
+                        <tr><td colspan="11" class="rev-loading">Loading assigned appraisals…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div><!-- /.content -->
+
+    <script>
+           var REVIEWER_ROLE    = 'RM';
+        var OWN_STAGE_STATUS = 'RMReview';   // RM's submitted-but-editable stage
+        var NEXT_STAGE_LABEL = 'HOD';        // NEW
+        var WAITING_STATUSES = ['Draft'];
+
+        var _revData         = [];
+        var _revStatusFilter = 'pending';
+
+        function esc(s) {
+            return String(s || '')
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // ── Load ────────────────────────────────────────────────────────────────────
+        function loadReviewerMappings() {
+            var year = document.getElementById('revYearFilter').value || 0;
+            document.getElementById('revTableBody').innerHTML =
+                '<tr><td colspan="11" class="rev-loading">Loading assigned appraisals\u2026</td></tr>';
+
+            fetch('/Pms/GetReviewerMappingsJson?role=' + REVIEWER_ROLE + '&year=' + year)
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (!res || res.error || !res.success) {
+                        document.getElementById('revTableBody').innerHTML =
+                            '<tr><td colspan="11" class="rev-empty">Could not load data.</td></tr>';
+                        return;
+                    }
+                    _revData = res.rows || [];
+
+                    var sel = document.getElementById('revYearFilter');
+                    if (sel.options.length <= 1 && res.years && res.years.length) {
+                        res.years.forEach(function(y) {
+                            var o = document.createElement('option');
+                            o.value = y;
+                            o.textContent = 'FY ' + y + '-' + String(parseInt(y) + 1).slice(-2);
+                            sel.appendChild(o);
+                        });
+                    }
+                    renderRevCounts();
+                    renderRevTable();
+                })
+                .catch(function() {
+                    document.getElementById('revTableBody').innerHTML =
+                        '<tr><td colspan="11" class="rev-empty">Network error loading data.</td></tr>';
+                });
+        }
+
+        function renderRevCounts() {
+            var all      = _revData.length;
+            var pending  = _revData.filter(function(r) { return r.isMyPending; }).length;
+            var awaiting = _revData.filter(function(r) { return r.status === OWN_STAGE_STATUS && !r.isMyPending; }).length;
+            var waiting  = _revData.filter(function(r) { return WAITING_STATUSES.indexOf(r.status) > -1; }).length;
+            document.getElementById('revcount-all').textContent       = all;
+            document.getElementById('revcount-pending').textContent   = pending;
+            document.getElementById('revcount-waiting').textContent   = waiting;
+            document.getElementById('revcount-awaiting').textContent  = awaiting;
+            document.getElementById('revcount-completed').textContent = all - pending - awaiting - waiting;
+            document.getElementById('statPending').textContent        = pending;
+        }
+
+        function setRevStatusFilter(f, btn) {
+            _revStatusFilter = f;
+            document.querySelectorAll('#revtab-pending,#revtab-waiting,#revtab-awaiting,#revtab-completed,#revtab-all')
+                .forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            renderRevTable();
+        }
+        function filterRevTable() { renderRevTable(); }
+
+        // ── Status pill ──────────────────────────────────────────────────────────────
+        // Renders the pill differently depending on what action state the row is in:
+        //
+        //  EmployeeFilled → RM must review for the first time (new review)
+        //  RMReview       → RM already submitted PMS, but can still edit it (own stage)
+        //                   — AND/OR — RM's BA form is still outstanding
+        //  baPending only → PMS submitted, only BA remains
+        //  not pending    → Locked / upstream waiting
+        function statusPill(row) {
+            if (row.isMyPending) {
+                if (row.status === OWN_STAGE_STATUS) {
+                    if (row.baPending) {
+                        return '<span class="pill-editable">✏️ Editable</span>' +
+                               '<span class="ba-badge" style="margin-left:4px">BA ⏳</span>';
+                    }
+                    return '<span class="pill-editable">✏️ Editable — awaiting HOD</span>';
+                }
+                if (row.baPending) {
+                    return '<span class="pill-pending" style="background:#eff6ff;color:#1e40af;border-color:#93c5fd">' +
+                           '📋 Ready for RM Review</span>' +
+                           '<span class="ba-badge" style="margin-left:4px">BA ⏳</span>';
+                }
+                return '<span class="pill-pending" style="background:#eff6ff;color:#1e40af;border-color:#93c5fd">' +
+                       '📋 Ready for RM Review</span>';
+            }
+
+            if (row.status === OWN_STAGE_STATUS) {
+                return '<span class="pill-awaiting">⏩ Awaiting ' + NEXT_STAGE_LABEL + '</span>';
+            }
+
+            if (row.status === 'Draft') return '<span class="pill-other">Draft — awaiting employee</span>';
+            return '<span class="pill-done">✔ ' + esc(row.status) + '</span>';
+        }
+        function buildActionLinks(r) {
+            if (r.status === OWN_STAGE_STATUS) {
+                // RM has submitted PMS — still editable until HOD moves things forward,
+                // whether BA is still due (Pending tab) or already done (Awaiting HOD tab).
+                var parts = ['<a href="' + r.pmsUrl + '" class="btn-link-edit" target="_blank">✏️ Edit Submission</a>'];
+                if (r.hasBaLink && r.baUrl && r.baPending) {
+                    parts.push('<a href="' + r.baUrl + '" class="btn-link-ba" target="_blank">📋 BA Form</a>');
+                }
+                return '<div class="link-btns">' + parts.join('') + '</div>';
+            }
+
+            if (!r.isMyPending) {
+                return '<span class="btn-link-locked">🔒 Locked</span>';
+            }
+
+            // EmployeeFilled — RM's first review, not yet submitted
+            var parts = ['<a href="' + r.pmsUrl + '" class="btn-link-pms" target="_blank">📝 PMS Review</a>'];
+            if (r.hasBaLink && r.baUrl && r.baPending) {
+                parts.push('<a href="' + r.baUrl + '" class="btn-link-ba" target="_blank">📋 BA Form</a>');
+            }
+            return '<div class="link-btns">' + parts.join('') + '</div>';
+        }
+        // ── Render table ─────────────────────────────────────────────────────────────
+        function renderRevTable() {
+            var q = (document.getElementById('revSearch').value || '').toLowerCase().trim();
+            var rows = _revData.filter(function(r) {
+                var isAwaiting = r.status === OWN_STAGE_STATUS && !r.isMyPending;
+                var isWaiting  = WAITING_STATUSES.indexOf(r.status) > -1;
+                if (_revStatusFilter === 'pending'   && !r.isMyPending) return false;
+                if (_revStatusFilter === 'waiting'   && !isWaiting) return false;
+                if (_revStatusFilter === 'awaiting'  && !isAwaiting) return false;
+                if (_revStatusFilter === 'completed' && (r.isMyPending || isAwaiting || isWaiting)) return false;
+                if (q && (r.empName  || '').toLowerCase().indexOf(q) < 0
+                       && (r.empCode || '').toLowerCase().indexOf(q) < 0) return false;
+                return true;
+            });
+            // ...rest of the function stays exactly the same
+            // ... rest of the function (the rows.map(...) part) stays exactly the same
+
+            var tbody = document.getElementById('revTableBody');
+            if (!rows.length) {
+                tbody.innerHTML =
+                    '<tr><td colspan="11" class="rev-empty">' +
+                    '<span class="rev-empty-icon">&#x1F4E1;</span>' +
+                    'No appraisals found for this filter.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = rows.map(function(r, i) {
+                var period = (r.cycleFromDate || '\u2014') + ' \u2192 ' + (r.cycleToDate || '\u2014');
+                return '<tr>' +
+                    '<td style="color:var(--ink4);font-family:var(--mono)">'                    + (i + 1)                           + '</td>' +
+                    '<td style="font-weight:600">'                                               + esc(r.empName)                    + '</td>' +
+                    '<td style="font-family:var(--mono)">'                                       + esc(r.empCode)                    + '</td>' +
+                    '<td>'                                                                        + esc(r.designation)                + '</td>' +
+                    '<td>'                                                                        + esc(r.department)                 + '</td>' +
+                    '<td><span class="cycle-chip-sm">'                                           + esc(r.appraisalCycle || '\u2014') + '</span></td>' +
+                    '<td style="text-align:center;font-family:var(--mono)">'                     + r.appraisalYear                   + '</td>' +
+                    '<td style="font-family:var(--mono);font-size:.70rem;color:var(--ink3)">'   + esc(period)                       + '</td>' +
+                    '<td style="text-align:center;font-family:var(--mono)">'                     + r.kpiCount                        + '</td>' +
+                    '<td>'                                                                        + statusPill(r)                     + '</td>' +
+                    '<td>'                                                                        + buildActionLinks(r)               + '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        loadReviewerMappings();
+    </script>
+
+</body>
+</html>

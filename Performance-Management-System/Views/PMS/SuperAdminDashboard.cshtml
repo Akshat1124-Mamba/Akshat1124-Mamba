@@ -1,0 +1,2755 @@
+﻿@* SuperAdmin PMS Dashboard - Premium Command Center *@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>SuperAdmin — PMS Command Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --navy: #07111f;
+            --navy2: #0d1a2e;
+            --navy3: #112238;
+            --navy4: #162d47;
+            --gold: #f5a623;
+            --gold-dim: #c47f0c;
+            --gold-glow: rgba(245,166,35,.18);
+            --ink: #f0f4f8;
+            --ink2: #cbd5e0;
+            --ink3: #8899aa;
+            --ink4: #4a5a6a;
+            --bg: #060f1c;
+            --surface: #0d1a2e;
+            --surface2: #112238;
+            --surface3: #162d47;
+            --border: rgba(255,255,255,.06);
+            --border2: rgba(255,255,255,.10);
+            --border3: rgba(255,255,255,.16);
+            --teal: #14b8a6;
+            --teal-lt: rgba(20,184,166,.12);
+            --teal-bd: rgba(20,184,166,.3);
+            --emerald: #10b981;
+            --emerald-lt: rgba(16,185,129,.12);
+            --rose: #f43f5e;
+            --rose-lt: rgba(244,63,94,.12);
+            --cobalt: #3b82f6;
+            --cobalt-lt: rgba(59,130,246,.12);
+            --violet: #8b5cf6;
+            --violet-lt: rgba(139,92,246,.12);
+            --amber: #f59e0b;
+            --amber-lt: rgba(245,158,11,.12);
+            --slate: #64748b;
+            --font: 'Inter',sans-serif;
+            --mono: 'JetBrains Mono',monospace;
+            --rad: 8px;
+            --rad-lg: 12px;
+            --rad-xl: 16px;
+            --sh: 0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+            --sh-lg: 0 4px 32px rgba(0,0,0,.5);
+            --transition: .18s cubic-bezier(.4,0,.2,1);
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--ink);
+            font-size: 13px;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border3);
+            border-radius: 4px
+        }
+
+        /* ══════════════════════════════════
+           LAYOUT
+        ══════════════════════════════════ */
+        .layout {
+            display: flex;
+            min-height: 100vh
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: 232px;
+            background: var(--navy);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 600;
+            border-right: 1px solid var(--border);
+            overflow: hidden
+        }
+
+        .sb-brand {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 16px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0
+        }
+
+        .sb-logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg,#f5a623,#e84545);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            font-family: Georgia,serif;
+            font-style: italic;
+            flex-shrink: 0;
+            box-shadow: 0 2px 12px rgba(245,166,35,.35)
+        }
+
+        .sb-name {
+            font-size: .78rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -.01em
+        }
+
+            .sb-name span {
+                display: block;
+                font-size: .55rem;
+                color: var(--ink4);
+                text-transform: uppercase;
+                letter-spacing: .12em;
+                font-weight: 500;
+                margin-top: 1px
+            }
+
+        .sa-badge {
+            margin: 12px 14px;
+            padding: 7px 11px;
+            background: linear-gradient(135deg,rgba(245,166,35,.15),rgba(232,69,69,.1));
+            border: 1px solid rgba(245,166,35,.22);
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            flex-shrink: 0
+        }
+
+        .sa-badge-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--gold);
+            box-shadow: 0 0 6px var(--gold);
+            flex-shrink: 0
+        }
+
+        .sa-badge-label {
+            font-size: .58rem;
+            font-weight: 700;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: .12em
+        }
+
+        .sb-section-label {
+            padding: 10px 18px 4px;
+            font-size: .50rem;
+            font-weight: 700;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--ink4);
+            flex-shrink: 0
+        }
+
+        .sb-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 12px
+        }
+
+        .sb-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            height: 36px;
+            padding: 0 12px 0 14px;
+            border-radius: 7px;
+            margin: 1px 8px;
+            color: var(--ink3);
+            font-size: .73rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            border: 1px solid transparent;
+            transition: var(--transition);
+            white-space: nowrap;
+            position: relative
+        }
+
+        .sb-icon {
+            font-size: .82rem;
+            flex-shrink: 0;
+            opacity: .8
+        }
+
+        .sb-link:hover {
+            background: rgba(255,255,255,.05);
+            color: var(--ink2)
+        }
+
+        .sb-link.active {
+            background: rgba(245,166,35,.1);
+            border-color: rgba(245,166,35,.22);
+            color: var(--gold)
+        }
+
+            .sb-link.active .sb-icon {
+                opacity: 1
+            }
+
+        .sb-cnt {
+            margin-left: auto;
+            font-family: var(--mono);
+            font-size: .56rem;
+            background: rgba(255,255,255,.07);
+            padding: 1px 6px;
+            border-radius: 5px;
+            color: var(--ink4);
+            flex-shrink: 0
+        }
+
+        .sb-link.active .sb-cnt {
+            background: rgba(245,166,35,.18);
+            color: var(--gold)
+        }
+
+        .sb-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 8px 14px
+        }
+
+        .sb-footer {
+            padding: 12px 14px;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0
+        }
+
+        .sb-user {
+            display: flex;
+            align-items: center;
+            gap: 9px
+        }
+
+        .sb-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg,#f5a623,#e84545);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .60rem;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0
+        }
+
+        .sb-uname {
+            font-size: .68rem;
+            color: var(--ink4)
+        }
+
+            .sb-uname strong {
+                display: block;
+                color: var(--ink2);
+                font-size: .70rem;
+                font-weight: 600
+            }
+
+        /* ── MAIN ── */
+        .main {
+            margin-left: 232px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh
+        }
+
+        .topbar {
+            height: 64px;
+            background: rgba(7,17,31,.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            position: sticky;
+            top: 0;
+            z-index: 400
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 14px
+        }
+
+        .page-heading {
+            font-size: .92rem;
+            font-weight: 700;
+            color: var(--ink);
+            letter-spacing: -.01em
+        }
+
+        .page-sub {
+            font-size: .68rem;
+            color: var(--ink4);
+            margin-top: 2px
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .btn-sm {
+            height: 32px;
+            padding: 0 14px;
+            border-radius: 7px;
+            border: 1px solid var(--border2);
+            background: rgba(255,255,255,.04);
+            font-size: .71rem;
+            font-weight: 600;
+            font-family: var(--font);
+            color: var(--ink2);
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: var(--transition)
+        }
+
+            .btn-sm:hover {
+                border-color: var(--border3);
+                color: var(--ink);
+                background: rgba(255,255,255,.07)
+            }
+
+            .btn-sm.gold {
+                background: var(--gold);
+                color: #07111f;
+                border-color: var(--gold);
+                box-shadow: 0 2px 12px rgba(245,166,35,.3);
+                font-weight: 700
+            }
+
+                .btn-sm.gold:hover {
+                    filter: brightness(1.1)
+                }
+
+            .btn-sm.teal {
+                background: var(--teal-lt);
+                border-color: var(--teal-bd);
+                color: var(--teal)
+            }
+
+        .year-sel {
+            height: 32px;
+            border: 1px solid var(--border2);
+            border-radius: 7px;
+            padding: 0 10px;
+            font-size: .72rem;
+            font-family: var(--font);
+            background: rgba(255,255,255,.04);
+            color: var(--ink2);
+            outline: none;
+            min-width: 110px
+        }
+
+            .year-sel:focus {
+                border-color: rgba(245,166,35,.4)
+            }
+
+            .year-sel option {
+                background: #0d1a2e
+            }
+
+        .chip-sa {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: .60rem;
+            font-weight: 700;
+            background: rgba(245,166,35,.12);
+            color: var(--gold);
+            border: 1px solid rgba(245,166,35,.25)
+        }
+
+        .content {
+            padding: 24px 28px 80px
+        }
+
+        /* ── PANEL ── */
+        .panel {
+            display: none
+        }
+
+            .panel.active {
+                display: block
+            }
+
+        /* ══════════════════════════════════
+           OVERVIEW HERO
+        ══════════════════════════════════ */
+        .cmd-hero {
+            background: var(--navy2);
+            border: 1px solid var(--border);
+            border-radius: var(--rad-xl);
+            padding: 28px 32px;
+            margin-bottom: 22px;
+            position: relative;
+            overflow: hidden
+        }
+
+            .cmd-hero::before {
+                content: '';
+                position: absolute;
+                top: -60px;
+                right: -60px;
+                width: 280px;
+                height: 280px;
+                background: radial-gradient(circle,rgba(245,166,35,.1) 0%,transparent 70%);
+                pointer-events: none
+            }
+
+            .cmd-hero::after {
+                content: '';
+                position: absolute;
+                bottom: -40px;
+                left: 40%;
+                width: 180px;
+                height: 180px;
+                background: radial-gradient(circle,rgba(20,184,166,.07) 0%,transparent 70%);
+                pointer-events: none
+            }
+
+        .hero-eyebrow {
+            font-size: .57rem;
+            font-weight: 700;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+            .hero-eyebrow::before {
+                content: '';
+                width: 18px;
+                height: 1px;
+                background: var(--gold);
+                opacity: .5
+            }
+
+        .hero-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1.2;
+            letter-spacing: -.02em
+        }
+
+        .hero-sub {
+            font-size: .76rem;
+            color: var(--ink3);
+            margin-top: 7px;
+            max-width: 480px;
+            line-height: 1.6
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+            flex-wrap: wrap
+        }
+
+        .btn-hero {
+            height: 36px;
+            padding: 0 18px;
+            border-radius: 8px;
+            font-size: .74rem;
+            font-weight: 600;
+            font-family: var(--font);
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition);
+            white-space: nowrap;
+            border: 1px solid var(--border2);
+            background: rgba(255,255,255,.06);
+            color: rgba(255,255,255,.7)
+        }
+
+            .btn-hero:hover {
+                background: rgba(255,255,255,.11);
+                color: #fff;
+                border-color: var(--border3)
+            }
+
+            .btn-hero.gold {
+                background: var(--gold);
+                color: #07111f;
+                border-color: var(--gold);
+                box-shadow: 0 2px 14px rgba(245,166,35,.35);
+                font-weight: 700
+            }
+
+                .btn-hero.gold:hover {
+                    filter: brightness(1.08)
+                }
+
+        /* ══════════════════════════════════
+           STATS GRID
+        ══════════════════════════════════ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit,minmax(148px,1fr));
+            gap: 10px;
+            margin-bottom: 22px
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--rad-lg);
+            padding: 16px 18px;
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition)
+        }
+
+            .stat-card:hover {
+                border-color: var(--border2);
+                transform: translateY(-1px)
+            }
+
+            .stat-card::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+                border-radius: var(--rad-lg) var(--rad-lg) 0 0
+            }
+
+        .c-gold::after {
+            background: var(--gold)
+        }
+
+        .c-rose::after {
+            background: var(--rose)
+        }
+
+        .c-amber::after {
+            background: var(--amber)
+        }
+
+        .c-emerald::after {
+            background: var(--emerald)
+        }
+
+        .c-cobalt::after {
+            background: var(--cobalt)
+        }
+
+        .c-teal::after {
+            background: var(--teal)
+        }
+
+        .c-violet::after {
+            background: var(--violet)
+        }
+
+        .c-slate::after {
+            background: var(--slate)
+        }
+
+        .stat-label {
+            font-size: .54rem;
+            font-weight: 700;
+            letter-spacing: .11em;
+            text-transform: uppercase;
+            color: var(--ink4);
+            margin-bottom: 8px
+        }
+
+        .stat-val {
+            font-size: 1.7rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            line-height: 1
+        }
+
+        .stat-sub {
+            font-size: .64rem;
+            color: var(--ink4);
+            margin-top: 5px;
+            line-height: 1.4
+        }
+
+        .stat-icon {
+            position: absolute;
+            right: 14px;
+            top: 14px;
+            font-size: 1.1rem;
+            opacity: .25
+        }
+
+        /* ══════════════════════════════════
+           SECTION LABEL
+        ══════════════════════════════════ */
+        .section-lbl {
+            font-size: .55rem;
+            font-weight: 700;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--ink4);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+            .section-lbl::after {
+                content: '';
+                flex: 1;
+                height: 1px;
+                background: var(--border)
+            }
+
+        /* ══════════════════════════════════
+           CARD
+        ══════════════════════════════════ */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--rad-xl);
+            padding: 20px 22px;
+            margin-bottom: 18px;
+            box-shadow: var(--sh)
+        }
+
+        .card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .card-title {
+            font-size: .83rem;
+            font-weight: 700;
+            color: var(--ink);
+            letter-spacing: -.01em
+        }
+
+        .card-sub {
+            font-size: .68rem;
+            color: var(--ink4);
+            margin-top: 3px
+        }
+
+        /* ══════════════════════════════════
+           ROLE VIEW CARDS (Quick Launch)
+        ══════════════════════════════════ */
+        .role-views {
+            display: grid;
+            grid-template-columns: repeat(auto-fit,minmax(185px,1fr));
+            gap: 12px;
+            margin-bottom: 22px
+        }
+
+        .rv-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--rad-xl);
+            padding: 18px 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden
+        }
+
+            .rv-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px
+            }
+
+            .rv-card:hover {
+                border-color: var(--border2);
+                transform: translateY(-2px);
+                box-shadow: var(--sh)
+            }
+
+        .rv-emp::before {
+            background: var(--cobalt)
+        }
+
+        .rv-rm::before {
+            background: var(--amber)
+        }
+
+        .rv-hod::before {
+            background: var(--teal)
+        }
+
+        .rv-uh::before {
+            background: var(--violet)
+        }
+
+        .rv-mc::before {
+            background: #b45309
+        }
+
+        .rv-jmd::before {
+            background: var(--rose)
+        }
+
+        .rv-icon {
+            font-size: 1.4rem;
+            margin-bottom: 9px;
+            opacity: .85
+        }
+
+        .rv-title {
+            font-size: .78rem;
+            font-weight: 700;
+            color: var(--ink)
+        }
+
+        .rv-sub {
+            font-size: .65rem;
+            color: var(--ink4);
+            margin-top: 2px
+        }
+
+        .rv-count {
+            margin-top: 10px;
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            color: var(--ink)
+        }
+
+        .rv-pending {
+            font-size: .62rem;
+            font-weight: 600;
+            color: var(--gold);
+            margin-top: 3px
+        }
+
+        /* ══════════════════════════════════
+           DUAL PANEL
+        ══════════════════════════════════ */
+        .dual {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 14px
+        }
+        @@media(max - width:1100px) {
+            .dual
+
+        {
+            grid-template-columns: 1fr
+        }
+
+        }
+
+        /* ══════════════════════════════════
+           FUNNEL
+        ══════════════════════════════════ */
+        .funnel {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            padding: 4px 0
+        }
+
+        .funnel-row {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .funnel-lbl {
+            font-size: .65rem;
+            color: var(--ink3);
+            width: 110px;
+            flex-shrink: 0;
+            text-align: right
+        }
+
+        .funnel-bar-wrap {
+            flex: 1;
+            height: 20px;
+            background: rgba(255,255,255,.04);
+            border-radius: 5px;
+            overflow: hidden
+        }
+
+        .funnel-bar {
+            height: 100%;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            font-size: .58rem;
+            font-weight: 700;
+            color: rgba(255,255,255,.9);
+            font-family: var(--mono);
+            transition: width .7s cubic-bezier(.4,0,.2,1)
+        }
+
+        .funnel-pct {
+            font-size: .60rem;
+            color: var(--ink4);
+            width: 34px;
+            text-align: right;
+            font-family: var(--mono)
+        }
+
+        /* ══════════════════════════════════
+           ALERTS
+        ══════════════════════════════════ */
+        .alert-item {
+            border-radius: var(--rad);
+            padding: 10px 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 7px;
+            border: 1px solid transparent
+        }
+
+            .alert-item.warn {
+                background: rgba(245,166,35,.08);
+                border-color: rgba(245,166,35,.2)
+            }
+
+            .alert-item.info {
+                background: rgba(59,130,246,.08);
+                border-color: rgba(59,130,246,.2)
+            }
+
+            .alert-item.success {
+                background: rgba(16,185,129,.08);
+                border-color: rgba(16,185,129,.2)
+            }
+
+            .alert-item.danger {
+                background: rgba(244,63,94,.08);
+                border-color: rgba(244,63,94,.2)
+            }
+
+        .alert-icon {
+            font-size: .9rem;
+            flex-shrink: 0;
+            margin-top: 1px
+        }
+
+        .alert-title {
+            font-size: .72rem;
+            font-weight: 600
+        }
+
+        .alert-sub {
+            font-size: .63rem;
+            color: var(--ink4);
+            margin-top: 1px
+        }
+
+        .warn .alert-title {
+            color: #f5a623
+        }
+
+        .info .alert-title {
+            color: var(--cobalt)
+        }
+
+        .success .alert-title {
+            color: var(--emerald)
+        }
+
+        .danger .alert-title {
+            color: var(--rose)
+        }
+
+        /* ══════════════════════════════════
+           PROGRESS RING
+        ══════════════════════════════════ */
+        .prog-wrap {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap
+        }
+
+        .prog-ring {
+            position: relative;
+            width: 76px;
+            height: 76px;
+            flex-shrink: 0
+        }
+
+            .prog-ring svg {
+                transform: rotate(-90deg)
+            }
+
+        .prog-ring-inner {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center
+        }
+
+        .pr-val {
+            font-size: .88rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            color: var(--ink)
+        }
+
+        .pr-lbl {
+            font-size: .46rem;
+            color: var(--ink4);
+            text-transform: uppercase;
+            letter-spacing: .1em
+        }
+
+        /* ══════════════════════════════════
+           TIMELINE PROCESS VIEWER (NEW)
+        ══════════════════════════════════ */
+        .process-track {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--rad-xl);
+            padding: 20px 22px;
+            margin-bottom: 18px
+        }
+
+        .process-stages {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            position: relative;
+            padding-top: 36px;
+            overflow-x: auto;
+            padding-bottom: 8px
+        }
+
+            .process-stages::before {
+                content: '';
+                position: absolute;
+                top: 18px;
+                left: 24px;
+                right: 24px;
+                height: 1.5px;
+                background: linear-gradient(90deg,var(--cobalt) 0%,var(--teal) 30%,var(--violet) 60%,var(--emerald) 100%);
+                opacity: .3
+            }
+
+        .ps-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            min-width: 96px;
+            position: relative;
+            cursor: pointer
+        }
+
+        .ps-dot-wrap {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 2;
+            flex-shrink: 0;
+            transition: var(--transition)
+        }
+
+            .ps-dot-wrap.active {
+                transform: scale(1.15)
+            }
+
+        .ps-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .55rem;
+            font-weight: 700;
+            color: #fff;
+            border: 2px solid transparent;
+            transition: var(--transition)
+        }
+
+        .ps-label {
+            font-size: .60rem;
+            font-weight: 600;
+            color: var(--ink3);
+            text-align: center;
+            line-height: 1.4
+        }
+
+        .ps-count {
+            font-size: .80rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            color: var(--ink);
+            margin-top: 4px
+        }
+
+        .ps-tag {
+            font-size: .55rem;
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-top: 3px;
+            font-weight: 700;
+            display: inline-block
+        }
+
+        /* ══════════════════════════════════
+           TOOLBAR
+        ══════════════════════════════════ */
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 14px
+        }
+
+        .role-tabs {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap
+        }
+
+        .rtab {
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            font-size: .68rem;
+            font-weight: 600;
+            color: var(--ink4);
+            cursor: pointer;
+            font-family: var(--font);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: var(--transition)
+        }
+
+            .rtab:hover {
+                border-color: var(--border2);
+                color: var(--ink2)
+            }
+
+            .rtab.active {
+                border-color: rgba(245,166,35,.35);
+                color: var(--gold);
+                background: rgba(245,166,35,.08)
+            }
+
+        .rtab-cnt {
+            font-family: var(--mono);
+            font-size: .56rem;
+            background: rgba(255,255,255,.07);
+            padding: 1px 5px;
+            border-radius: 4px
+        }
+
+        .rtab.active .rtab-cnt {
+            background: rgba(245,166,35,.18);
+            color: var(--gold)
+        }
+
+        .search-wrap {
+            position: relative;
+            flex: 1;
+            max-width: 280px;
+            margin-left: auto
+        }
+
+            .search-wrap input {
+                width: 100%;
+                height: 30px;
+                border: 1px solid var(--border);
+                border-radius: 7px;
+                padding: 0 10px 0 28px;
+                font-size: .73rem;
+                font-family: var(--font);
+                background: rgba(255,255,255,.04);
+                color: var(--ink);
+                outline: none
+            }
+
+                .search-wrap input:focus {
+                    border-color: rgba(245,166,35,.35)
+                }
+
+                .search-wrap input::placeholder {
+                    color: var(--ink4)
+                }
+
+        .search-icon {
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: .72rem;
+            color: var(--ink4);
+            pointer-events: none
+        }
+
+        /* ══════════════════════════════════
+           TABLE
+        ══════════════════════════════════ */
+        .tbl-wrap {
+            overflow-x: auto
+        }
+
+        .sa-tbl {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .74rem
+        }
+
+            .sa-tbl thead th {
+                background: rgba(255,255,255,.03);
+                color: var(--ink4);
+                padding: 8px 10px;
+                text-align: left;
+                font-size: .54rem;
+                font-weight: 700;
+                letter-spacing: .09em;
+                text-transform: uppercase;
+                border-bottom: 1px solid var(--border2);
+                white-space: nowrap
+            }
+
+            .sa-tbl tbody tr {
+                border-bottom: 1px solid rgba(255,255,255,.04);
+                transition: background .1s
+            }
+
+                .sa-tbl tbody tr:hover {
+                    background: rgba(255,255,255,.03)
+                }
+
+            .sa-tbl tbody td {
+                padding: 9px 10px;
+                color: var(--ink2);
+                vertical-align: middle
+            }
+
+            .sa-tbl .mono {
+                font-family: var(--mono);
+                font-size: .70rem
+            }
+
+            .sa-tbl .dim {
+                color: var(--ink4)
+            }
+
+        .tbl-empty {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--ink4);
+            font-size: .78rem
+        }
+
+        .tbl-loading {
+            text-align: center;
+            padding: 36px;
+            color: var(--ink4)
+        }
+
+        /* ── PILLS ── */
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: .58rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            white-space: nowrap;
+            letter-spacing: .03em
+        }
+
+        .pill-draft {
+            background: rgba(100,116,139,.15);
+            color: var(--slate);
+            border: 1px solid rgba(100,116,139,.25)
+        }
+
+        .pill-emp {
+            background: var(--cobalt-lt);
+            color: var(--cobalt);
+            border: 1px solid rgba(59,130,246,.25)
+        }
+
+        .pill-rm {
+            background: var(--amber-lt);
+            color: var(--amber);
+            border: 1px solid rgba(245,158,11,.25)
+        }
+
+        .pill-hod {
+            background: var(--teal-lt);
+            color: var(--teal);
+            border: 1px solid rgba(20,184,166,.25)
+        }
+
+        .pill-uh {
+            background: var(--violet-lt);
+            color: var(--violet);
+            border: 1px solid rgba(139,92,246,.25)
+        }
+
+        .pill-mc {
+            background: rgba(180,83,9,.15);
+            color: #f59e0b;
+            border: 1px solid rgba(180,83,9,.3)
+        }
+
+        .pill-jmd {
+            background: var(--rose-lt);
+            color: var(--rose);
+            border: 1px solid rgba(244,63,94,.25)
+        }
+
+        .pill-hr {
+            background: var(--emerald-lt);
+            color: var(--emerald);
+            border: 1px solid rgba(16,185,129,.25)
+        }
+
+        /* ── CYCLE CHIP ── */
+        .cycle-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-size: .58rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            background: var(--teal-lt);
+            color: var(--teal);
+            border: 1px solid var(--teal-bd);
+            white-space: nowrap
+        }
+
+        /* ── LINK BTNS ── */
+        .link-btns {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap
+        }
+
+        .lb {
+            height: 26px;
+            padding: 0 9px;
+            border-radius: 5px;
+            font-size: .64rem;
+            font-weight: 600;
+            font-family: var(--font);
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            transition: var(--transition);
+            white-space: nowrap
+        }
+
+        .lb-emp {
+            background: var(--cobalt-lt);
+            color: var(--cobalt);
+            border-color: rgba(59,130,246,.3)
+        }
+
+        .lb-rm {
+            background: var(--amber-lt);
+            color: var(--amber);
+            border-color: rgba(245,158,11,.3)
+        }
+
+        .lb-hod {
+            background: var(--teal-lt);
+            color: var(--teal);
+            border-color: rgba(20,184,166,.3)
+        }
+
+        .lb-uh {
+            background: var(--violet-lt);
+            color: var(--violet);
+            border-color: rgba(139,92,246,.3)
+        }
+
+        .lb-mc {
+            background: rgba(180,83,9,.12);
+            color: #f59e0b;
+            border-color: rgba(180,83,9,.3)
+        }
+
+        .lb-jmd {
+            background: var(--rose-lt);
+            color: var(--rose);
+            border-color: rgba(244,63,94,.3)
+        }
+
+        .lb-print {
+            background: rgba(255,255,255,.06);
+            color: var(--ink3);
+            border-color: var(--border)
+        }
+
+        .lb:hover {
+            filter: brightness(1.15)
+        }
+
+        /* ── PIPELINE DOTS ── */
+        .pipeline {
+            display: flex;
+            align-items: center;
+            gap: 1px
+        }
+
+        .pipe-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .40rem;
+            font-weight: 700;
+            border: 1.5px solid transparent;
+            flex-shrink: 0
+        }
+
+            .pipe-dot.done {
+                background: var(--emerald);
+                border-color: var(--emerald);
+                color: #fff
+            }
+
+            .pipe-dot.now {
+                background: var(--gold);
+                border-color: var(--gold);
+                color: #07111f;
+                box-shadow: 0 0 0 3px rgba(245,166,35,.2)
+            }
+
+            .pipe-dot.wait {
+                background: rgba(255,255,255,.06);
+                border-color: var(--border);
+                color: var(--ink4)
+            }
+
+        .pipe-line {
+            width: 6px;
+            height: 1.5px;
+            background: var(--border);
+            border-radius: 2px
+        }
+
+            .pipe-line.done {
+                background: var(--emerald)
+            }
+
+        /* ══════════════════════════════════
+           MASTERS TABLE extras
+        ══════════════════════════════════ */
+        .reviewer-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: .62rem;
+            color: var(--ink3);
+            background: rgba(255,255,255,.05);
+            padding: 2px 7px;
+            border-radius: 5px;
+            border: 1px solid var(--border)
+        }
+
+        /* ══════════════════════════════════
+           AUDIT TRAIL PANEL (NEW)
+        ══════════════════════════════════ */
+        .audit-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 0
+        }
+
+        .audit-item {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border)
+        }
+
+            .audit-item:last-child {
+                border-bottom: none
+            }
+
+        .audit-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 5px
+        }
+
+            .audit-dot.a {
+                background: var(--cobalt)
+            }
+
+            .audit-dot.b {
+                background: var(--teal)
+            }
+
+            .audit-dot.c {
+                background: var(--gold)
+            }
+
+            .audit-dot.d {
+                background: var(--emerald)
+            }
+
+            .audit-dot.e {
+                background: var(--violet)
+            }
+
+            .audit-dot.f {
+                background: var(--rose)
+            }
+
+        .audit-text {
+            font-size: .72rem;
+            color: var(--ink2);
+            line-height: 1.5
+        }
+
+        .audit-time {
+            font-size: .60rem;
+            color: var(--ink4);
+            font-family: var(--mono);
+            margin-top: 2px
+        }
+
+        /* ══════════════════════════════════
+           MINI PROGRESS BARS (stage insight)
+        ══════════════════════════════════ */
+        .stage-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px
+        }
+
+        .sbd-row {
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .sbd-label {
+            font-size: .64rem;
+            color: var(--ink3);
+            width: 120px;
+            flex-shrink: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .sbd-bar-wrap {
+            flex: 1;
+            height: 5px;
+            background: rgba(255,255,255,.06);
+            border-radius: 3px;
+            overflow: hidden
+        }
+
+        .sbd-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width .6s cubic-bezier(.4,0,.2,1)
+        }
+
+        .sbd-val {
+            font-size: .60rem;
+            color: var(--ink4);
+            font-family: var(--mono);
+            width: 28px;
+            text-align: right
+        }
+
+        /* ══════════════════════════════════
+           ANNUAL REPORT PANEL
+        ══════════════════════════════════ */
+        .annual-cta {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 20px;
+            text-align: center
+        }
+
+        .annual-cta-icon {
+            font-size: 2.4rem;
+            margin-bottom: 14px;
+            opacity: .7
+        }
+
+        .annual-cta-title {
+            font-size: .92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 6px
+        }
+
+        .annual-cta-sub {
+            font-size: .74rem;
+            color: var(--ink4);
+            max-width: 360px;
+            line-height: 1.6;
+            margin-bottom: 20px
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- ═══════════════ SIDEBAR ═══════════════ -->
+        <aside class="sidebar">
+            <div class="sb-brand">
+                <div class="sb-logo">V</div>
+                <div class="sb-name">VGL PMS<span>Command Center</span></div>
+            </div>
+
+            <div class="sa-badge">
+                <div class="sa-badge-dot"></div>
+                <div class="sa-badge-label">SuperAdmin · Full Access</div>
+            </div>
+
+            <div class="sb-nav">
+                <div class="sb-section-label">Overview</div>
+                <a class="sb-link active" onclick="showPanel('overview',this)">
+                    <span class="sb-icon">🏠</span> Command Center
+                </a>
+                <a class="sb-link" onclick="showPanel('process',this)">
+                    <span class="sb-icon">🔁</span> Full Process View
+                    <span class="sb-cnt" id="cnt-process">—</span>
+                </a>
+                <a class="sb-link" onclick="showPanel('pipeline',this)">
+                    <span class="sb-icon">⚡</span> Live Pipeline
+                    <span class="sb-cnt" id="cnt-pipeline">—</span>
+                </a>
+
+                <div class="sb-section-label">Role Views</div>
+                <a class="sb-link" onclick="showPanel('employee',this)">
+                    <span class="sb-icon">👤</span> Employee View
+                    <span class="sb-cnt" id="cnt-emp">—</span>
+                </a>
+                <a class="sb-link" onclick="showPanel('rm',this)">
+                    <span class="sb-icon">📋</span> RM View
+                    <span class="sb-cnt" id="cnt-rm">—</span>
+                </a>
+                <a class="sb-link" onclick="showPanel('hod',this)">
+                    <span class="sb-icon">🏛</span> HOD View
+                    <span class="sb-cnt" id="cnt-hod">—</span>
+                </a>
+                <a class="sb-link" onclick="showPanel('uh',this)">
+                    <span class="sb-icon">🏢</span> Unit Head View
+                    <span class="sb-cnt" id="cnt-uh">—</span>
+                </a>
+                <a class="sb-link" onclick="showPanel('mc',this)">
+                    <span class="sb-icon">🏅</span> Mod. Committee
+                    <span class="sb-cnt" id="cnt-mc">—</span>
+                </a>
+                <a class="sb-link" onclick="showPanel('jmd',this)">
+                    <span class="sb-icon">⭐</span> JMD View
+                    <span class="sb-cnt" id="cnt-jmd">—</span>
+                </a>
+
+                <div class="sb-divider"></div>
+                <div class="sb-section-label">Management</div>
+                <a class="sb-link" onclick="showPanel('masters',this)">
+                    <span class="sb-icon">🗄</span> Master Mappings
+                    <span class="sb-cnt" id="cnt-masters">—</span>
+                </a>
+                <a class="sb-link" onclick="showPanel('annual',this)">
+                    <span class="sb-icon">📊</span> Annual Report
+                </a>
+                <div class="sb-divider"></div>
+                <a class="sb-link" href="/Pms/Index" target="_blank">
+                    <span class="sb-icon">⚙️</span> PMS Admin ↗
+                </a>
+                <a class="sb-link" href="/Pms/GetAnnualReport" target="_blank">
+                    <span class="sb-icon">📄</span> Full Annual Report ↗
+                </a>
+            </div>
+
+            <div class="sb-footer">
+                <div class="sb-user">
+                    <div class="sb-avatar">SA</div>
+                    <div class="sb-uname">
+                        <strong>@User.Identity?.Name</strong>
+                        Super Administrator
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ═══════════════ MAIN ═══════════════ -->
+        <div class="main">
+            <div class="topbar">
+                <div class="topbar-left">
+                    <div>
+                        <div class="page-heading" id="topbar-heading">Command Center</div>
+                        <div class="page-sub" id="topbar-sub">Full visibility · All appraisal workflows</div>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <select class="year-sel" id="globalYearFilter" onchange="globalYearChanged()">
+                        <option value="">All Years</option>
+                    </select>
+                    <span class="chip-sa">👑 SuperAdmin</span>
+                    <a href="javascript:history.back()" class="btn-sm">← Back</a>
+                </div>
+            </div>
+
+            <div class="content">
+
+                <!-- ════════════ OVERVIEW PANEL ════════════ -->
+                <div class="panel active" id="panel-overview">
+                    <div class="cmd-hero">
+                        <div class="hero-eyebrow">SuperAdmin · Full Access · Real-time</div>
+                        <div class="hero-title">PMS Command Center</div>
+                        <div class="hero-sub">Complete visibility from cycle initialization to final HR sign-off. Every employee, every stage, every action — under one roof.</div>
+                        <div class="hero-actions">
+                            <a href="/Pms/Index?tab=4" target="_blank" class="btn-hero gold">⚙️ Manage Cycles</a>
+                            <a href="/Pms/GetAnnualReport" target="_blank" class="btn-hero">📊 Annual Report</a>
+                            <a href="/Pms/Index?tab=1" target="_blank" class="btn-hero">🗄 KPI Masters</a>
+                            <a onclick="showPanel('process',null)" class="btn-hero">🔁 Full Process View</a>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid" id="overview-stats">
+                        <div class="stat-card c-gold">
+                            <div class="stat-icon">📋</div>
+                            <div class="stat-label">Total Appraisals</div>
+                            <div class="stat-val" id="ov-total">—</div>
+                            <div class="stat-sub">Active cycle assignments</div>
+                        </div>
+                        <div class="stat-card c-rose">
+                            <div class="stat-icon">⏳</div>
+                            <div class="stat-label">Draft / Not Started</div>
+                            <div class="stat-val" id="ov-draft" style="color:var(--rose)">—</div>
+                            <div class="stat-sub">Self-appraisal pending</div>
+                        </div>
+                        <div class="stat-card c-amber">
+                            <div class="stat-icon">🔄</div>
+                            <div class="stat-label">In Review</div>
+                            <div class="stat-val" id="ov-inprogress" style="color:var(--amber)">—</div>
+                            <div class="stat-sub">Across all reviewer stages</div>
+                        </div>
+                        <div class="stat-card c-emerald">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-label">HR Finalized</div>
+                            <div class="stat-val" id="ov-finalized" style="color:var(--emerald)">—</div>
+                            <div class="stat-sub">Cycle fully complete</div>
+                        </div>
+                        <div class="stat-card c-cobalt">
+                            <div class="stat-icon">📋</div>
+                            <div class="stat-label">Pending RM</div>
+                            <div class="stat-val" id="ov-rm" style="color:var(--cobalt)">—</div>
+                            <div class="stat-sub">EmpFilled → RM queue</div>
+                        </div>
+                        <div class="stat-card c-teal">
+                            <div class="stat-icon">🏛</div>
+                            <div class="stat-label">Pending HOD</div>
+                            <div class="stat-val" id="ov-hod" style="color:var(--teal)">—</div>
+                            <div class="stat-sub">RMReview → HOD queue</div>
+                        </div>
+                        <div class="stat-card c-violet">
+                            <div class="stat-icon">🏢</div>
+                            <div class="stat-label">Pending UH</div>
+                            <div class="stat-val" id="ov-uh" style="color:var(--violet)">—</div>
+                            <div class="stat-sub">HODReview → UH queue</div>
+                        </div>
+                        <div class="stat-card c-slate">
+                            <div class="stat-icon">🗄</div>
+                            <div class="stat-label">Master Mappings</div>
+                            <div class="stat-val" id="ov-masters">—</div>
+                            <div class="stat-sub">Configured employees</div>
+                        </div>
+                    </div>
+
+                    <!-- Role Quick Launch -->
+                    <div class="section-lbl">Jump to Role View</div>
+                    <div class="role-views">
+                        <div class="rv-card rv-emp" onclick="showPanel('employee',null)">
+                            <div class="rv-icon">👤</div>
+                            <div class="rv-title">Employee</div>
+                            <div class="rv-sub">Self-appraisals</div>
+                            <div class="rv-count" id="rv-emp">—</div>
+                            <div class="rv-pending" id="rv-emp-p"></div>
+                        </div>
+                        <div class="rv-card rv-rm" onclick="showPanel('rm',null)">
+                            <div class="rv-icon">📋</div>
+                            <div class="rv-title">Reporting Manager</div>
+                            <div class="rv-sub">RM reviews</div>
+                            <div class="rv-count" id="rv-rm">—</div>
+                            <div class="rv-pending" id="rv-rm-p"></div>
+                        </div>
+                        <div class="rv-card rv-hod" onclick="showPanel('hod',null)">
+                            <div class="rv-icon">🏛</div>
+                            <div class="rv-title">Head of Dept</div>
+                            <div class="rv-sub">HOD reviews</div>
+                            <div class="rv-count" id="rv-hod">—</div>
+                            <div class="rv-pending" id="rv-hod-p"></div>
+                        </div>
+                        <div class="rv-card rv-uh" onclick="showPanel('uh',null)">
+                            <div class="rv-icon">🏢</div>
+                            <div class="rv-title">Unit Head</div>
+                            <div class="rv-sub">UH reviews</div>
+                            <div class="rv-count" id="rv-uh">—</div>
+                            <div class="rv-pending" id="rv-uh-p"></div>
+                        </div>
+                        <div class="rv-card rv-mc" onclick="showPanel('mc',null)">
+                            <div class="rv-icon">🏅</div>
+                            <div class="rv-title">Mod. Committee</div>
+                            <div class="rv-sub">MC decisions</div>
+                            <div class="rv-count" id="rv-mc">—</div>
+                            <div class="rv-pending" id="rv-mc-p"></div>
+                        </div>
+                        <div class="rv-card rv-jmd" onclick="showPanel('jmd',null)">
+                            <div class="rv-icon">⭐</div>
+                            <div class="rv-title">JMD</div>
+                            <div class="rv-sub">Final approval</div>
+                            <div class="rv-count" id="rv-jmd">—</div>
+                            <div class="rv-pending" id="rv-jmd-p"></div>
+                        </div>
+                    </div>
+
+                    <!-- Funnel + Alerts -->
+                    <div class="dual">
+                        <div class="card">
+                            <div class="card-head">
+                                <div>
+                                    <div class="card-title">Approval Pipeline Funnel</div>
+                                    <div class="card-sub">Appraisals at each stage right now</div>
+                                </div>
+                                <a onclick="showPanel('process',null)" class="btn-sm teal" style="cursor:pointer">🔁 Full View</a>
+                            </div>
+                            <div class="funnel" id="funnel-chart">
+                                <div class="tbl-loading">Computing…</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="card" style="margin-bottom:12px">
+                                <div class="card-head">
+                                    <div class="card-title">⚠️ Actions Needed</div>
+                                </div>
+                                <div id="alerts-section">
+                                    <div class="tbl-loading" style="padding:14px">Loading…</div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-head">
+                                    <div class="card-title">Completion Rate</div>
+                                </div>
+                                <div class="prog-wrap">
+                                    <div class="prog-ring">
+                                        <svg width="76" height="76">
+                                            <circle cx="38" cy="38" r="30" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="8" />
+                                            <circle id="pr-circle" cx="38" cy="38" r="30" fill="none"
+                                                    stroke="var(--emerald)" stroke-width="8"
+                                                    stroke-dasharray="188.5" stroke-dashoffset="188.5"
+                                                    stroke-linecap="round" />
+                                        </svg>
+                                        <div class="prog-ring-inner">
+                                            <span class="pr-val" id="pr-pct">0%</span>
+                                            <span class="pr-lbl">Done</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size:.74rem;font-weight:600;color:var(--ink)">HR Finalization Rate</div>
+                                        <div style="font-size:.65rem;color:var(--ink4);margin-top:3px">HR-Finalized / Total assigned</div>
+                                        <div style="font-size:.65rem;color:var(--ink3);margin-top:9px" id="pr-detail">— / — complete</div>
+                                    </div>
+                                </div>
+                                <!-- Stage breakdown mini bars -->
+                                <div class="stage-breakdown" id="stage-breakdown"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ FULL PROCESS VIEW (NEW) ════════════ -->
+                <div class="panel" id="panel-process">
+                    <div class="card">
+                        <div class="card-head">
+                            <div>
+                                <div class="card-title">🔁 Full Appraisal Process — Initialization to Completion</div>
+                                <div class="card-sub">Every stage, every transition, every count — the complete lifecycle</div>
+                            </div>
+                            <a href="/Pms/Index?tab=4" target="_blank" class="btn-sm gold">Manage Cycles ↗</a>
+                        </div>
+                        <!-- Stage track -->
+                        <div class="process-stages" id="process-stages">
+                            <div class="tbl-loading">Loading…</div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed stage tables -->
+                    <div id="process-detail-cards"></div>
+                </div>
+
+                <!-- ════════════ PIPELINE PANEL ════════════ -->
+                <div class="panel" id="panel-pipeline">
+                    <div class="card">
+                        <div class="card-head">
+                            <div>
+                                <div class="card-title">⚡ Live Appraisal Pipeline — All Employees</div>
+                                <div class="card-sub">SuperAdmin view · Every mapping · Full cross-role access</div>
+                            </div>
+                            <a href="/Pms/Index?tab=4" target="_blank" class="btn-sm gold">Manage Cycles ↗</a>
+                        </div>
+                        <div class="toolbar">
+                            <div class="role-tabs" id="pipeline-status-tabs">
+                                <button class="rtab active" onclick="setPipelineFilter('all',this)">All <span class="rtab-cnt" id="pf-all">0</span></button>
+                                <button class="rtab" onclick="setPipelineFilter('Draft',this)">Draft <span class="rtab-cnt" id="pf-draft">0</span></button>
+                                <button class="rtab" onclick="setPipelineFilter('EmployeeFilled',this)">Emp Filled <span class="rtab-cnt" id="pf-ef">0</span></button>
+                                <button class="rtab" onclick="setPipelineFilter('RMReview',this)">RM Review <span class="rtab-cnt" id="pf-rm">0</span></button>
+                                <button class="rtab" onclick="setPipelineFilter('HODReview',this)">HOD Review <span class="rtab-cnt" id="pf-hod">0</span></button>
+                                <button class="rtab" onclick="setPipelineFilter('UnitHeadReview',this)">UH Review <span class="rtab-cnt" id="pf-uh">0</span></button>
+                                <button class="rtab" onclick="setPipelineFilter('ModCommitteeReview',this)">MC Review <span class="rtab-cnt" id="pf-mc">0</span></button>
+                                <button class="rtab" onclick="setPipelineFilter('JMDReview',this)">JMD Review <span class="rtab-cnt" id="pf-jmd2">0</span></button>
+                                <button class="rtab" onclick="setPipelineFilter('HRFinalized',this)">Finalized <span class="rtab-cnt" id="pf-fin">0</span></button>
+                            </div>
+                            <div class="search-wrap">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="pipeline-search" placeholder="Search employee, dept…" oninput="renderPipelineTable()" />
+                            </div>
+                        </div>
+                        <div class="tbl-wrap">
+                            <table class="sa-tbl">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Employee</th>
+                                        <th>Code</th>
+                                        <th>Dept</th>
+                                        <th>Cycle</th>
+                                        <th>Year</th>
+                                        <th>KPIs</th>
+                                        <th>Stage Pipeline</th>
+                                        <th>Status</th>
+                                        <th>All Role Access</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pipeline-tbody">
+                                    <tr><td colspan="10" class="tbl-loading">Loading pipeline…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ EMPLOYEE PANEL ════════════ -->
+                <div class="panel" id="panel-employee">
+                    <div class="card">
+                        <div class="card-head">
+                            <div>
+                                <div class="card-title">👤 Employee Self-Appraisal — All Employees</div>
+                                <div class="card-sub">View any employee's appraisal as SuperAdmin</div>
+                            </div>
+                        </div>
+                        <div class="toolbar">
+                            <div class="role-tabs">
+                                <button class="rtab active" onclick="setRoleViewFilter('emp','all',this)">All <span class="rtab-cnt" id="emp-cnt-all">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('emp','pending',this)">⏳ Pending <span class="rtab-cnt" id="emp-cnt-p">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('emp','done',this)">✔ Submitted <span class="rtab-cnt" id="emp-cnt-d">0</span></button>
+                            </div>
+                            <div class="search-wrap">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="emp-search" placeholder="Search…" oninput="renderRoleTable('emp')" />
+                            </div>
+                        </div>
+                        <div class="tbl-wrap">
+                            <table class="sa-tbl">
+                                <thead><tr><th>#</th><th>Employee</th><th>Code</th><th>Dept</th><th>Designation</th><th>Cycle</th><th>Year</th><th>KPIs</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody id="emp-tbody"><tr><td colspan="10" class="tbl-loading">Loading…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ RM PANEL ════════════ -->
+                <div class="panel" id="panel-rm">
+                    <div class="card">
+                        <div class="card-head">
+                            <div>
+                                <div class="card-title">📋 Reporting Manager Review — All</div>
+                                <div class="card-sub">Act as RM for any employee · SuperAdmin override</div>
+                            </div>
+                        </div>
+                        <div class="toolbar">
+                            <div class="role-tabs">
+                                <button class="rtab active" onclick="setRoleViewFilter('rm','all',this)">All <span class="rtab-cnt" id="rm-cnt-all">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('rm','pending',this)">⏳ Needs RM <span class="rtab-cnt" id="rm-cnt-p">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('rm','done',this)">✔ RM Done <span class="rtab-cnt" id="rm-cnt-d">0</span></button>
+                            </div>
+                            <div class="search-wrap">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="rm-search" placeholder="Search…" oninput="renderRoleTable('rm')" />
+                            </div>
+                        </div>
+                        <div class="tbl-wrap">
+                            <table class="sa-tbl">
+                                <thead><tr><th>#</th><th>Employee</th><th>Code</th><th>Dept</th><th>RM Assigned</th><th>Cycle</th><th>Year</th><th>KPIs</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody id="rm-tbody"><tr><td colspan="10" class="tbl-loading">Loading…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ HOD PANEL ════════════ -->
+                <div class="panel" id="panel-hod">
+                    <div class="card">
+                        <div class="card-head">
+                            <div>
+                                <div class="card-title">🏛 HOD Review — All Employees</div>
+                                <div class="card-sub">Act as HOD for any appraisal · SuperAdmin override</div>
+                            </div>
+                        </div>
+                        <div class="toolbar">
+                            <div class="role-tabs">
+                                <button class="rtab active" onclick="setRoleViewFilter('hod','all',this)">All <span class="rtab-cnt" id="hod-cnt-all">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('hod','pending',this)">⏳ Needs HOD <span class="rtab-cnt" id="hod-cnt-p">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('hod','done',this)">✔ HOD Done <span class="rtab-cnt" id="hod-cnt-d">0</span></button>
+                            </div>
+                            <div class="search-wrap">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="hod-search" placeholder="Search…" oninput="renderRoleTable('hod')" />
+                            </div>
+                        </div>
+                        <div class="tbl-wrap">
+                            <table class="sa-tbl">
+                                <thead><tr><th>#</th><th>Employee</th><th>Code</th><th>Dept</th><th>HOD Assigned</th><th>Cycle</th><th>Year</th><th>KPIs</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody id="hod-tbody"><tr><td colspan="10" class="tbl-loading">Loading…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ UH PANEL ════════════ -->
+                <div class="panel" id="panel-uh">
+                    <div class="card">
+                        <div class="card-head">
+                            <div>
+                                <div class="card-title">🏢 Unit Head Review — All Employees</div>
+                                <div class="card-sub">Act as Unit Head for any appraisal · SuperAdmin override</div>
+                            </div>
+                        </div>
+                        <div class="toolbar">
+                            <div class="role-tabs">
+                                <button class="rtab active" onclick="setRoleViewFilter('uh','all',this)">All <span class="rtab-cnt" id="uh-cnt-all">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('uh','pending',this)">⏳ Needs UH <span class="rtab-cnt" id="uh-cnt-p">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('uh','done',this)">✔ UH Done <span class="rtab-cnt" id="uh-cnt-d">0</span></button>
+                            </div>
+                            <div class="search-wrap">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="uh-search" placeholder="Search…" oninput="renderRoleTable('uh')" />
+                            </div>
+                        </div>
+                        <div class="tbl-wrap">
+                            <table class="sa-tbl">
+                                <thead><tr><th>#</th><th>Employee</th><th>Code</th><th>Dept</th><th>UH Assigned</th><th>Cycle</th><th>Year</th><th>KPIs</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody id="uh-tbody"><tr><td colspan="10" class="tbl-loading">Loading…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ MC PANEL ════════════ -->
+                <div class="panel" id="panel-mc">
+                    <div class="card">
+                        <div class="card-head">
+                            <div>
+                                <div class="card-title">🏅 Moderation Committee — All Appraisals</div>
+                                <div class="card-sub">MC-stage appraisals · Full SuperAdmin access</div>
+                            </div>
+                        </div>
+                        <div class="toolbar">
+                            <div class="role-tabs">
+                                <button class="rtab active" onclick="setRoleViewFilter('mc','all',this)">All <span class="rtab-cnt" id="mc-cnt-all">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('mc','pending',this)">⏳ Needs MC <span class="rtab-cnt" id="mc-cnt-p">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('mc','done',this)">✔ MC Done <span class="rtab-cnt" id="mc-cnt-d">0</span></button>
+                            </div>
+                            <div class="search-wrap">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="mc-search" placeholder="Search…" oninput="renderRoleTable('mc')" />
+                            </div>
+                        </div>
+                        <div class="tbl-wrap">
+                            <table class="sa-tbl">
+                                <thead><tr><th>#</th><th>Employee</th><th>Code</th><th>Dept</th><th>MC Members</th><th>Cycle</th><th>Year</th><th>KPIs</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody id="mc-tbody"><tr><td colspan="10" class="tbl-loading">Loading…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ JMD PANEL ════════════ -->
+                <div class="panel" id="panel-jmd">
+                    <div class="card">
+                        <div class="card-head">
+                            <div>
+                                <div class="card-title">⭐ JMD Final Review — All Appraisals</div>
+                                <div class="card-sub">JMD-stage appraisals · Final approval gateway</div>
+                            </div>
+                        </div>
+                        <div class="toolbar">
+                            <div class="role-tabs">
+                                <button class="rtab active" onclick="setRoleViewFilter('jmd','all',this)">All <span class="rtab-cnt" id="jmd-cnt-all">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('jmd','pending',this)">⏳ Needs JMD <span class="rtab-cnt" id="jmd-cnt-p">0</span></button>
+                                <button class="rtab" onclick="setRoleViewFilter('jmd','done',this)">✔ JMD Done <span class="rtab-cnt" id="jmd-cnt-d">0</span></button>
+                            </div>
+                            <div class="search-wrap">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="jmd-search" placeholder="Search…" oninput="renderRoleTable('jmd')" />
+                            </div>
+                        </div>
+                        <div class="tbl-wrap">
+                            <table class="sa-tbl">
+                                <thead><tr><th>#</th><th>Employee</th><th>Code</th><th>Dept</th><th>JMD Assigned</th><th>Cycle</th><th>Year</th><th>KPIs</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody id="jmd-tbody"><tr><td colspan="10" class="tbl-loading">Loading…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ MASTERS PANEL ════════════ -->
+                <div class="panel" id="panel-masters">
+                    <div class="card">
+                        <div class="card-head">
+                            <div>
+                                <div class="card-title">🗄 Master KPI Mappings — All Employees</div>
+                                <div class="card-sub">Base configurations · Before cycle assignment</div>
+                            </div>
+                            <a href="/Pms/Index?tab=3" target="_blank" class="btn-sm gold">+ Add Mapping ↗</a>
+                        </div>
+                        <div class="toolbar">
+                            <div class="search-wrap" style="max-width:none;flex:1;margin:0">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="masters-search" placeholder="Search employee, dept, designation…" oninput="renderMastersTable()" />
+                            </div>
+                        </div>
+                        <div class="tbl-wrap">
+                            <table class="sa-tbl">
+                                <thead><tr><th>#</th><th>Employee</th><th>Code</th><th>Dept</th><th>Designation</th><th>Year</th><th>RM</th><th>HOD</th><th>UH</th><th>JMD</th><th>KPIs</th><th>Updated</th><th>Actions</th></tr></thead>
+                                <tbody id="masters-tbody"><tr><td colspan="13" class="tbl-loading">Loading…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ ANNUAL PANEL ════════════ -->
+                <div class="panel" id="panel-annual">
+                    <div class="card">
+                        <div class="card-head">
+                            <div>
+                                <div class="card-title">📊 Annual Appraisal Summary</div>
+                                <div class="card-sub">Scores, ratings and increment calculations</div>
+                            </div>
+                            <a href="/Pms/GetAnnualReport" target="_blank" class="btn-sm gold">Full Report ↗</a>
+                        </div>
+                        <div class="annual-cta">
+                            <div class="annual-cta-icon">📊</div>
+                            <div class="annual-cta-title">Full Annual PMS + BA Report</div>
+                            <div class="annual-cta-sub">Includes BSC scores, MC/JMD ratings, increment calculations and BA audit integration for all annual appraisal cycles.</div>
+                            <a href="/Pms/GetAnnualReport" target="_blank" class="btn-sm gold" style="height:38px;font-size:.78rem">
+                                Open Full Annual Report ↗
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /content -->
+        </div><!-- /main -->
+    </div><!-- /layout -->
+
+    <script>
+        /* ══════════════════════════════════
+           DATA STORE
+        ══════════════════════════════════ */
+        var _allMappings   = [];
+        var _masterMappings = [];
+        var _loadedOnce    = {};
+        var _pipelineFilter = 'all';
+        var _roleFilters   = { emp:'all', rm:'all', hod:'all', uh:'all', mc:'all', jmd:'all' };
+        var _activePanel   = 'overview';
+        var _globalYear    = 0;
+
+        var PANEL_META = {
+          overview: { title:'Command Center',              sub:'Full visibility · All appraisal workflows' },
+          process:  { title:'Full Process View',           sub:'Lifecycle from initialization to HR sign-off' },
+          pipeline: { title:'Live Appraisal Pipeline',     sub:'Every appraisal · All statuses · All employees' },
+          employee: { title:'Employee Self-Appraisal View',sub:'View any employee\'s appraisal as SuperAdmin' },
+          rm:       { title:'Reporting Manager View',      sub:'All RM-stage appraisals across the organisation' },
+          hod:      { title:'Head of Department View',     sub:'All HOD-stage appraisals' },
+          uh:       { title:'Unit Head View',              sub:'All UH-stage appraisals' },
+          mc:       { title:'Moderation Committee View',   sub:'MC-stage appraisals' },
+          jmd:      { title:'JMD Review View',             sub:'Final approval · All JMD-stage appraisals' },
+          masters:  { title:'Master KPI Mappings',         sub:'Base employee–KPI configurations' },
+          annual:   { title:'Annual Appraisal Report',     sub:'Scores, ratings and increment summary' }
+        };
+
+        /* ══════════════════════════════════
+           NAVIGATION
+        ══════════════════════════════════ */
+        function showPanel(name, sidebarLink) {
+          document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+          var el = document.getElementById('panel-' + name);
+          if (el) el.classList.add('active');
+
+          document.querySelectorAll('.sb-link').forEach(function(l){ l.classList.remove('active'); });
+          if (sidebarLink) sidebarLink.classList.add('active');
+
+          var meta = PANEL_META[name] || {};
+          document.getElementById('topbar-heading').textContent = meta.title || name;
+          document.getElementById('topbar-sub').textContent = meta.sub || '';
+          _activePanel = name;
+
+          if (!_loadedOnce[name]) {
+            _loadedOnce[name] = true;
+            switch(name) {
+              case 'process':  renderProcessView();       break;
+              case 'pipeline': renderPipelineTable();     break;
+              case 'employee': renderRoleTable('emp');    break;
+              case 'rm':       renderRoleTable('rm');     break;
+              case 'hod':      renderRoleTable('hod');    break;
+              case 'uh':       renderRoleTable('uh');     break;
+              case 'mc':       renderRoleTable('mc');     break;
+              case 'jmd':      renderRoleTable('jmd');    break;
+              case 'masters':  renderMastersTable();      break;
+            }
+          }
+        }
+
+        /* ══════════════════════════════════
+           YEAR FILTER
+        ══════════════════════════════════ */
+        function globalYearChanged() {
+          _globalYear = parseInt(document.getElementById('globalYearFilter').value) || 0;
+          buildOverview();
+          _loadedOnce = { overview: true };
+          if (_activePanel !== 'overview') {
+            _loadedOnce[_activePanel] = true;
+            switch(_activePanel) {
+              case 'process':  renderProcessView();       break;
+              case 'pipeline': renderPipelineTable();     break;
+              case 'employee': renderRoleTable('emp');    break;
+              case 'rm':       renderRoleTable('rm');     break;
+              case 'hod':      renderRoleTable('hod');    break;
+              case 'uh':       renderRoleTable('uh');     break;
+              case 'mc':       renderRoleTable('mc');     break;
+              case 'jmd':      renderRoleTable('jmd');    break;
+              case 'masters':  renderMastersTable();      break;
+            }
+          }
+        }
+
+        function filteredByYear(list) {
+          if (!_globalYear) return list;
+          return list.filter(function(m){
+            return m.appraisalYear === _globalYear || m.AppraisalYear === _globalYear;
+          });
+        }
+
+        /* ══════════════════════════════════
+           LOAD ALL DATA
+        ══════════════════════════════════ */
+        function loadAllData() {
+          Promise.all([
+            fetch('/Pms/GetAppraisalMappingsJson').then(function(r){ return r.json(); }),
+            fetch('/Pms/GetAllMappingsJson').then(function(r){ return r.json(); })
+          ]).then(function(results) {
+            _allMappings    = Array.isArray(results[0]) ? results[0] : [];
+            _masterMappings = Array.isArray(results[1]) ? results[1] : [];
+
+            // Populate year dropdown
+            var years = [...new Set(_allMappings.map(function(m){ return m.appraisalYear || m.AppraisalYear; }).filter(Boolean))].sort().reverse();
+            var sel = document.getElementById('globalYearFilter');
+            years.forEach(function(y){
+              var o = document.createElement('option');
+              o.value = y; o.textContent = 'FY ' + y + '-' + String(y+1).slice(-2);
+              sel.appendChild(o);
+            });
+            buildOverview();
+          }).catch(function(e){ console.error('Load error', e); });
+        }
+
+        /* ══════════════════════════════════
+           OVERVIEW
+        ══════════════════════════════════ */
+        function buildOverview() {
+          var all = filteredByYear(_allMappings);
+          var total   = all.length;
+          var draft   = all.filter(function(m){ return m.status === 'Draft'; }).length;
+          var efilled = all.filter(function(m){ return m.status === 'EmployeeFilled'; }).length;
+          var rmrev   = all.filter(function(m){ return m.status === 'RMReview'; }).length;
+          var hodrev  = all.filter(function(m){ return m.status === 'HODReview'; }).length;
+          var uhrev   = all.filter(function(m){ return m.status === 'UnitHeadReview'; }).length;
+          var mcrev   = all.filter(function(m){ return m.status === 'ModCommitteeReview'; }).length;
+          var jmdrev  = all.filter(function(m){ return m.status === 'JMDReview'; }).length;
+          var hrfin   = all.filter(function(m){ return m.status === 'HRFinalized'; }).length;
+          var inprog  = total - draft - hrfin;
+          var masters = filteredByYear(_masterMappings).length;
+
+          setText('ov-total', total);
+          setText('ov-draft', draft);
+          setText('ov-inprogress', inprog);
+          setText('ov-finalized', hrfin);
+          setText('ov-rm',   efilled);
+          setText('ov-hod',  rmrev);
+          setText('ov-uh',   hodrev);
+          setText('ov-masters', masters);
+
+          // Sidebar counts
+          setSbCount('cnt-process',  total);
+          setSbCount('cnt-pipeline', total);
+          setSbCount('cnt-emp',  total);
+          setSbCount('cnt-rm',   efilled);
+          setSbCount('cnt-hod',  rmrev);
+          setSbCount('cnt-uh',   hodrev);
+          setSbCount('cnt-mc',   mcrev);
+          setSbCount('cnt-jmd',  jmdrev);
+          setSbCount('cnt-masters', masters);
+
+          setRvCard('rv-emp', total, draft,   'awaiting self-appraisal');
+          setRvCard('rv-rm',  total, efilled, 'waiting RM review');
+          setRvCard('rv-hod', total, rmrev,   'waiting HOD review');
+          setRvCard('rv-uh',  total, hodrev,  'waiting UH review');
+          setRvCard('rv-mc',  total, uhrev,   'at Mod. Committee');
+          setRvCard('rv-jmd', total, mcrev,   'pending JMD sign-off');
+
+          // Completion ring
+          var pct = total > 0 ? Math.round(hrfin / total * 100) : 0;
+          setText('pr-pct', pct + '%');
+          setText('pr-detail', hrfin + ' / ' + total + ' complete');
+          var circ = 188.5;
+          var offset = circ - (pct / 100 * circ);
+          var circle = document.getElementById('pr-circle');
+          if (circle) { setTimeout(function(){ circle.style.strokeDashoffset = offset; circle.style.transition = 'stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)'; }, 200); }
+
+          // Mini stage breakdown bars
+          buildStageBreakdown([
+            { label:'Draft',          count:draft,   color:'#64748b', max:total },
+            { label:'Emp Filled',     count:efilled, color:'#3b82f6', max:total },
+            { label:'RM Review',      count:rmrev,   color:'#f59e0b', max:total },
+            { label:'HOD Review',     count:hodrev,  color:'#14b8a6', max:total },
+            { label:'UH Review',      count:uhrev,   color:'#8b5cf6', max:total },
+            { label:'MC Review',      count:mcrev,   color:'#b45309', max:total },
+            { label:'JMD Review',     count:jmdrev,  color:'#f43f5e', max:total },
+            { label:'HR Finalized',   count:hrfin,   color:'#10b981', max:total }
+          ], total);
+
+          buildFunnel([
+            { label:'Draft / Not Started', count:draft,   color:'#64748b' },
+            { label:'Employee Filled',     count:efilled, color:'#3b82f6' },
+            { label:'RM Review',           count:rmrev,   color:'#f59e0b' },
+            { label:'HOD Review',          count:hodrev,  color:'#14b8a6' },
+            { label:'UH Review',           count:uhrev,   color:'#8b5cf6' },
+            { label:'Mod. Committee',      count:mcrev,   color:'#f59e0b' },
+            { label:'JMD Review',          count:jmdrev,  color:'#f43f5e' },
+            { label:'HR Finalized',        count:hrfin,   color:'#10b981' }
+          ], total);
+
+          buildAlerts(draft, efilled, rmrev, hodrev, uhrev, mcrev, jmdrev, hrfin, total);
+        }
+
+        function buildStageBreakdown(stages, total) {
+          var el = document.getElementById('stage-breakdown');
+          if (!el) return;
+          if (!total) { el.innerHTML = ''; return; }
+          el.innerHTML = stages.filter(function(s){ return s.count > 0; }).map(function(s){
+            var w = Math.round(s.count / total * 100);
+            return '<div class="sbd-row">' +
+              '<div class="sbd-label">' + esc(s.label) + '</div>' +
+              '<div class="sbd-bar-wrap"><div class="sbd-bar" style="width:' + w + '%;background:' + s.color + '"></div></div>' +
+              '<div class="sbd-val">' + s.count + '</div>' +
+            '</div>';
+          }).join('');
+        }
+
+        function buildFunnel(stages, total) {
+          var el = document.getElementById('funnel-chart');
+          if (!el) return;
+          if (!total) { el.innerHTML = '<div class="tbl-empty">No data yet</div>'; return; }
+          el.innerHTML = stages.map(function(s){
+            var pct = total > 0 ? Math.round(s.count / total * 100) : 0;
+            var w = Math.max(s.count > 0 ? 5 : 0, pct);
+            return '<div class="funnel-row">' +
+              '<div class="funnel-lbl">' + esc(s.label) + '</div>' +
+              '<div class="funnel-bar-wrap"><div class="funnel-bar" style="width:' + w + '%;background:' + s.color + '">' +
+                (s.count > 0 ? s.count : '') + '</div></div>' +
+              '<div class="funnel-pct">' + pct + '%</div>' +
+            '</div>';
+          }).join('');
+        }
+
+        function buildAlerts(draft, ef, rm, hod, uh, mc, jmd, fin, total) {
+          var el = document.getElementById('alerts-section');
+          if (!el) return;
+          var alerts = [];
+          if (draft > 0) alerts.push({ type:'danger', icon:'🔴', title: draft + ' employees haven\'t started', sub:'Self-appraisal still pending' });
+          if (ef > 0)   alerts.push({ type:'warn',   icon:'🟡', title: ef + ' waiting for RM review', sub:'Employees submitted, RM not acted' });
+          if (rm > 0)   alerts.push({ type:'info',   icon:'🔵', title: rm + ' waiting for HOD', sub:'RM done, HOD review pending' });
+          if (hod > 0)  alerts.push({ type:'info',   icon:'🔵', title: hod + ' waiting for Unit Head', sub:'HOD done, UH review pending' });
+          if (uh > 0)   alerts.push({ type:'info',   icon:'🔵', title: uh + ' waiting for MC', sub:'UH done, MC review pending' });
+          if (mc > 0)   alerts.push({ type:'info',   icon:'🔵', title: mc + ' waiting for JMD', sub:'MC done, JMD approval pending' });
+          if (fin > 0)  alerts.push({ type:'success',icon:'✅', title: fin + ' fully finalized', sub:'HR has closed these appraisals' });
+          if (!alerts.length) alerts.push({ type:'success', icon:'🎉', title:'All appraisals on track', sub:'No critical blockers detected' });
+          el.innerHTML = alerts.map(function(a){
+            return '<div class="alert-item ' + a.type + '">' +
+              '<span class="alert-icon">' + a.icon + '</span>' +
+              '<div><div class="alert-title">' + esc(a.title) + '</div>' +
+              '<div class="alert-sub">' + esc(a.sub) + '</div></div>' +
+            '</div>';
+          }).join('');
+        }
+
+        /* ══════════════════════════════════
+           FULL PROCESS VIEW
+        ══════════════════════════════════ */
+        var STAGES_CFG = [
+          { key:'Init',              label:'Cycle Init',      icon:'🚀', color:'#64748b', desc:'Cycle created, employee assigned' },
+          { key:'Draft',             label:'Self-Appraisal',  icon:'👤', color:'#3b82f6', desc:'Employee filling KPIs & self-ratings' },
+          { key:'EmployeeFilled',    label:'RM Review',       icon:'📋', color:'#f59e0b', desc:'RM reviewing submitted appraisal' },
+          { key:'RMReview',          label:'HOD Review',      icon:'🏛', color:'#14b8a6', desc:'HOD provides department-level input' },
+          { key:'HODReview',         label:'UH Review',       icon:'🏢', color:'#8b5cf6', desc:'Unit Head strategic review' },
+          { key:'UnitHeadReview',    label:'MC Review',       icon:'🏅', color:'#f5a623', desc:'Moderation Committee calibration' },
+          { key:'ModCommitteeReview',label:'JMD Approval',    icon:'⭐', color:'#f43f5e', desc:'JMD final sign-off' },
+          { key:'JMDReview',         label:'HR Finalized',    icon:'✅', color:'#10b981', desc:'Appraisal closed by HR' },
+          { key:'HRFinalized',       label:'Archived',        icon:'🗄', color:'#475569', desc:'Permanently recorded' }
+        ];
+
+        function renderProcessView() {
+          var all = filteredByYear(_allMappings);
+          var counts = {};
+          all.forEach(function(m){ counts[m.status] = (counts[m.status]||0)+1; });
+
+          var stagesCont = document.getElementById('process-stages');
+          if (!stagesCont) return;
+
+          var stageHTML = STAGES_CFG.map(function(s, i){
+            var cnt = s.key === 'Init' ? all.length : (counts[s.key]||0);
+            var isPast = s.key === 'HRFinalized';
+            return '<div class="ps-item" onclick="filterProcessDetail(\'' + s.key + '\')">' +
+              '<div class="ps-dot-wrap">' +
+                '<div class="ps-dot" style="background:' + s.color + ';border-color:' + s.color + '">' + (i+1) + '</div>' +
+              '</div>' +
+              '<div class="ps-label">' + s.icon + ' ' + esc(s.label) + '</div>' +
+              '<div class="ps-count" style="color:' + s.color + '">' + cnt + '</div>' +
+            '</div>' +
+            (i < STAGES_CFG.length - 1 ? '<div style="flex-shrink:0;height:2px;width:18px;background:rgba(255,255,255,.1);margin-top:17px"></div>' : '');
+          }).join('');
+          stagesCont.innerHTML = stageHTML;
+
+          // Build per-stage detail cards
+          buildProcessDetailCards(all, counts);
+        }
+
+        function buildProcessDetailCards(all, counts) {
+          var cont = document.getElementById('process-detail-cards');
+          if (!cont) return;
+
+          var activeStatuses = ['Draft','EmployeeFilled','RMReview','HODReview','UnitHeadReview','ModCommitteeReview','JMDReview'];
+          var html = '';
+
+          activeStatuses.forEach(function(status){
+            var items = all.filter(function(m){ return m.status === status; });
+            if (!items.length) return;
+            var cfg = STAGES_CFG.find(function(s){ return s.key === status; }) || {};
+            html += '<div class="card" id="pdc-' + status + '">' +
+              '<div class="card-head">' +
+                '<div>' +
+                  '<div class="card-title">' + (cfg.icon||'') + ' ' + esc(cfg.label||status) + ' — ' + items.length + ' appraisals</div>' +
+                  '<div class="card-sub">' + esc(cfg.desc||'') + '</div>' +
+                '</div>' +
+                '<span class="pill" style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);font-size:.58rem">' + items.length + ' pending</span>' +
+              '</div>' +
+              '<div class="tbl-wrap"><table class="sa-tbl"><thead><tr>' +
+                '<th>#</th><th>Employee</th><th>Code</th><th>Department</th>' +
+                '<th>Cycle</th><th>Year</th><th>KPIs</th><th>Actions</th>' +
+              '</tr></thead><tbody>' +
+              items.slice(0,10).map(function(m, i){
+                return '<tr>' +
+                  '<td class="dim mono">' + (i+1) + '</td>' +
+                  '<td style="font-weight:600">' + esc(m.empName) + '</td>' +
+                  '<td class="mono">' + esc(m.empCode) + '</td>' +
+                  '<td>' + esc(m.department) + '</td>' +
+                  '<td><span class="cycle-chip">' + esc(m.appraisalCycle||'—') + '</span></td>' +
+                  '<td class="mono">' + (m.appraisalYear||'—') + '</td>' +
+                  '<td class="mono" style="text-align:center">' + (m.kpiCount||0) + '</td>' +
+                  '<td>' + allRoleLinks(m) + '</td>' +
+                '</tr>';
+              }).join('') +
+              (items.length > 10 ? '<tr><td colspan="8" style="text-align:center;padding:10px;font-size:.68rem;color:var(--ink4)">+ ' + (items.length-10) + ' more — use Live Pipeline for full list</td></tr>' : '') +
+              '</tbody></table></div></div>';
+          });
+
+          // Finalized summary
+          var fin = all.filter(function(m){ return m.status === 'HRFinalized'; });
+          if (fin.length) {
+            html += '<div class="card" style="border-color:rgba(16,185,129,.2)">' +
+              '<div class="card-head">' +
+                '<div><div class="card-title">✅ HR Finalized — ' + fin.length + ' appraisals complete</div>' +
+                '<div class="card-sub">These appraisals have been closed and archived by HR</div></div>' +
+                '<a href="/Pms/GetAnnualReport" target="_blank" class="btn-sm gold">View Annual Report ↗</a>' +
+              '</div>' +
+              '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">' +
+              fin.slice(0,12).map(function(m){
+                return '<div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:8px;padding:10px 12px">' +
+                  '<div style="font-weight:600;font-size:.74rem;color:var(--ink)">' + esc(m.empName) + '</div>' +
+                  '<div style="font-size:.62rem;color:var(--ink4);margin-top:2px">' + esc(m.department) + ' · ' + (m.appraisalYear||'—') + '</div>' +
+                  '<div style="margin-top:6px"><a href="/Pms/PrintAppraisal?mappingId=' + m.mappingId + '" class="lb lb-print" target="_blank">📄 Print</a></div>' +
+                '</div>';
+              }).join('') +
+              (fin.length > 12 ? '<div style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:.68rem;color:var(--ink4)">+ ' + (fin.length-12) + ' more</div>' : '') +
+              '</div></div>';
+          }
+
+          if (!html) html = '<div class="card"><div class="tbl-empty">No appraisals in active stages.</div></div>';
+          cont.innerHTML = html;
+        }
+
+        /* ══════════════════════════════════
+           PIPELINE TABLE
+        ══════════════════════════════════ */
+        function setPipelineFilter(f, btn) {
+          _pipelineFilter = f;
+          document.querySelectorAll('#pipeline-status-tabs .rtab').forEach(function(b){ b.classList.remove('active'); });
+          btn.classList.add('active');
+          renderPipelineTable();
+        }
+
+        function renderPipelineTable() {
+          var q = (document.getElementById('pipeline-search').value || '').toLowerCase();
+          var all = filteredByYear(_allMappings);
+          var cnts = {};
+          all.forEach(function(m){ cnts[m.status] = (cnts[m.status]||0)+1; });
+
+          setText('pf-all',   all.length);
+          setText('pf-draft', cnts['Draft']||0);
+          setText('pf-ef',    cnts['EmployeeFilled']||0);
+          setText('pf-rm',    cnts['RMReview']||0);
+          setText('pf-hod',   cnts['HODReview']||0);
+          setText('pf-uh',    cnts['UnitHeadReview']||0);
+          setText('pf-mc',    cnts['ModCommitteeReview']||0);
+          setText('pf-jmd2',  cnts['JMDReview']||0);
+          setText('pf-fin',   cnts['HRFinalized']||0);
+
+          var rows = all.filter(function(m){
+            if (_pipelineFilter !== 'all' && m.status !== _pipelineFilter) return false;
+            if (q && (m.empName||'').toLowerCase().indexOf(q) < 0 &&
+                     (m.empCode||'').toLowerCase().indexOf(q) < 0 &&
+                     (m.department||'').toLowerCase().indexOf(q) < 0) return false;
+            return true;
+          });
+
+          var tbody = document.getElementById('pipeline-tbody');
+          if (!rows.length) { tbody.innerHTML = '<tr><td colspan="10" class="tbl-empty">No records match this filter.</td></tr>'; return; }
+          tbody.innerHTML = rows.map(function(m, i){
+            return '<tr>' +
+              '<td class="dim mono">' + (i+1) + '</td>' +
+              '<td style="font-weight:600;white-space:nowrap">' + esc(m.empName) + '</td>' +
+              '<td class="mono">' + esc(m.empCode) + '</td>' +
+              '<td style="font-size:.70rem">' + esc(m.department) + '</td>' +
+              '<td><span class="cycle-chip">' + esc(m.appraisalCycle||'—') + '</span></td>' +
+              '<td class="mono">' + (m.appraisalYear||'—') + '</td>' +
+              '<td class="mono" style="text-align:center">' + (m.kpiCount||0) + '</td>' +
+              '<td>' + pipelineDots(m.status) + '</td>' +
+              '<td>' + statusPill(m.status) + '</td>' +
+              '<td>' + allRoleLinks(m) + '</td>' +
+            '</tr>';
+          }).join('');
+        }
+
+        function pipelineDots(status) {
+          var STAGES = ['Draft','EmployeeFilled','RMReview','HODReview','UnitHeadReview','ModCommitteeReview','JMDReview','HRFinalized'];
+          var LABELS = ['E','R','H','U','M','J','✓'];
+          var idx = STAGES.indexOf(status);
+          var out = '<div class="pipeline">';
+          for (var i = 0; i < 7; i++) {
+            var cls = i < idx ? 'done' : (i === idx ? 'now' : 'wait');
+            out += '<div class="pipe-dot ' + cls + '" title="' + STAGES[i+1] + '">' + LABELS[i] + '</div>';
+            if (i < 6) out += '<div class="pipe-line ' + (i < idx ? 'done' : '') + '"></div>';
+          }
+          return out + '</div>';
+        }
+
+        function allRoleLinks(m) {
+          var mid = m.mappingId;
+          return '<div class="link-btns">' +
+            '<a href="/Pms/MyAppraisal?mappingId=' + mid + '" class="lb lb-emp" target="_blank">👤</a>' +
+            '<a href="/Pms/RmAppraisal?mappingId=' + mid + '" class="lb lb-rm" target="_blank">📋</a>' +
+            '<a href="/Pms/HodAppraisal?mappingId=' + mid + '" class="lb lb-hod" target="_blank">🏛</a>' +
+            '<a href="/Pms/UnitHeadAppraisal?mappingId=' + mid + '" class="lb lb-uh" target="_blank">🏢</a>' +
+            '<a href="/Pms/ModCommitteeAppraisal?mappingId=' + mid + '" class="lb lb-mc" target="_blank">🏅</a>' +
+            '<a href="/Pms/JmdAppraisal?mappingId=' + mid + '" class="lb lb-jmd" target="_blank">⭐</a>' +
+            '<a href="/Pms/PrintAppraisal?mappingId=' + mid + '" class="lb lb-print" target="_blank">📄</a>' +
+          '</div>';
+        }
+
+        /* ══════════════════════════════════
+           ROLE TABLES
+        ══════════════════════════════════ */
+        var ROLE_CFG = {
+          emp: {
+            pendingStatus:'Draft',
+            doneStatuses:['EmployeeFilled','RMReview','HODReview','UnitHeadReview','ModCommitteeReview','JMDReview','HRFinalized'],
+            reviewerCol:null,
+            actionLink:function(m){ return '<a href="/Pms/MyAppraisal?mappingId='+m.mappingId+'" class="lb lb-emp" target="_blank">👤 View as Emp</a>'; }
+          },
+          rm: {
+            pendingStatus:'EmployeeFilled',
+            doneStatuses:['RMReview','HODReview','UnitHeadReview','ModCommitteeReview','JMDReview','HRFinalized'],
+            reviewerCol:'rmName',
+            actionLink:function(m){ return '<a href="/Pms/RmAppraisal?mappingId='+m.mappingId+'" class="lb lb-rm" target="_blank">📋 RM Form</a>'; }
+          },
+          hod: {
+            pendingStatus:'RMReview',
+            doneStatuses:['HODReview','UnitHeadReview','ModCommitteeReview','JMDReview','HRFinalized'],
+            reviewerCol:'hodName',
+            actionLink:function(m){ return '<a href="/Pms/HodAppraisal?mappingId='+m.mappingId+'" class="lb lb-hod" target="_blank">🏛 HOD Form</a>'; }
+          },
+          uh: {
+            pendingStatus:'HODReview',
+            doneStatuses:['UnitHeadReview','ModCommitteeReview','JMDReview','HRFinalized'],
+            reviewerCol:'unitHeadName',
+            actionLink:function(m){ return '<a href="/Pms/UnitHeadAppraisal?mappingId='+m.mappingId+'" class="lb lb-uh" target="_blank">🏢 UH Form</a>'; }
+          },
+          mc: {
+            pendingStatus:'UnitHeadReview',
+            doneStatuses:['ModCommitteeReview','JMDReview','HRFinalized'],
+            reviewerCol:'modCommitteeNames',
+            actionLink:function(m){ return '<a href="/Pms/ModCommitteeAppraisal?mappingId='+m.mappingId+'" class="lb lb-mc" target="_blank">🏅 MC Form</a>'; }
+          },
+          jmd: {
+            pendingStatus:'ModCommitteeReview',
+            doneStatuses:['JMDReview','HRFinalized'],
+            reviewerCol:'jmdName',
+            actionLink:function(m){ return '<a href="/Pms/JmdAppraisal?mappingId='+m.mappingId+'" class="lb lb-jmd" target="_blank">⭐ JMD Form</a>'; }
+          }
+        };
+
+        function setRoleViewFilter(role, filter, btn) {
+          _roleFilters[role] = filter;
+          var panelId = role === 'emp' ? 'employee' : role;
+          document.querySelectorAll('#panel-' + panelId + ' .rtab').forEach(function(b){ b.classList.remove('active'); });
+          if (btn) btn.classList.add('active');
+          renderRoleTable(role);
+        }
+
+        function renderRoleTable(role) {
+          var cfg  = ROLE_CFG[role];
+          var filt = _roleFilters[role] || 'all';
+          var searchId = role === 'emp' ? 'emp-search' : role + '-search';
+          var q = ((document.getElementById(searchId)||{}).value||'').toLowerCase();
+          var all = filteredByYear(_allMappings);
+
+          var pending = all.filter(function(m){ return m.status === cfg.pendingStatus; });
+          var done    = all.filter(function(m){ return cfg.doneStatuses.indexOf(m.status) >= 0; });
+
+          setText(role + '-cnt-all', all.length);
+          setText(role + '-cnt-p',   pending.length);
+          setText(role + '-cnt-d',   done.length);
+
+          var rows = all.filter(function(m){
+            if (filt === 'pending' && m.status !== cfg.pendingStatus) return false;
+            if (filt === 'done' && cfg.doneStatuses.indexOf(m.status) < 0) return false;
+            if (q && (m.empName||'').toLowerCase().indexOf(q)<0 && (m.empCode||'').toLowerCase().indexOf(q)<0) return false;
+            return true;
+          });
+
+          var tbodyId = role === 'emp' ? 'emp-tbody' : role + '-tbody';
+          var tbody = document.getElementById(tbodyId);
+          if (!tbody) return;
+          if (!rows.length) { tbody.innerHTML = '<tr><td colspan="10" class="tbl-empty">No records.</td></tr>'; return; }
+
+          tbody.innerHTML = rows.map(function(m, i){
+            var reviewerVal = cfg.reviewerCol ? (m[cfg.reviewerCol]||'—') : '';
+            return '<tr>' +
+              '<td class="dim mono">' + (i+1) + '</td>' +
+              '<td style="font-weight:600;white-space:nowrap">' + esc(m.empName) + '</td>' +
+              '<td class="mono">' + esc(m.empCode) + '</td>' +
+              '<td style="font-size:.70rem">' + esc(m.department) + '</td>' +
+              (cfg.reviewerCol ? '<td style="font-size:.68rem;color:var(--ink4)">' + esc(reviewerVal) + '</td>' : '') +
+              '<td><span class="cycle-chip">' + esc(m.appraisalCycle||'—') + '</span></td>' +
+              '<td class="mono">' + (m.appraisalYear||'—') + '</td>' +
+              '<td class="mono" style="text-align:center">' + (m.kpiCount||0) + '</td>' +
+              '<td>' + statusPill(m.status) + '</td>' +
+              '<td><div class="link-btns">' +
+                cfg.actionLink(m) +
+                '<a href="/Pms/PrintAppraisal?mappingId=' + m.mappingId + '" class="lb lb-print" target="_blank">📄</a>' +
+                '<a href="/Pms/RmAppraisal?mappingId=' + m.mappingId + '" class="lb lb-rm" target="_blank" title="SA: Open as RM">📋</a>' +
+              '</div></td>' +
+            '</tr>';
+          }).join('');
+        }
+
+        /* ══════════════════════════════════
+           MASTERS TABLE
+        ══════════════════════════════════ */
+        function renderMastersTable() {
+          var q = (document.getElementById('masters-search').value||'').toLowerCase();
+          var all = filteredByYear(_masterMappings);
+          var rows = all.filter(function(m){
+            return !q ||
+              (m.empName||'').toLowerCase().indexOf(q)>=0 ||
+              (m.empCode||'').toLowerCase().indexOf(q)>=0 ||
+              (m.department||'').toLowerCase().indexOf(q)>=0 ||
+              (m.designation||'').toLowerCase().indexOf(q)>=0;
+          });
+          setText('cnt-masters', all.length);
+          var tbody = document.getElementById('masters-tbody');
+          if (!tbody) return;
+          if (!rows.length) { tbody.innerHTML = '<tr><td colspan="13" class="tbl-empty">No master mappings found.</td></tr>'; return; }
+          tbody.innerHTML = rows.map(function(m, i){
+            return '<tr>' +
+              '<td class="dim mono">' + (i+1) + '</td>' +
+              '<td style="font-weight:600;white-space:nowrap">' + esc(m.empName) + '</td>' +
+              '<td class="mono">' + esc(m.empCode) + '</td>' +
+              '<td style="font-size:.70rem">' + esc(m.department) + '</td>' +
+              '<td style="font-size:.68rem;color:var(--ink3)">' + esc(m.designation) + '</td>' +
+              '<td class="mono">' + (m.appraisalYear||'—') + '</td>' +
+              '<td><span class="reviewer-chip">' + esc(m.rmName||'—') + '</span></td>' +
+              '<td><span class="reviewer-chip">' + esc(m.hodName||'—') + '</span></td>' +
+              '<td><span class="reviewer-chip">' + esc(m.unitHeadName||'—') + '</span></td>' +
+              '<td><span class="reviewer-chip">' + esc(m.jmdName||'—') + '</span></td>' +
+              '<td class="mono" style="text-align:center">' + (m.kpiCount||0) + '</td>' +
+              '<td style="font-size:.62rem;color:var(--ink4);font-family:var(--mono)">' + esc(m.lastUpdatedAt||'—') + '</td>' +
+              '<td><a href="/Pms/Index?tab=3" target="_blank" class="lb lb-hod">✏️ Edit</a></td>' +
+            '</tr>';
+          }).join('');
+        }
+
+        /* ══════════════════════════════════
+           STATUS PILL
+        ══════════════════════════════════ */
+        function statusPill(status) {
+          var MAP = {
+            'Draft':                ['pill-draft','Draft'],
+            'EmployeeFilled':       ['pill-emp','👤 Emp Filled'],
+            'RMReview':             ['pill-rm','📋 RM Review'],
+            'HODReview':            ['pill-hod','🏛 HOD Review'],
+            'UnitHeadReview':       ['pill-uh','🏢 UH Review'],
+            'ModCommitteeReview':   ['pill-mc','🏅 MC Review'],
+            'JMDReview':            ['pill-jmd','⭐ JMD Review'],
+            'HRFinalized':          ['pill-hr','✅ Finalized'],
+            'Master':               ['pill-draft','🗄 Master']
+          };
+          var pair = MAP[status] || ['pill-draft', esc(status)];
+          return '<span class="pill ' + pair[0] + '">' + pair[1] + '</span>';
+        }
+
+        /* ══════════════════════════════════
+           HELPERS
+        ══════════════════════════════════ */
+        function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+        function setText(id,val){var el=document.getElementById(id);if(el)el.textContent=val;}
+        function setSbCount(id,val){var el=document.getElementById(id);if(el)el.textContent=val;}
+        function setRvCard(id,total,pending,label){
+          var el=document.getElementById(id);if(el)el.textContent=total;
+          var ep=document.getElementById(id+'-p');
+          if(ep)ep.textContent=pending>0?'⏳ '+pending+' '+label:'✔ All up to date';
+        }
+
+        /* ══════════════════════════════════
+           BOOT
+        ══════════════════════════════════ */
+        loadAllData();
+    </script>
+</body>
+</html>

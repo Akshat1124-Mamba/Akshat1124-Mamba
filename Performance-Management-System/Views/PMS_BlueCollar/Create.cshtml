@@ -1,0 +1,489 @@
+﻿@* Views/PMSBlueCollar/Create.cshtml *@
+@model vgl.Models.PMSCriteriaModel
+@{
+    ViewData["Title"] = "Add PMS Criteria";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>@ViewData["Title"] — VGL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+            :root {
+                --navy: #0f1c3f;
+                --navy2: #1a2d5a;
+                --cobalt: #1e4ed8;
+                --cobalt-lt: #eff4ff;
+                --cobalt-md: #c7d7fd;
+                --gold: #d97706;
+                --gold-lt: #fef3c7;
+                --emerald: #059669;
+                --emerald-lt: #d1fae5;
+                --rose: #e11d48;
+                --rose-lt: #fff1f2;
+                --bg: #f8f9fc;
+                --white: #ffffff;
+                --border: #dde2ed;
+                --border2: #eaeef7;
+                --shadow-sm: 0 1px 3px rgba(15,28,63,.06);
+                --shadow: 0 4px 16px rgba(15,28,63,.08);
+                --ink: #0f172a;
+                --ink2: #334155;
+                --ink3: #64748b;
+                --ink4: #94a3b8;
+                --font: 'Inter', system-ui, sans-serif;
+                --mono: 'JetBrains Mono', monospace;
+                --serif: 'Instrument Serif', Georgia, serif;
+                --tr: .18s cubic-bezier(.4,0,.2,1);
+            }
+
+            *, *::before, *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: var(--font);
+                background: var(--bg);
+                color: var(--ink);
+                font-size: 13px;
+                min-height: 100vh;
+                -webkit-font-smoothing: antialiased;
+            }
+
+            a {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            .site-header {
+                position: sticky;
+                top: 0;
+                z-index: 500;
+                background: var(--navy);
+                padding: 0 32px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 62px;
+                box-shadow: 0 2px 16px rgba(15,28,63,.25);
+                gap: 16px;
+            }
+
+            .brand {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .brand-icon {
+                width: 36px;
+                height: 36px;
+                background: linear-gradient(135deg,#3b82f6 0%,#4f46e5 100%);
+                border-radius: 9px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: var(--serif);
+                font-size: 17px;
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(79,70,229,.4);
+            }
+
+            .brand-name {
+                font-size: .88rem;
+                font-weight: 600;
+                color: #fff;
+            }
+
+            .brand-sub {
+                font-size: .63rem;
+                color: rgba(255,255,255,.45);
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                display: block;
+                margin-top: 1px;
+            }
+
+            .nav {
+                display: flex;
+                gap: 2px;
+            }
+
+                .nav a {
+                    padding: 6px 14px;
+                    border-radius: 7px;
+                    font-size: .75rem;
+                    font-weight: 600;
+                    color: rgba(255,255,255,.65);
+                    transition: var(--tr);
+                }
+
+                    .nav a:hover {
+                        color: #fff;
+                        background: rgba(255,255,255,.09);
+                    }
+
+                    .nav a.active {
+                        color: #fff;
+                        background: rgba(255,255,255,.13);
+                    }
+
+            .page-wrap {
+                max-width: 740px;
+                margin: 0 auto;
+                padding: 32px 24px 80px;
+            }
+
+            .breadcrumb {
+                font-size: 11px;
+                color: var(--ink4);
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+                .breadcrumb a {
+                    color: var(--cobalt);
+                }
+
+            .page-title {
+                font-family: var(--serif);
+                font-size: 1.7rem;
+                color: var(--navy);
+                font-style: italic;
+                margin-bottom: 4px;
+                margin-top: 10px;
+            }
+
+            .page-subtitle {
+                font-size: .76rem;
+                color: var(--ink3);
+                margin-bottom: 22px;
+            }
+
+            .alert-danger {
+                background: var(--rose-lt);
+                color: var(--rose);
+                border-left: 3px solid var(--rose);
+                border-radius: 9px;
+                padding: 11px 16px;
+                margin-bottom: 18px;
+                font-size: .78rem;
+                font-weight: 500;
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            /* PMS BADGE BANNER */
+            .pms-banner {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                background: var(--cobalt-lt);
+                border: 1.5px solid var(--cobalt-md);
+                border-radius: 12px;
+                padding: 14px 18px;
+                margin-bottom: 22px;
+            }
+
+            .pms-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: var(--cobalt);
+                color: #fff;
+                border-radius: 20px;
+                padding: 4px 14px;
+                font-size: .72rem;
+                font-weight: 700;
+                letter-spacing: .05em;
+                font-family: var(--mono);
+            }
+
+            .pms-banner-text {
+                font-size: .78rem;
+                color: var(--cobalt);
+                font-weight: 500;
+            }
+
+            .pms-banner-sub {
+                font-size: .71rem;
+                color: var(--ink3);
+                margin-top: 2px;
+            }
+
+            /* FORM CARD */
+            .form-card {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: 16px;
+                box-shadow: var(--shadow);
+                padding: 28px 30px;
+            }
+
+            .section-divider {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+
+                .section-divider span {
+                    font-size: .64rem;
+                    font-weight: 700;
+                    color: var(--ink4);
+                    text-transform: uppercase;
+                    letter-spacing: 1.5px;
+                    white-space: nowrap;
+                }
+
+                .section-divider::before, .section-divider::after {
+                    content: '';
+                    flex: 1;
+                    height: 1px;
+                    background: var(--border2);
+                }
+
+            .field-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                margin-bottom: 20px;
+            }
+
+            .field-group {
+                margin-bottom: 20px;
+            }
+
+            .field-label {
+                display: block;
+                font-size: .68rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: .06em;
+                color: var(--ink3);
+                margin-bottom: 7px;
+            }
+
+                .field-label .req {
+                    color: var(--rose);
+                    margin-left: 2px;
+                }
+
+            .field-hint {
+                font-size: .7rem;
+                color: var(--ink4);
+                margin-top: 5px;
+            }
+
+            input[type="text"], input[type="number"], textarea {
+                width: 100%;
+                border: 1.5px solid var(--border);
+                border-radius: 9px;
+                padding: 9px 13px;
+                font-family: var(--font);
+                font-size: .82rem;
+                color: var(--ink);
+                background: var(--white);
+                outline: none;
+                transition: border-color var(--tr), box-shadow var(--tr);
+            }
+
+                input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
+                    border-color: var(--cobalt);
+                    background: var(--white);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1);
+                }
+
+            textarea {
+                resize: vertical;
+                min-height: 88px;
+            }
+
+            input[type="number"] {
+                max-width: 150px;
+            }
+
+            .btn-row {
+                display: flex;
+                gap: 10px;
+                justify-content: flex-end;
+                margin-top: 24px;
+                padding-top: 18px;
+                border-top: 1px solid var(--border2);
+            }
+
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                border: none;
+                border-radius: 8px;
+                font-family: var(--font);
+                font-weight: 600;
+                cursor: pointer;
+                transition: var(--tr);
+                text-decoration: none;
+            }
+
+            .btn-md {
+                height: 38px;
+                padding: 0 18px;
+                font-size: .79rem;
+            }
+
+            .btn-primary {
+                background: var(--cobalt);
+                color: #fff;
+                box-shadow: 0 2px 8px rgba(30,78,216,.28);
+            }
+
+                .btn-primary:hover {
+                    background: #1740bf;
+                }
+
+            .btn-ghost {
+                background: var(--white);
+                color: var(--ink2);
+                border: 1.5px solid var(--border);
+            }
+
+                .btn-ghost:hover {
+                    border-color: var(--cobalt);
+                    color: var(--cobalt);
+                    background: var(--cobalt-lt);
+                }
+
+            @@media(max-width:600px) {
+                .page-wrap {
+                    padding: 16px;
+                }
+
+                .field-row {
+                    grid-template-columns: 1fr;
+                }
+
+                .form-card {
+                    padding: 20px 16px;
+                }
+            }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="brand">
+            <div class="brand-icon">V</div>
+            <div>
+                <div class="brand-name">Vandana Global Limited</div>
+                <span class="brand-sub">PMS — Blue Collar</span>
+            </div>
+        </div>
+        <nav class="nav">
+            <a href="/pmsbluecollar/mc-jmd-dashboard">MC / JMD Review</a>
+            <a href="/pmsbluecollar/hr-dashboard" class="active">HR Dashboard</a>
+            <a href="/pmsbluecollar/index">Creteria Master</a>
+            <a href="/pmsbluecollar/tracking">PMS Tracking</a>
+        </nav>
+    </header>
+
+    <main class="page-wrap">
+
+        <div class="breadcrumb">
+            <a href="/pmsbluecollar/hr-dashboard">Home</a>
+            <span>/</span><a href="/pmscriteria">PMS Criteria</a>
+            <span>/</span><span>Add Criteria</span>
+        </div>
+
+        <div class="page-title">Add PMS Criteria</div>
+        <div class="page-subtitle">All criteria created here are automatically tagged as PMS — Performance Management.</div>
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert-danger">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                @Model.ErrorMessage
+            </div>
+        }
+
+        <!-- PMS Badge Banner -->
+        <div class="pms-banner">
+            <span class="pms-badge">PMS</span>
+            <div>
+                <div class="pms-banner-text">Performance Management System Criteria</div>
+                <div class="pms-banner-sub">Category is fixed as PMS — no selection needed.</div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Category" value="PMS" />
+
+                <div class="section-divider"><span>Sequence Numbers</span></div>
+
+                <div class="field-row">
+                    <div class="field-group" style="margin-bottom:0">
+                        <label class="field-label" for="MainSrNo">Main Sr. No <span class="req">*</span></label>
+                        <input type="number" id="MainSrNo" name="MainSrNo" min="1"
+                               value="@(Model.MainSrNo > 0 ? Model.MainSrNo.ToString() : "")"
+                               placeholder="e.g. 1" required />
+                        <div class="field-hint">Primary ordering sequence.</div>
+                    </div>
+                    <div class="field-group" style="margin-bottom:0">
+                        <label class="field-label" for="SubSrNo">Sub Sr. No <span class="req">*</span></label>
+                        <input type="number" id="SubSrNo" name="SubSrNo" min="1"
+                               value="@(Model.SubSrNo > 0 ? Model.SubSrNo.ToString() : "")"
+                               placeholder="e.g. 1" required />
+                        <div class="field-hint">Sub-sequence within the main group.</div>
+                    </div>
+                </div>
+
+                <div class="section-divider" style="margin-top:8px"><span>Criteria Details</span></div>
+
+                <div class="field-group">
+                    <label class="field-label" for="Beh_Pers">Category <span class="req">*</span></label>
+                    <input type="text" id="Beh_Pers" name="Beh_Pers"
+                           value="@Model.Beh_Pers"
+                           placeholder="e.g. Goal Achievement, Productivity, Discipline…"
+                           maxlength="300" required />
+                    <div class="field-hint">Name / title of this PMS criteria group.</div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="Description">Criterion <span class="req">*</span></label>
+                    <textarea id="Description" name="Description"
+                              placeholder="Describe what this criterion measures — visible to reviewers during scoring…" required>@Model.Description</textarea>
+                    <div class="field-hint">Detailed description visible to RM and HOD during scoring.</div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="MaxScore">Max Score <span class="req">*</span></label>
+                    <input type="number" id="MaxScore" name="MaxScore"
+                           min="1" max="100"
+                           value="@(Model.MaxScore > 0 ? Model.MaxScore.ToString() : "")"
+                           placeholder="e.g. 5" required />
+                    <div class="field-hint">Maximum score a reviewer can award. Between 1 and 100.</div>
+                </div>
+
+                <div class="btn-row">
+                    <a href="/pmsbluecollar/tracking" class="btn btn-ghost btn-md">Cancel</a>
+                    <button type="submit" class="btn btn-primary btn-md">
+                        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
+                        Save Criteria
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </main>
+
+</body>
+</html>

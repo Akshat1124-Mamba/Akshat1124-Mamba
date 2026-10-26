@@ -1,0 +1,1500 @@
+﻿@* Views/PMSBlueCollar/MCJMDDashboard.cshtml *@
+@model List<vgl.Models.PMSBCMCJMDModel>
+@{
+    ViewData["Title"] = "PMS Blue Collar — MC / JMD Review";
+    Layout = null;
+
+    string q_search = (string)ViewBag.SearchText ?? Context.Request.Query["searchText"].ToString();
+    string q_year = ViewBag.SelectedYear != null ? ((int)ViewBag.SelectedYear).ToString() : Context.Request.Query["year"].ToString();
+    string q_tab = (string)ViewBag.TabFilter ?? Context.Request.Query["tab"].ToString();
+    if (string.IsNullOrEmpty(q_tab)) q_tab = "all";
+
+    var years = ViewBag.YearList as List<int> ?? new List<int>();
+
+    // ── Declare lists FIRST so fallback counts can reference them ──
+    var pendingList = Model.Where(m => !(m.MC_SubmitDate != null && m.JMD_SubmitDate != null)).ToList();
+    var completedList = Model.Where(m => m.MC_SubmitDate != null && m.JMD_SubmitDate != null).ToList();
+    var activeList = q_tab == "completed" ? completedList : q_tab == "pending" ? pendingList :
+     Model;
+
+    // ── Stat counts: from controller (unaffected by search), fallback to model ──
+    int totalCount = (int?)ViewBag.TotalCount ?? (pendingList.Count + completedList.Count);
+    int pendingCount = (int?)ViewBag.PendingCount ?? pendingList.Count;
+    int completedCount = (int?)ViewBag.CompletedCount ?? completedList.Count;
+
+    string CalcRating(decimal score, int max)
+    {
+        if (max <= 0 || score <= 0) return "";
+        decimal pct = score / max * 100m;
+        return pct switch { >= 85 => "5", >= 71 => "4", >= 51 => "3", >= 31 => "2", _ => "1" };
+    }
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+            :root {
+                --navy: #0f1c3f;
+                --navy2: #1a2d5a;
+                --cobalt: #1e4ed8;
+                --cobalt-lt: #eff4ff;
+                --cobalt-md: #c7d7fd;
+                --indigo: #4f46e5;
+                --emerald: #059669;
+                --emerald-lt: #d1fae5;
+                --rose: #e11d48;
+                --amber: #b45309;
+                --amber-lt: #fef3c7;
+                --violet: #7c3aed;
+                --violet-lt: #ede9fe;
+                --bg: #f8f9fc;
+                --bg2: #f1f4f9;
+                --white: #fff;
+                --border: #dde2ed;
+                --border2: #eaeef7;
+                --shadow-sm: 0 1px 3px rgba(15,28,63,.06);
+                --shadow: 0 4px 16px rgba(15,28,63,.08),0 1px 4px rgba(15,28,63,.05);
+                --ink: #0f172a;
+                --ink2: #334155;
+                --ink3: #64748b;
+                --ink4: #94a3b8;
+                --font: 'Inter','Segoe UI',system-ui,sans-serif;
+                --mono: 'JetBrains Mono','Courier New',monospace;
+                --serif: 'Instrument Serif',Georgia,serif;
+                --radius: 10px;
+                --radius-lg: 16px;
+                --tr: .18s cubic-bezier(.4,0,.2,1);
+            }
+
+            *, *::before, *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0
+            }
+
+            body {
+                font-family: var(--font);
+                background: var(--bg);
+                color: var(--ink);
+                font-size: 13px;
+                min-height: 100vh;
+                -webkit-font-smoothing: antialiased;
+                line-height: 1.5;
+                overflow-x: hidden
+            }
+
+            a {
+                text-decoration: none;
+                color: inherit
+            }
+
+            /* HEADER */
+            .site-header {
+                position: sticky;
+                top: 0;
+                z-index: 500;
+                background: var(--navy);
+                padding: 0 32px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 62px;
+                box-shadow: 0 2px 16px rgba(15,28,63,.25);
+                gap: 16px
+            }
+
+            .brand {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-shrink: 0
+            }
+
+            .brand-icon {
+                width: 36px;
+                height: 36px;
+                background: linear-gradient(135deg,#3b82f6 0%,var(--indigo) 100%);
+                border-radius: 9px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: var(--serif);
+                font-size: 17px;
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(79,70,229,.4);
+                flex-shrink: 0
+            }
+
+            .brand-name {
+                font-size: .88rem;
+                font-weight: 600;
+                color: #fff;
+                letter-spacing: .01em;
+                line-height: 1.2
+            }
+
+            .brand-sub {
+                font-size: .63rem;
+                color: rgba(255,255,255,.45);
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                display: block;
+                margin-top: 1px
+            }
+
+            .nav {
+                display: flex;
+                gap: 2px;
+                flex-shrink: 0
+            }
+
+                .nav a {
+                    padding: 6px 14px;
+                    border-radius: 7px;
+                    font-size: .75rem;
+                    font-weight: 600;
+                    color: rgba(255,255,255,.65);
+                    transition: var(--tr);
+                    white-space: nowrap
+                }
+
+                    .nav a:hover {
+                        color: #fff;
+                        background: rgba(255,255,255,.09)
+                    }
+
+                    .nav a.active {
+                        color: #fff;
+                        background: rgba(255,255,255,.13)
+                    }
+
+            /* PAGE */
+            .page-wrap {
+                max-width: 1600px;
+                margin: 0 auto;
+                padding: 32px 32px 100px
+            }
+
+            .breadcrumb {
+                font-size: 11px;
+                color: var(--ink4);
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                flex-wrap: wrap
+            }
+
+                .breadcrumb a {
+                    color: var(--cobalt)
+                }
+
+            .page-header-top {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-bottom: 28px
+            }
+
+            .page-title {
+                font-family: var(--serif);
+                font-size: 1.9rem;
+                color: var(--navy);
+                line-height: 1.2
+            }
+
+            .page-subtitle {
+                font-size: 12.5px;
+                color: var(--ink3);
+                margin-top: 5px;
+                line-height: 1.6
+            }
+
+            /* STAT CARDS */
+            .stat-row {
+                display: flex;
+                flex-direction: row;
+                gap: 14px;
+                margin-bottom: 24px;
+                width: 100%;
+                align-items: stretch;
+            }
+
+                .stat-row > .stat-card {
+                    flex: 1;
+                    min-width: 0;
+                    max-width: none;
+                }
+
+            .stat-card {
+                background: var(--white);
+                border: 2px solid var(--border);
+                border-radius: var(--radius-lg);
+                padding: 18px 20px;
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                box-shadow: var(--shadow-sm);
+                cursor: pointer;
+                transition: border-color var(--tr), box-shadow var(--tr), transform var(--tr);
+                user-select: none;
+                text-decoration: none;
+            }
+
+                .stat-card:hover {
+                    border-color: var(--cobalt-md);
+                    box-shadow: var(--shadow);
+                    transform: translateY(-1px);
+                }
+
+                .stat-card.active-tab {
+                    border-color: var(--cobalt);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.12), var(--shadow);
+                }
+
+                    .stat-card.active-tab .stat-val {
+                        color: var(--cobalt);
+                    }
+
+            .stat-icon {
+                width: 44px;
+                height: 44px;
+                border-radius: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                flex-shrink: 0;
+            }
+
+            .si-blue {
+                background: var(--cobalt-lt);
+            }
+
+            .si-amber {
+                background: #fff7ed;
+            }
+
+            .si-green {
+                background: var(--emerald-lt);
+            }
+
+            .stat-val {
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--navy);
+                font-family: var(--mono);
+                line-height: 1;
+            }
+
+            .stat-label {
+                font-size: 11.5px;
+                color: var(--ink3);
+                margin-top: 4px;
+                font-weight: 500;
+            }
+
+            .stat-hint {
+                font-size: 10.5px;
+                color: var(--ink4);
+                margin-top: 2px;
+            }
+
+            @@media (max-width: 900px) {
+                .stat-row {
+                    flex-wrap: wrap;
+                }
+
+                    .stat-row > .stat-card {
+                        flex: 1 1 calc(50% - 7px);
+                    }
+            }
+
+            @@media (max-width: 500px) {
+                .stat-row > .stat-card {
+                    flex: 1 1 100%;
+                }
+            }
+
+            /* TOOLBAR */
+            .toolbar {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                align-items: center;
+                padding: 14px 16px;
+                background: var(--bg2);
+                border-bottom: 1px solid var(--border)
+            }
+
+            .search-box {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px;
+                flex: 1;
+                min-width: 200px;
+                max-width: 300px;
+                height: 38px;
+                transition: border-color var(--tr)
+            }
+
+                .search-box:focus-within {
+                    border-color: var(--cobalt);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1)
+                }
+
+                .search-box svg {
+                    color: var(--ink4);
+                    flex-shrink: 0
+                }
+
+                .search-box input {
+                    border: none;
+                    background: transparent;
+                    font-family: var(--font);
+                    font-size: .82rem;
+                    color: var(--ink);
+                    outline: none;
+                    width: 100%
+                }
+
+                    .search-box input::placeholder {
+                        color: var(--ink4)
+                    }
+
+            .year-select {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 14px;
+                height: 38px;
+                font-family: var(--mono);
+                font-size: .82rem;
+                font-weight: 600;
+                color: var(--navy);
+                cursor: pointer;
+                outline: none;
+                transition: border-color var(--tr);
+                min-width: 110px
+            }
+
+                .year-select:focus {
+                    border-color: var(--cobalt);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1)
+                }
+
+            .btn-outline {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: var(--white);
+                color: var(--ink2);
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 16px;
+                height: 38px;
+                font-size: .80rem;
+                font-family: var(--font);
+                font-weight: 600;
+                cursor: pointer;
+                transition: var(--tr);
+                text-decoration: none
+            }
+
+                .btn-outline:hover {
+                    border-color: var(--cobalt);
+                    color: var(--cobalt);
+                    background: var(--cobalt-lt)
+                }
+
+            .tab-label {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 14px;
+                border-radius: 20px;
+                font-size: .72rem;
+                font-weight: 700;
+                border: 1.5px solid
+            }
+
+            .tab-pending {
+                background: var(--amber-lt);
+                color: var(--amber);
+                border-color: #fcd34d
+            }
+
+            .tab-completed {
+                background: var(--emerald-lt);
+                color: var(--emerald);
+                border-color: #6ee7b7
+            }
+
+            /* CARD & TABLE */
+            .card {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: var(--radius-lg);
+                box-shadow: var(--shadow);
+                overflow: hidden
+            }
+
+            .table-outer {
+                width: 100%;
+                overflow-x: auto;
+                overflow-y: auto;
+                max-height: 560px;
+                scrollbar-width: thin;
+                scrollbar-color: var(--border) transparent
+            }
+
+                .table-outer::-webkit-scrollbar {
+                    height: 6px;
+                    width: 6px
+                }
+
+                .table-outer::-webkit-scrollbar-thumb {
+                    background: var(--border);
+                    border-radius: 3px
+                }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: .78rem;
+                min-width: 1000px
+            }
+
+            thead {
+                position: sticky;
+                top: 0;
+                z-index: 20
+            }
+
+                thead tr {
+                    background: var(--navy)
+                }
+
+                thead th {
+                    padding: 11px 12px;
+                    font-size: .60rem;
+                    font-weight: 700;
+                    color: rgba(255,255,255,.65);
+                    text-transform: uppercase;
+                    letter-spacing: .09em;
+                    text-align: left;
+                    white-space: nowrap;
+                    border-right: 1px solid rgba(255,255,255,.08)
+                }
+
+                    thead th:last-child {
+                        border-right: none
+                    }
+
+                thead tr.group-row th {
+                    padding: 6px 12px;
+                    font-size: .58rem;
+                    letter-spacing: .12em;
+                    border-bottom: 1px solid rgba(255,255,255,.1);
+                    text-align: center
+                }
+
+            .th-rm {
+                background: #0d4f38
+            }
+
+            .th-hod {
+                background: #3b2278
+            }
+
+            .th-mc {
+                background: #7c3400
+            }
+
+            .th-jmd {
+                background: #0e3e5c
+            }
+
+            tbody tr {
+                border-bottom: 1px solid var(--border2);
+                transition: background var(--tr),opacity .4s,transform .4s
+            }
+
+                tbody tr:last-child {
+                    border-bottom: none
+                }
+
+                tbody tr:hover {
+                    background: var(--cobalt-lt)
+                }
+
+            tbody td {
+                padding: 10px 12px;
+                color: var(--ink2);
+                border-right: 1px solid var(--border2);
+                vertical-align: middle;
+                white-space: nowrap
+            }
+
+                tbody td:last-child {
+                    border-right: none
+                }
+
+            .emp-name {
+                font-weight: 600;
+                color: var(--navy);
+                font-size: .81rem
+            }
+
+            .emp-sub {
+                font-size: .70rem;
+                color: var(--ink4);
+                margin-top: 1px
+            }
+
+            .emp-code {
+                font-size: .72rem;
+                color: var(--ink3);
+                font-family: var(--mono)
+            }
+
+            .cell-sm {
+                font-size: .72rem;
+                color: var(--ink3)
+            }
+
+            .pill-annual {
+                background: #fff7ed;
+                color: #c2410c;
+                border: 1px solid #fed7aa;
+                padding: 3px 10px;
+                border-radius: 20px;
+                font-size: .67rem;
+                font-weight: 700;
+                font-family: var(--mono);
+                display: inline-block
+            }
+
+            .pill-rating {
+                padding: 3px 9px;
+                border-radius: 20px;
+                font-size: .67rem;
+                font-weight: 700;
+                display: inline-block;
+                font-family: var(--mono)
+            }
+
+            .rating-5 {
+                background: #d1fae5;
+                color: #065f46;
+                border: 1px solid #6ee7b7
+            }
+
+            .rating-4 {
+                background: #dbeafe;
+                color: #1e40af;
+                border: 1px solid #93c5fd
+            }
+
+            .rating-3 {
+                background: #fef9c3;
+                color: #92400e;
+                border: 1px solid #fde68a
+            }
+
+            .rating-2 {
+                background: #fee2e2;
+                color: #991b1b;
+                border: 1px solid #fca5a5
+            }
+
+            .rating-1 {
+                background: #f3e8ff;
+                color: #6b21a8;
+                border: 1px solid #d8b4fe
+            }
+
+            /* INPUTS */
+            .score-input {
+                width: 82px;
+                border: 1.5px solid var(--border);
+                border-radius: 6px;
+                padding: 5px 8px;
+                font-family: var(--mono);
+                font-size: .80rem;
+                font-weight: 600;
+                color: var(--navy);
+                outline: none;
+                transition: border-color var(--tr);
+                background: var(--white)
+            }
+
+                .score-input:focus {
+                    border-color: var(--cobalt);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1)
+                }
+
+            .mc-input:focus {
+                border-color: #b45309;
+                box-shadow: 0 0 0 3px rgba(180,83,9,.12)
+            }
+
+            .jmd-input:focus {
+                border-color: #0e4472;
+                box-shadow: 0 0 0 3px rgba(14,68,114,.12)
+            }
+
+            .remark-input {
+                width: 148px;
+                border: 1.5px solid var(--border);
+                border-radius: 6px;
+                padding: 5px 8px;
+                font-family: var(--font);
+                font-size: .72rem;
+                color: var(--ink2);
+                outline: none;
+                height: 31px;
+                transition: border-color var(--tr);
+                background: var(--white)
+            }
+
+                .remark-input:focus {
+                    border-color: var(--cobalt);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1)
+                }
+
+            .submitted-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                background: var(--emerald-lt);
+                color: var(--emerald);
+                border: 1px solid #6ee7b7;
+                padding: 3px 9px;
+                border-radius: 6px;
+                font-size: .68rem;
+                font-weight: 700;
+                white-space: nowrap
+            }
+
+            .partial-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                background: var(--amber-lt);
+                color: var(--amber);
+                border: 1px solid #fcd34d;
+                padding: 3px 9px;
+                border-radius: 6px;
+                font-size: .68rem;
+                font-weight: 700;
+                white-space: nowrap
+            }
+
+            .btn-xs {
+                display: inline-flex;
+                align-items: center;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: .68rem;
+                font-weight: 700;
+                border: 1.5px solid;
+                cursor: pointer;
+                transition: opacity .18s;
+                white-space: nowrap;
+                text-decoration: none;
+                font-family: var(--font);
+            }
+
+                .btn-xs:hover {
+                    opacity: .75
+                }
+
+            .btn-print {
+                border-color: var(--navy);
+                color: var(--navy);
+                background: var(--white);
+            }
+
+                .btn-print:hover {
+                    background: var(--cobalt-lt);
+                    border-color: var(--cobalt);
+                    color: var(--cobalt);
+                }
+
+            /* TABLE FOOTER */
+            .table-footer {
+                padding: 10px 16px;
+                font-size: .72rem;
+                color: var(--ink4);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: var(--bg2);
+                border-top: 1px solid var(--border)
+            }
+
+            /* EMPTY */
+            .empty-state {
+                text-align: center;
+                padding: 60px 24px;
+                color: var(--ink4);
+                font-size: .84rem
+            }
+
+            .empty-icon {
+                font-size: 32px;
+                margin-bottom: 10px
+            }
+
+            /* TOAST */
+            #toast {
+                position: fixed;
+                bottom: 28px;
+                right: 28px;
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                pointer-events: none
+            }
+
+            .toast-msg {
+                background: var(--navy);
+                color: #fff;
+                padding: 12px 20px;
+                border-radius: 10px;
+                font-size: .78rem;
+                font-weight: 600;
+                box-shadow: var(--shadow);
+                opacity: 0;
+                transform: translateY(10px);
+                transition: opacity .25s,transform .25s
+            }
+
+                .toast-msg.show {
+                    opacity: 1;
+                    transform: translateY(0)
+                }
+
+                .toast-msg.success {
+                    border-left: 4px solid var(--emerald)
+                }
+
+                .toast-msg.error {
+                    border-left: 4px solid var(--rose)
+                }
+
+            /* SAVE BAR */
+            #saveBar {
+                display: none;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 400;
+                background: var(--navy);
+                padding: 14px 32px;
+                box-shadow: 0 -4px 20px rgba(15,28,63,.3);
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px
+            }
+
+                #saveBar.visible {
+                    display: flex
+                }
+
+                #saveBar .bar-info {
+                    color: rgba(255,255,255,.8);
+                    font-size: .80rem
+                }
+
+                #saveBar strong {
+                    color: #fff
+                }
+
+            .btn-save-all {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                background: #059669;
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                padding: 0 28px;
+                height: 42px;
+                font-family: var(--font);
+                font-size: .86rem;
+                font-weight: 700;
+                cursor: pointer;
+                transition: var(--tr);
+                box-shadow: 0 2px 10px rgba(5,150,105,.3)
+            }
+
+                .btn-save-all:hover {
+                    background: #047857
+                }
+
+                .btn-save-all:disabled {
+                    opacity: .5;
+                    cursor: not-allowed
+                }
+
+            .row-fade-out {
+                opacity: 0 !important;
+                transform: translateX(30px) !important
+            }
+
+            /* Search highlight */
+            .search-active-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                background: #fef3c7;
+                color: #92400e;
+                border: 1px solid #fcd34d;
+                padding: 2px 10px;
+                border-radius: 20px;
+                font-size: .68rem;
+                font-weight: 700
+            }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="brand">
+            <div class="brand-icon">V</div>
+            <div>
+                <div class="brand-name">Vandana Global Limited</div>
+                <div class="brand-sub">PMS — Non Management Cadre</div>
+            </div>
+        </div>
+        <nav class="nav">
+            <a href="/pmsbluecollar/mc-jmd-dashboard">MC / JMD Review</a>
+            <a href="/pmsbluecollar/hr-dashboard" class="active">HR Dashboard</a>
+            <a href="/pmsbluecollar/index">Creteria Master</a>
+            <a href="/pmsbluecollar/tracking">PMS Tracking</a>
+        </nav>
+    </header>
+
+    <main class="page-wrap">
+
+        <div class="breadcrumb">
+            <a href="/pmsbluecollar/hr-dashboard">Home</a>
+            <span>/</span><span>PMS Blue Collar</span>
+            <span>/</span><span>MC / JMD Review — Annual</span>
+        </div>
+
+        <div class="page-header-top">
+            <div>
+                <div class="page-title">MC / JMD <em style="font-style:italic;color:var(--cobalt)">Annual Review</em></div>
+                <div class="page-subtitle">Score entry for completed Annual appraisals — Management Committee &amp; JMD ratings.</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <a href="/pmsbluecollar/export-mc-jmd-excel?year=@q_year"
+                   class="btn-outline"
+                   style="background:#059669;color:#fff;border-color:#059669;gap:7px"
+                   title="Export to Excel">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    Export Excel
+                </a>
+                <a href="/pmsbluecollar/tracking" class="btn-outline">↺ Back to Tracking</a>
+            </div>
+        </div>
+
+        @* ── STAT CARDS ── *@
+        <div class="stat-row">
+
+            <a class="stat-card @(q_tab == "all" ? "active-tab" : "")"
+               href="/pmsbluecollar/mc-jmd-dashboard?year=@q_year&searchText=@q_search">
+                <div class="stat-icon si-blue">📋</div>
+                <div>
+                    <div class="stat-val">@totalCount</div>
+                    <div class="stat-label">Total Annual PMS</div>
+                    <div class="stat-hint">All years · @pendingCount pending · @completedCount completed</div>
+                </div>
+            </a>
+
+            <a class="stat-card @(q_tab == "pending" ? "active-tab" : "")"
+               href="/pmsbluecollar/mc-jmd-dashboard?tab=pending&year=@q_year&searchText=@q_search">
+                <div class="stat-icon si-amber">⏳</div>
+                <div>
+                    <div class="stat-val">@pendingCount</div>
+                    <div class="stat-label">Pending</div>
+                    <div class="stat-hint">MC or JMD score missing</div>
+                </div>
+            </a>
+
+            <a class="stat-card @(q_tab == "completed" ? "active-tab" : "")"
+               href="/pmsbluecollar/mc-jmd-dashboard?tab=completed&year=@q_year&searchText=@q_search">
+                <div class="stat-icon si-green">✅</div>
+                <div>
+                    <div class="stat-val">@completedCount</div>
+                    <div class="stat-label">Completed</div>
+                    <div class="stat-hint">Both MC &amp; JMD scored</div>
+                </div>
+            </a>
+
+        </div>
+
+        @* ── TOOLBAR ── *@
+        <form method="get" action="/pmsbluecollar/mc-jmd-dashboard" id="filterForm">
+            <input type="hidden" name="tab" id="tabInput" value="@q_tab" />
+            <input type="hidden" name="searchText" id="searchHidden" value="@q_search" />
+
+            <div class="card" style="margin-bottom:0">
+                <div class="toolbar">
+
+                    <div class="search-box">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.35-4.35" />
+                        </svg>
+                        <input type="text" id="srchInput" placeholder="Emp Code / Name"
+                               value="@q_search" autocomplete="off" />
+                    </div>
+
+                    <select name="year" id="yearSelect" class="year-select">
+                        <option value="">All Years</option>
+                        @foreach (var y in years)
+                        {
+                            <option value="@y" selected="@(q_year == y.ToString() ? "selected" : null)">@y</option>
+                        }
+                    </select>
+
+                    @if (q_tab == "all")
+                    {
+                        <span class="tab-label">📋 All Records</span>
+                    }
+                    else if (q_tab == "pending")
+                    {
+                        <span class="tab-label tab-pending">⏳ Pending</span>
+                    }
+                    else
+                    {
+                        <span class="tab-label tab-completed">✅ Completed</span>
+                    }
+
+                    @if (!string.IsNullOrEmpty(q_search))
+                    {
+                        <span class="search-active-badge">
+                            🔍 "@q_search"
+                            <a href="/pmsbluecollar/mc-jmd-dashboard?tab=@q_tab&year=@q_year"
+                               style="color:var(--amber);font-weight:900;margin-left:2px">✕</a>
+                        </span>
+                    }
+
+                   
+                </div>
+
+                <div class="table-outer">
+                    <table id="mainTable">
+                        <thead>
+                            <tr class="group-row">
+                                <th colspan="6" style="background:var(--navy)"></th>
+                                <th colspan="1" class="th-rm">RM</th>
+                                <th colspan="1" class="th-hod">HOD</th>
+                                @if (q_tab == "pending")
+                                {
+                                    <th colspan="2" class="th-mc">MC Score Entry</th>
+                                    <th colspan="2" class="th-jmd">JMD Score Entry</th>
+                                }
+                                else
+                                {
+                                    <th colspan="2" class="th-mc">MC Score</th>
+                                    <th colspan="2" class="th-jmd">JMD Score</th>
+                                }
+                                <th colspan="1" style="background:var(--navy2)"></th>
+                            </tr>
+                            <tr>
+                                <th style="width:36px">#</th>
+                                <th>Employee</th>
+                                <th>Emp Code</th>
+                                <th>Department</th>
+                                <th>Designation</th>
+                                <th>Period</th>
+                                <th class="th-rm">Rating</th>
+                                <th class="th-hod">Rating</th>
+                                <th class="th-mc">Score</th>
+                                <th class="th-mc">Remark</th>
+                                <th class="th-jmd">Score</th>
+                                <th class="th-jmd">Remark</th>
+                                @if (q_tab == "pending")
+                                {
+                                    <th style="background:var(--navy2);text-align:center;color:rgba(255,255,255,.65)">Status</th>
+                                }
+                                <th style="background:var(--navy2);text-align:center;color:rgba(255,255,255,.65);width:70px">Print</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mainTbody">
+                            @if (!activeList.Any())
+                            {
+                                <tr>
+                                    <td colspan="13">
+                                        <div class="empty-state">
+                                            <div class="empty-icon">@(q_tab == "pending" ? "🎉" : "📭")</div>
+                                            @if (q_tab == "pending")
+                                            {
+                                                <div>All Annual appraisals have been scored by MC &amp; JMD.</div>
+                                            }
+                                            else
+                                            {
+                                                <div>No completed MC / JMD scores yet for the selected filters.</div>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            @{
+                                int rowNum = 0;
+                            }
+                            @foreach (var item in activeList)
+                            {
+                                rowNum++;
+                                string rmRating = CalcRating(item.RM_TotalScore, item.TotalMaxScore);
+                                string hodRating = CalcRating(item.HOD_TotalScore, item.TotalMaxScore);
+
+                                string period = item.FromDate.HasValue && item.ToDate.HasValue
+                                    ? $"{item.FromDate.Value:dd-MMM-yy} – {item.ToDate.Value:dd-MMM-yy}"
+                                    : (item.Year > 0 ? $"FY {item.Year}" : "—");
+
+                                bool mcDone = item.MC_SubmitDate != null;
+                                bool jmdDone = item.JMD_SubmitDate != null;
+
+                                <tr data-pmsid="@item.PmsID" id="row-@item.PmsID">
+                                    <td class="cell-sm">@rowNum</td>
+                                    <td style="min-width:160px">
+                                        <div class="emp-name">@item.EmpName</div>
+                                        @if (!string.IsNullOrEmpty(item.SubDepartment))
+                                        {
+                                            <div class="emp-sub">@item.SubDepartment</div>
+                                        }
+                                    </td>
+                                    <td><span class="emp-code">@item.EmpCode</span></td>
+                                    <td class="cell-sm" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">@item.Department</td>
+                                    <td class="cell-sm">@item.Designation</td>
+                                    <td style="min-width:180px">
+                                        <div class="cell-sm">@period</div>
+                                        <div style="margin-top:2px"><span class="pill-annual">Annual @item.Year</span></div>
+                                    </td>
+
+                                    @* RM Rating *@
+                                    <td style="text-align:center">
+                                        @if (!string.IsNullOrEmpty(rmRating))
+                                        {
+                                            <span class="pill-rating rating-@rmRating">@rmRating</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="cell-sm">—</span>
+                                        }
+                                    </td>
+
+                                    @* HOD Rating *@
+                                    <td style="text-align:center">
+                                        @if (!string.IsNullOrEmpty(hodRating))
+                                        {
+                                            <span class="pill-rating rating-@hodRating">@hodRating</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="cell-sm">—</span>
+                                        }
+                                    </td>
+
+                                    @* MC Score *@
+                                    <td style="min-width:100px">
+                                        @if (mcDone)
+                                        {
+                                            <span class="submitted-badge">✓ @item.MC_Score.ToString("0.##")</span>
+                                        }
+                                        else
+                                        {
+                                            <input type="number" min="0" max="5" step="1"
+                                                   class="score-input mc-input"
+                                                   data-field="mc_score"
+                                                   data-pmsid="@item.PmsID"
+                                                   placeholder="0" value="" />
+                                        }
+                                    </td>
+
+                                    @* MC Remark *@
+                                    <td style="min-width:155px">
+                                        @if (mcDone)
+                                        {
+                                            <span class="cell-sm">@(string.IsNullOrEmpty(item.MC_Remark) ? "—" : item.MC_Remark)</span>
+                                        }
+                                        else
+                                        {
+                                            <input type="text" class="remark-input"
+                                                   data-field="mc_remark"
+                                                   data-pmsid="@item.PmsID"
+                                                   placeholder="Optional" maxlength="300" value="" />
+                                        }
+                                    </td>
+
+                                    @* JMD Score *@
+                                    <td style="min-width:100px">
+                                        @if (jmdDone)
+                                        {
+                                            <span class="submitted-badge">✓ @item.JMD_Score.ToString("0.##")</span>
+                                        }
+                                        else
+                                        {
+                                            <input type="number" min="0" max="5" step="1"
+                                                   class="score-input jmd-input"
+                                                   data-field="jmd_score"
+                                                   data-pmsid="@item.PmsID"
+                                                   placeholder="0" value="" />
+                                        }
+                                    </td>
+
+                                    @* JMD Remark *@
+                                    <td style="min-width:155px">
+                                        @if (jmdDone)
+                                        {
+                                            <span class="cell-sm">@(string.IsNullOrEmpty(item.JMD_Remark) ? "—" : item.JMD_Remark)</span>
+                                        }
+                                        else
+                                        {
+                                            <input type="text" class="remark-input"
+                                                   data-field="jmd_remark"
+                                                   data-pmsid="@item.PmsID"
+                                                   placeholder="Optional" maxlength="300" value="" />
+                                        }
+                                    </td>
+
+                                    @* Status (pending tab only) *@
+                                    @if (q_tab == "pending")
+                                    {
+                                        <td style="text-align:center;min-width:120px">
+                                            @if (mcDone && !jmdDone)
+                                            {
+                                                <span class="partial-badge">MC ✓ · JMD ⏳</span>
+                                            }
+                                            else if (!mcDone && jmdDone)
+                                            {
+                                                <span class="partial-badge">MC ⏳ · JMD ✓</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="cell-sm" style="color:var(--ink4)">Pending</span>
+                                            }
+                                        </td>
+                                    }
+
+                                    @* Print *@
+                                    <td style="text-align:center;min-width:72px">
+                                        <a href="/pmsbluecollar/print?id=@item.PmsID"
+                                           target="_blank"
+                                           class="btn-xs btn-print">🖨 Print</a>
+                                    </td>
+
+                                </tr>   
+                            }
+                            
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-footer">
+                    <span>
+                        Showing <strong>@rowNum</strong> of <strong>@activeList.Count</strong> records
+                        @if (!string.IsNullOrEmpty(q_search))
+                        {
+                            <span>(filtered — <strong>@totalCount</strong> total in scope)</span>
+                        }
+                        — <span class="tab-label @(q_tab == "pending" ? "tab-pending" : "tab-completed")" style="padding:2px 8px;font-size:.65rem">
+                        @(q_tab == "pending" ? "Pending" : "Completed")
+                    </span>
+                </span>
+                <span id="dirtyHint" style="color:var(--amber);font-weight:600;display:none">● Unsaved changes</span>
+                <span>Scroll ↔ for all columns</span>
+            </div>
+        </div>
+    </form>
+
+</main>
+
+@* SAVE BAR *@
+<div id="saveBar">
+    <div class="bar-info">
+        <strong id="saveBarCount">0</strong> row(s) with scores ready to save
+    </div>
+    <button class="btn-save-all" id="saveAllBtn">💾 Save All</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+        (function () {
+            var filled = new Set();
+
+            function refreshFilled() {
+                filled.clear();
+                document.querySelectorAll('.score-input').forEach(function (el) {
+                    var v = parseFloat(el.value);
+                    if (!isNaN(v) && v > 0) filled.add(el.dataset.pmsid);
+                });
+                updateBar();
+            }
+
+            function updateBar() {
+                var bar  = document.getElementById('saveBar');
+                var cnt  = document.getElementById('saveBarCount');
+                var hint = document.getElementById('dirtyHint');
+                if (filled.size > 0) {
+                    bar.classList.add('visible');
+                    cnt.textContent = filled.size;
+                    hint.style.display = 'inline';
+                } else {
+                    bar.classList.remove('visible');
+                    hint.style.display = 'none';
+                }
+            }
+
+                   document.querySelectorAll('.score-input').forEach(function (el) {
+            el.addEventListener('input', function () {
+                var v = parseFloat(el.value);
+                if (!isNaN(v)) {
+                    // Strip decimals and clamp to 0–5
+                    var clamped = Math.min(5, Math.max(0, Math.floor(v)));
+                    if (el.value !== String(clamped)) el.value = clamped;
+                }
+                refreshFilled();
+            });
+        });
+        document.querySelectorAll('.remark-input').forEach(function (el) {
+            el.addEventListener('input', refreshFilled);
+        });
+
+        function gatherRow(pmsId) {
+            var row = document.querySelector('tr[data-pmsid="' + pmsId + '"]');
+            if (!row) return null;
+            function fv(field) {
+                var el = row.querySelector('[data-field="' + field + '"]');
+                return el ? el.value : '';
+            }
+                    var mcVal  = Math.min(5, Math.max(0, Math.round(parseFloat(fv('mc_score'))  || 0)));
+        var jmdVal = Math.min(5, Math.max(0, Math.round(parseFloat(fv('jmd_score')) || 0)));
+            // ✅ Send if EITHER field has a value (not requiring both)
+            if (mcVal === 0 && jmdVal === 0) return null;
+            return {
+                pmsID     : parseInt(pmsId),
+                mc_Score  : mcVal,
+                mc_Remark : fv('mc_remark')  || '',
+                jmd_Score : jmdVal,
+                jmd_Remark: fv('jmd_remark') || ''
+            };
+        }
+
+            // ── Check if a row is now fully complete (both badges present) ──
+            function isRowComplete(row) {
+                var tds = row.querySelectorAll('td');
+                var mcDone  = false;
+                var jmdDone = false;
+                tds.forEach(function (td) {
+                    var badge = td.querySelector('.submitted-badge');
+                    if (!badge) return;
+                    // find which column this td belongs to by data-field of sibling inputs
+                    // simpler: check position — MC score is col 9 (index 8), JMD score is col 11 (index 10)
+                    var idx = Array.prototype.indexOf.call(row.cells, td);
+                    if (idx === 8 && badge) mcDone  = true;   // MC Score column
+                    if (idx === 10 && badge) jmdDone = true;  // JMD Score column
+                });
+                return mcDone && jmdDone;
+            }
+
+            function fadeAndRemoveRow(row) {
+                row.style.transition = 'opacity .4s, transform .4s';
+                row.style.opacity    = '0';
+                row.style.transform  = 'translateX(30px)';
+                setTimeout(function () {
+                    row.remove();
+                    renumber();
+                    updateEmptyState();
+                    updateFooterCount();
+                }, 420);
+            }
+
+            document.getElementById('saveAllBtn').addEventListener('click', function () {
+                var payload = [];
+                filled.forEach(function (id) {
+                    var d = gatherRow(id);
+                    if (d) payload.push(d);
+                });
+                if (!payload.length) { showToast('No scores entered.', 'error'); return; }
+
+                var btn = document.getElementById('saveAllBtn');
+                btn.disabled = true;
+                btn.textContent = 'Saving…';
+
+                fetch('/pmsbluecollar/save-mc-jmd', {
+                    method : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body   : JSON.stringify(payload)
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    btn.disabled = false;
+                    btn.textContent = '💾 Save All';
+
+                    if (data.success) {
+                        showToast('Scores saved successfully!', 'success');
+
+                        setTimeout(function () {
+                            payload.forEach(function (item) {
+                                var row = document.getElementById('row-' + item.pmsID);
+                                if (!row) return;
+
+                                // Lock saved fields first
+                                if (item.mc_Score  > 0) {
+                                    lockField(row, 'mc_score',   item.mc_Score);
+                                    lockField(row, 'mc_remark',  item.mc_Remark);
+                                }
+                                if (item.jmd_Score > 0) {
+                                    lockField(row, 'jmd_score',  item.jmd_Score);
+                                    lockField(row, 'jmd_remark', item.jmd_Remark);
+                                }
+
+                                // Update status cell if in pending tab
+                                var statusTd = row.cells[row.cells.length - 1];
+                                var hasMcBadge  = !!row.querySelector('td:nth-child(9) .submitted-badge');
+                                var hasJmdBadge = !!row.querySelector('td:nth-child(11) .submitted-badge');
+
+                                // ── KEY FIX: remove row if BOTH mc and jmd are now done ──
+                                if (hasMcBadge && hasJmdBadge) {
+                                    fadeAndRemoveRow(row);
+                                } else {
+                                    // Update partial status badge
+                                    if (statusTd && statusTd.querySelector) {
+                                        statusTd.innerHTML =
+                                            '<span class="partial-badge">' +
+                                            (hasMcBadge  ? 'MC ✓'  : 'MC ⏳') + ' · ' +
+                                            (hasJmdBadge ? 'JMD ✓' : 'JMD ⏳') +
+                                            '</span>';
+                                    }
+                                }
+                            });
+
+                            filled.clear();
+                            updateBar();
+                        }, 300);
+
+                    } else {
+                        showToast(data.message || 'Save failed.', 'error');
+                    }
+                })
+                .catch(function (e) {
+                    btn.disabled = false;
+                    btn.textContent = '💾 Save All';
+                    showToast('Network error: ' + e.message, 'error');
+                });
+            });
+
+            function lockField(row, field, val) {
+                var el = row.querySelector('[data-field="' + field + '"]');
+                if (!el) return;
+                var td = el.closest('td');
+                if (field.endsWith('_score'))
+                    td.innerHTML = '<span class="submitted-badge">✓ ' + (val || 0) + '</span>';
+                else
+                    td.innerHTML = '<span class="cell-sm">' + (val || '—') + '</span>';
+            }
+
+            function renumber() {
+                document.querySelectorAll('#mainTbody tr[data-pmsid]').forEach(function (row, i) {
+                    var td = row.querySelector('td:first-child');
+                    if (td) td.textContent = i + 1;
+                });
+            }
+
+            function updateEmptyState() {
+                var tbody = document.getElementById('mainTbody');
+                if (!tbody) return;
+                if (!tbody.querySelectorAll('tr[data-pmsid]').length) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="13">' +
+                        '<div class="empty-state">' +
+                        '<div class="empty-icon">🎉</div>' +
+                        '<div>All Annual appraisals have been scored by MC &amp; JMD.</div>' +
+                        '</div></td></tr>';
+                }
+            }
+
+            function updateFooterCount() {
+                var tbody   = document.getElementById('mainTbody');
+                var total   = tbody ? tbody.querySelectorAll('tr[data-pmsid]').length : 0;
+                var footerSpan = document.querySelector('.table-footer span strong');
+                if (footerSpan) footerSpan.textContent = total;
+            }
+
+            function showToast(msg, type) {
+                var wrap = document.getElementById('toast');
+                var el   = document.createElement('div');
+                el.className  = 'toast-msg ' + (type || '');
+                el.textContent = msg;
+                wrap.appendChild(el);
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () { el.classList.add('show'); });
+                });
+                setTimeout(function () {
+                    el.classList.remove('show');
+                    setTimeout(function () { el.remove(); }, 300);
+                }, 3200);
+            }
+
+            // ── Year select: sync search before submit ──
+            var yearSelect = document.getElementById('yearSelect');
+            var srch       = document.getElementById('srchInput');
+            var hidden     = document.getElementById('searchHidden');
+            var form       = document.getElementById('filterForm');
+
+            if (yearSelect) {
+                yearSelect.addEventListener('change', function () {
+                    hidden.value = srch ? srch.value : '';
+                    form.submit();
+                });
+            }
+
+            // ── Search debounce ──
+            var timer, lastVal = srch ? srch.value : '';
+            if (srch) {
+                srch.addEventListener('input', function () {
+                    hidden.value = srch.value;
+                    clearTimeout(timer);
+                    timer = setTimeout(function () {
+                        if (srch.value !== lastVal) { lastVal = srch.value; form.submit(); }
+                    }, 480);
+                });
+                srch.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        hidden.value = srch.value;
+                        form.submit();
+                    }
+                });
+            }
+        })();
+</script>
+</body>
+</html>

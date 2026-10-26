@@ -1,0 +1,1205 @@
+﻿@model vgl.Models.ReviewerDashboardVM
+@{
+    Layout = null;
+    string roleColor = "#9d174d";
+    string roleLt = "#fdf2f8";
+    string roleBd = "#fbcfe8";
+    string roleLabel = "Joint Managing Director";
+    string roleIcon = "👑";
+
+    var mcRatings = ViewBag.McRatings as Dictionary<int, decimal?> ?? new Dictionary<int, decimal?>();
+    var mcRemarks = ViewBag.McRemarks as Dictionary<int, string> ?? new Dictionary<int, string>();
+    var jmdRatings = ViewBag.JmdRatings as Dictionary<int, decimal?> ?? new Dictionary<int, decimal?>();
+    var jmdRemarks = ViewBag.JmdRemarks as Dictionary<int, string> ?? new Dictionary<int, string>();
+
+    int pendingCount = Model.Mappings.Count(m => m.Status == "ModCommitteeReview");
+    int reviewedCount = Model.Mappings.Count(m => m.Status == "JMDReview");
+    int finalCount = Model.Mappings.Count(m => m.Status == "HRFinalized");
+    int totalCount = Model.Mappings.Count;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JMD Appraisal Dashboard — VGL PMS</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --navy: #0f1c3f;
+            --navy2: #1a2d5a;
+            --rc: #9d174d;
+            --rlt: #fdf2f8;
+            --rbd: #fbcfe8;
+            --ink: #0f172a;
+            --ink2: #334155;
+            --ink3: #64748b;
+            --ink4: #94a3b8;
+            --bg: #f8f9fc;
+            --white: #fff;
+            --border: #e2e8f0;
+            --emerald: #059669;
+            --emerald-lt: #d1fae5;
+            --rose: #e11d48;
+            --rose-lt: #fff1f2;
+            --gold: #d97706;
+            --gold-lt: #fef9ee;
+            --mc-c: #c2410c;
+            --mc-lt: #fff7ed;
+            --mc-bd: #fdba74;
+            --avg-c: #0369a1;
+            --avg-lt: #f0f9ff;
+            --avg-bd: #7dd3fc;
+            --font: 'DM Sans', sans-serif;
+            --mono: 'DM Mono', monospace;
+            --rad: 12px;
+            --rad-lg: 18px;
+            --sh: 0 1px 3px rgba(15,28,63,.06), 0 4px 16px rgba(15,28,63,.06);
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--ink);
+            font-size: 13px;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── NAV ── */
+        .nav {
+            height: 58px;
+            background: var(--navy);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            position: sticky;
+            top: 0;
+            z-index: 500;
+            box-shadow: 0 2px 12px rgba(0,0,0,.18);
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-logo {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg,#9d174d,#ec4899);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            font-family: Georgia, serif;
+            font-style: italic;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(157,23,77,.35);
+        }
+
+        .nav-title {
+            font-size: .85rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+            .nav-title span {
+                display: block;
+                font-size: .60rem;
+                color: rgba(255,255,255,.4);
+                text-transform: uppercase;
+                letter-spacing: .1em;
+                margin-top: 1px;
+            }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .role-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: .70rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            background: var(--rlt);
+            color: var(--rc);
+            border: 1px solid var(--rbd);
+        }
+
+        .btn-nav {
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 7px;
+            border: 1px solid rgba(255,255,255,.15);
+            background: rgba(255,255,255,.08);
+            color: rgba(255,255,255,.75);
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            font-family: var(--font);
+            transition: .15s;
+        }
+
+            .btn-nav:hover {
+                background: rgba(255,255,255,.16);
+                color: #fff;
+            }
+
+        /* ── HERO ── */
+        .hero {
+            background: linear-gradient(120deg, var(--navy) 0%, #2d0f1a 100%);
+            padding: 28px 32px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .hero::after {
+                content: '';
+                position: absolute;
+                right: -60px;
+                top: -60px;
+                width: 280px;
+                height: 280px;
+                border-radius: 50%;
+                background: rgba(157,23,77,.08);
+                pointer-events: none;
+            }
+
+        .hero-role {
+            font-size: .70rem;
+            font-weight: 600;
+            color: rgba(255,255,255,.45);
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .hero-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .hero-sub {
+            font-size: .78rem;
+            color: rgba(255,255,255,.55);
+            margin-top: 5px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(157,23,77,.25);
+            border: 1px solid rgba(249,168,212,.3);
+            color: #fbcfe8;
+            border-radius: 20px;
+            padding: 3px 12px;
+            font-size: .68rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            margin-top: 10px;
+        }
+
+        /* ── CONTENT ── */
+        .content {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 28px 28px 80px;
+        }
+
+        /* ── STATS ── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+            gap: 12px;
+            margin-bottom: 26px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--rad);
+            padding: 16px 20px;
+            box-shadow: var(--sh);
+        }
+
+        .stat-label {
+            font-size: .60rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: var(--ink4);
+            margin-bottom: 6px;
+        }
+
+        .stat-val {
+            font-size: 1.55rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            line-height: 1;
+        }
+
+        .stat-sub {
+            font-size: .68rem;
+            color: var(--ink3);
+            margin-top: 4px;
+        }
+
+        .stat-card.c-amber {
+            border-top: 2.5px solid var(--gold);
+        }
+
+        .stat-card.c-jmd {
+            border-top: 2.5px solid var(--rc);
+        }
+
+        .stat-card.c-green {
+            border-top: 2.5px solid var(--emerald);
+        }
+
+        .stat-card.c-slate {
+            border-top: 2.5px solid var(--ink3);
+        }
+
+        /* ── SECTION LABEL ── */
+        .section-lbl {
+            font-size: .60rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: var(--ink3);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+            .section-lbl::after {
+                content: '';
+                flex: 1;
+                height: 1px;
+                background: var(--border);
+            }
+
+        /* ── FILTER BAR ── */
+        .filter-bar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filt-btn {
+            height: 30px;
+            padding: 0 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--white);
+            font-size: .70rem;
+            font-weight: 600;
+            color: var(--ink3);
+            cursor: pointer;
+            transition: .15s;
+            font-family: var(--font);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+            .filt-btn:hover {
+                border-color: var(--rc);
+                color: var(--rc);
+                background: var(--rlt);
+            }
+
+            .filt-btn.active {
+                border-color: var(--rc);
+                color: var(--rc);
+                background: var(--rlt);
+            }
+
+        .filt-count {
+            font-family: var(--mono);
+            font-size: .60rem;
+            background: var(--border);
+            padding: 1px 6px;
+            border-radius: 8px;
+        }
+
+        .filt-btn.active .filt-count {
+            background: var(--rc);
+            color: #fff;
+        }
+
+        .search-wrap {
+            position: relative;
+            flex: 1;
+            max-width: 320px;
+            margin-left: auto;
+        }
+
+            .search-wrap input {
+                width: 100%;
+                height: 32px;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px 0 32px;
+                font-size: .78rem;
+                font-family: var(--font);
+                background: var(--white);
+                outline: none;
+            }
+
+                .search-wrap input:focus {
+                    border-color: var(--rc);
+                    box-shadow: 0 0 0 2px rgba(157,23,77,.1);
+                }
+
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--ink4);
+            font-size: .78rem;
+            pointer-events: none;
+        }
+
+        /* ── EMPLOYEE CARDS ── */
+        .emp-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .emp-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--rad-lg);
+            padding: 18px 22px;
+            box-shadow: var(--sh);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+            .emp-card:hover {
+                border-color: var(--rbd);
+                box-shadow: 0 4px 20px rgba(157,23,77,.08);
+            }
+
+            .emp-card.pending {
+                border-left: 3px solid var(--gold);
+            }
+
+            .emp-card.reviewed {
+                border-left: 3px solid var(--rc);
+            }
+
+            .emp-card.finalized {
+                border-left: 3px solid var(--emerald);
+            }
+
+        .emp-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--rlt);
+            color: var(--rc);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: .85rem;
+            flex-shrink: 0;
+            border: 1.5px solid var(--rbd);
+        }
+
+        .emp-info {
+            flex: 1;
+            min-width: 160px;
+        }
+
+        .emp-name {
+            font-size: .88rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin-bottom: 2px;
+        }
+
+        .emp-meta {
+            font-size: .70rem;
+            color: var(--ink3);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+            .emp-meta span {
+                display: flex;
+                align-items: center;
+                gap: 3px;
+            }
+
+        /* ── RATING BADGES ── */
+        .mc-rating-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: .68rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            background: var(--mc-lt);
+            color: var(--mc-c);
+            border: 1px solid var(--mc-bd);
+            white-space: nowrap;
+        }
+
+        .jmd-rating-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: .68rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            background: var(--rlt);
+            color: var(--rc);
+            border: 1px solid var(--rbd);
+            white-space: nowrap;
+        }
+
+        .avg-rating-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: .68rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            background: var(--avg-lt);
+            color: var(--avg-c);
+            border: 1px solid var(--avg-bd);
+            white-space: nowrap;
+        }
+
+        .null-rating-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: .65rem;
+            font-family: var(--mono);
+            background: #f1f5f9;
+            color: var(--ink4);
+            border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .cycle-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: .65rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            background: #f1f5f9;
+            color: var(--ink3);
+            border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: .62rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            white-space: nowrap;
+        }
+
+        .sb-pending {
+            background: var(--gold-lt);
+            color: var(--gold);
+            border: 1px solid #fde68a;
+        }
+
+        .sb-reviewed {
+            background: var(--rlt);
+            color: var(--rc);
+            border: 1px solid var(--rbd);
+        }
+
+        .sb-finalized {
+            background: var(--emerald-lt);
+            color: var(--emerald);
+            border: 1px solid #a7f3d0;
+        }
+
+        .sb-wait {
+            background: #f1f5f9;
+            color: var(--ink4);
+            border: 1px solid var(--border);
+        }
+
+        /* ── STAGE DOTS ── */
+        .stage-flow {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .sm-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .52rem;
+            font-weight: 700;
+            border: 1.5px solid transparent;
+            flex-shrink: 0;
+            cursor: default;
+        }
+
+            .sm-dot.done {
+                background: var(--emerald);
+                border-color: var(--emerald);
+                color: #fff;
+            }
+
+            .sm-dot.active {
+                background: var(--rc);
+                border-color: var(--rc);
+                color: #fff;
+                box-shadow: 0 0 0 3px rgba(157,23,77,.18);
+            }
+
+            .sm-dot.wait {
+                background: #f1f5f9;
+                border-color: var(--border);
+                color: var(--ink4);
+            }
+
+        .sm-line {
+            width: 8px;
+            height: 2px;
+            background: var(--border);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+            .sm-line.done {
+                background: var(--emerald);
+            }
+
+        /* ── ACTIONS ── */
+        .emp-actions {
+            display: flex;
+            gap: 7px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .btn-review {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 36px;
+            padding: 0 16px;
+            border-radius: 8px;
+            background: var(--rc);
+            color: #fff;
+            font-size: .76rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            font-family: var(--font);
+            transition: .15s;
+            box-shadow: 0 1px 6px rgba(157,23,77,.25);
+            white-space: nowrap;
+        }
+
+            .btn-review:hover {
+                filter: brightness(1.1);
+                box-shadow: 0 3px 12px rgba(157,23,77,.35);
+            }
+
+            .btn-review.is-view {
+                background: var(--white);
+                color: var(--rc);
+                border: 1.5px solid var(--rbd);
+                box-shadow: none;
+            }
+
+                .btn-review.is-view:hover {
+                    background: var(--rlt);
+                }
+
+        .btn-sm {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 34px;
+            padding: 0 12px;
+            border-radius: 8px;
+            background: var(--white);
+            color: var(--ink2);
+            border: 1px solid var(--border);
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            font-family: var(--font);
+            transition: .15s;
+            white-space: nowrap;
+        }
+
+            .btn-sm:hover {
+                border-color: var(--rc);
+                color: var(--rc);
+                background: var(--rlt);
+            }
+
+        /* ── KPI PREVIEW PANEL ── */
+        .kpi-preview {
+            width: 100%;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+
+            .kpi-preview.open {
+                display: block;
+            }
+
+        .kpi-loading {
+            text-align: center;
+            padding: 14px;
+            font-size: .75rem;
+            color: var(--ink4);
+        }
+
+        .kpi-mini-tbl {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .75rem;
+        }
+
+            .kpi-mini-tbl thead th {
+                background: #fdf2f8;
+                color: var(--ink3);
+                padding: 7px 12px;
+                text-align: left;
+                font-size: .58rem;
+                font-weight: 700;
+                letter-spacing: .09em;
+                text-transform: uppercase;
+                border-bottom: 1.5px solid var(--rbd);
+            }
+
+                .kpi-mini-tbl thead th.tc {
+                    text-align: center;
+                }
+
+            .kpi-mini-tbl tbody tr {
+                border-bottom: 1px solid #f1f5f9;
+            }
+
+                .kpi-mini-tbl tbody tr:hover {
+                    background: #fdf2f8;
+                }
+
+            .kpi-mini-tbl tbody td {
+                padding: 8px 12px;
+                color: var(--ink2);
+                vertical-align: middle;
+            }
+
+                .kpi-mini-tbl tbody td.tc {
+                    text-align: center;
+                }
+
+        .rating-dot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: .65rem;
+            font-weight: 700;
+            font-family: var(--mono);
+        }
+
+        .rd-1 {
+            background: #fff1f2;
+            color: #e11d48;
+        }
+
+        .rd-2 {
+            background: #fef9c3;
+            color: #92400e;
+        }
+
+        .rd-3 {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .rd-4 {
+            background: #f0fdf4;
+            color: #15803d;
+        }
+
+        .rd-5 {
+            background: #f0fdf4;
+            color: #14532d;
+        }
+
+        .rd-null {
+            background: #f1f5f9;
+            color: var(--ink4);
+        }
+
+        .avg-cell {
+            font-family: var(--mono);
+            font-weight: 700;
+            color: var(--avg-c);
+            font-size: .78rem;
+        }
+
+        /* ── MC REMARKS SECTION ── */
+        .mc-remarks-box {
+            background: var(--mc-lt);
+            border: 1px solid var(--mc-bd);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-top: 12px;
+            font-size: .74rem;
+        }
+
+        .mc-remarks-label {
+            font-weight: 700;
+            color: var(--mc-c);
+            font-size: .65rem;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            margin-bottom: 3px;
+        }
+
+        /* ── NO DATA ── */
+        .no-data {
+            background: var(--white);
+            border: 1.5px dashed var(--border);
+            border-radius: var(--rad-lg);
+            padding: 52px 24px;
+            text-align: center;
+        }
+
+        .no-data-icon {
+            font-size: 2.4rem;
+            opacity: .2;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .no-data-title {
+            font-size: .90rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin-bottom: 5px;
+        }
+
+        .no-data-sub {
+            font-size: .76rem;
+            color: var(--ink3);
+        }
+
+        /* ── SPINNER (for KPI AJAX) ── */
+        @@keyframes spin {
+            to
+
+        {
+            transform: rotate(360deg);
+        }
+
+        }
+
+        .mini-spin {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--rc);
+            border-radius: 50%;
+            animation: spin .65s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        @@media (max-width: 768px) {
+            .hero, .content, .nav {
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+
+            .emp-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .emp-actions {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="nav">
+        <div class="nav-brand">
+            <div class="nav-logo">V</div>
+            <div class="nav-title">VGL — PMS <span>JMD Review Dashboard</span></div>
+        </div>
+        <div class="nav-right">
+            <div class="role-chip">👑 JMD</div>
+            <a href="javascript:history.back()" class="btn-nav">← Back</a>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <div class="hero-role">👑 Joint Managing Director</div>
+        <div class="hero-name">@Model.ReviewerName</div>
+        <div class="hero-sub">Final appraisal authority — review MC-moderated appraisals and issue overall JMD ratings</div>
+        <div class="hero-badge">
+            ⚖️ MC Reviewed → JMD Final Review
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- STATS -->
+        <div class="stats-row">
+            <div class="stat-card c-amber">
+                <div class="stat-label">Pending JMD Review</div>
+                <div class="stat-val" style="color:var(--gold)">@pendingCount</div>
+                <div class="stat-sub">MC reviewed, awaiting JMD</div>
+            </div>
+            <div class="stat-card c-jmd">
+                <div class="stat-label">JMD Reviewed</div>
+                <div class="stat-val" style="color:var(--rc)">@reviewedCount</div>
+                <div class="stat-sub">Overall rating submitted</div>
+            </div>
+            <div class="stat-card c-green">
+                <div class="stat-label">HR Finalized</div>
+                <div class="stat-val" style="color:var(--emerald)">@finalCount</div>
+                <div class="stat-sub">Appraisal cycle complete</div>
+            </div>
+            <div class="stat-card c-slate">
+                <div class="stat-label">Total Visible</div>
+                <div class="stat-val">@totalCount</div>
+                <div class="stat-sub">In JMD scope</div>
+            </div>
+        </div>
+
+        <div class="section-lbl">All Appraisals — JMD Review Queue</div>
+
+        <!-- FILTER BAR -->
+        <div class="filter-bar">
+            <button class="filt-btn active" id="filt-all" onclick="setFilter('all',this)">All <span class="filt-count">@totalCount</span></button>
+            <button class="filt-btn" id="filt-pending" onclick="setFilter('pending',this)">⏳ Pending <span class="filt-count">@pendingCount</span></button>
+            <button class="filt-btn" id="filt-reviewed" onclick="setFilter('reviewed',this)">✔ JMD Reviewed <span class="filt-count">@reviewedCount</span></button>
+            <button class="filt-btn" id="filt-final" onclick="setFilter('finalized',this)">🏁 HR Finalized <span class="filt-count">@finalCount</span></button>
+            <div class="search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="empSearch" placeholder="Search employees…" oninput="filterCards()" autocomplete="off" />
+            </div>
+        </div>
+
+        @if (!Model.Mappings.Any())
+        {
+            <div class="no-data">
+                <span class="no-data-icon">👑</span>
+                <div class="no-data-title">No appraisals in JMD scope yet</div>
+                <div class="no-data-sub">Appraisals will appear here once the Moderation Committee completes their review.</div>
+            </div>
+        }
+        else
+        {
+            <div class="emp-grid" id="empGrid">
+                @foreach (var m in Model.Mappings.OrderByDescending(x => x.Status == "ModCommitteeReview").ThenByDescending(x => x.MappingId))
+                {
+                    bool canReview = m.Status == "ModCommitteeReview";
+                    bool isReviewed = m.Status == "JMDReview";
+                    bool isFinalized = m.Status == "HRFinalized";
+
+                    string cardClass = canReview ? "pending" : isReviewed ? "reviewed" : isFinalized ? "finalized" : "";
+                    string filterAttr = canReview ? "pending" : isReviewed ? "reviewed" : isFinalized ? "finalized" : "other";
+                    string sbClass = canReview ? "sb-pending" : isReviewed ? "sb-reviewed" : isFinalized ? "sb-finalized" : "sb-wait";
+                    string sbText = canReview ? "⏳ Awaiting JMD Review" : isReviewed ? "✔ JMD Reviewed" : isFinalized ? "🏁 HR Finalized" : m.Status;
+
+                    string initials = string.Join("", (m.EmpName ?? "EE").Split(' ').Take(2).Select(w => w.Length > 0 ? w[0].ToString().ToUpper() : ""));
+
+                    // Stage booleans
+                    bool empDone = true;
+                    bool rmDone = m.Status is "RMReview" or "HODReview" or "UnitHeadReview" or "ModCommitteeReview" or "JMDReview" or "HRFinalized";
+                    bool hodDone = m.Status is "HODReview" or "UnitHeadReview" or "ModCommitteeReview" or "JMDReview" or "HRFinalized";
+                    bool uhDone = m.Status is "UnitHeadReview" or "ModCommitteeReview" or "JMDReview" or "HRFinalized";
+                    bool mcDone = m.Status is "ModCommitteeReview" or "JMDReview" or "HRFinalized";
+                    bool jmdDone = m.Status is "JMDReview" or "HRFinalized";
+
+                    // MC & JMD ratings
+                    decimal? mcRating = mcRatings.ContainsKey(m.MappingId) ? mcRatings[m.MappingId] : null;
+                    string mcRemark = mcRemarks.ContainsKey(m.MappingId) ? mcRemarks[m.MappingId] : null;
+                    decimal? jmdRating = jmdRatings.ContainsKey(m.MappingId) ? jmdRatings[m.MappingId] : null;
+                    string jmdRemark = jmdRemarks.ContainsKey(m.MappingId) ? jmdRemarks[m.MappingId] : null;
+
+                    <div class="emp-card @cardClass"
+                         data-filter="@filterAttr"
+                         data-name="@m.EmpName.ToLower()"
+                         data-code="@m.EmpCode.ToLower()"
+                         id="ecard-@m.MappingId">
+
+                        <!-- Avatar -->
+                        <div class="emp-avatar">@initials</div>
+
+                        <!-- Employee Info -->
+                        <div class="emp-info">
+                            <div class="emp-name">@m.EmpName</div>
+                            <div class="emp-meta">
+                                <span>🔑 @m.EmpCode</span>
+                                <span>💼 @m.Designation</span>
+                                <span>🏢 @m.Department</span>
+                                @if (!string.IsNullOrWhiteSpace(m.UnitName))
+                                {
+                                    <span>🏭 @m.UnitName</span>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Cycle Chip -->
+                        <span class="cycle-chip">📅 @m.AppraisalCycle @m.AppraisalYear</span>
+
+                        <!-- MC Overall Rating (reference) -->
+                        @if (mcRating.HasValue)
+                        {
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                                <span class="mc-rating-badge">⚖️ MC: @mcRating.Value.ToString("0.##")</span>
+                                @if (!string.IsNullOrWhiteSpace(mcRemark))
+                                {
+                                    <span style="font-size:.60rem;color:var(--mc-c);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@mcRemark">@mcRemark</span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="null-rating-badge">⚖️ MC: —</span>
+                        }
+
+                        <!-- JMD Overall Rating (if already reviewed) -->
+                        @if (jmdRating.HasValue)
+                        {
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                                <span class="jmd-rating-badge">👑 JMD: @jmdRating.Value.ToString("0.##")</span>
+                                @if (!string.IsNullOrWhiteSpace(jmdRemark))
+                                {
+                                    <span style="font-size:.60rem;color:var(--rc);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@jmdRemark">@jmdRemark</span>
+                                }
+                            </div>
+                        }
+
+                        <!-- Stage Progress Dots -->
+                        <div class="stage-flow" title="Appraisal stage progress">
+                            <div class="sm-dot done" title="Employee ✓">E</div>
+                            <div class="sm-line @(rmDone ? "done" : "")"></div>
+                            <div class="sm-dot @(rmDone ? "done" : "wait")" title="RM">R</div>
+                            <div class="sm-line @(hodDone ? "done" : "")"></div>
+                            <div class="sm-dot @(hodDone ? "done" : "wait")" title="HOD">H</div>
+                            <div class="sm-line @(uhDone ? "done" : "")"></div>
+                            <div class="sm-dot @(uhDone ? "done" : "wait")" title="UH">U</div>
+                            <div class="sm-line @(mcDone ? "done" : "")"></div>
+                            <div class="sm-dot @(mcDone ? "done" : "wait")" title="MC">M</div>
+                            <div class="sm-line @(jmdDone ? "done" : "")"></div>
+                            <div class="sm-dot @(jmdDone ? "done" : canReview ? "active" : "wait")" title="JMD">J</div>
+                        </div>
+
+                        <!-- Status Badge -->
+                        <span class="status-badge @sbClass">@sbText</span>
+
+                        <!-- Actions -->
+                        <div class="emp-actions">
+                            @if (canReview)
+                            {
+                                <a href="/Pms/JmdAppraisal?mappingId=@m.MappingId" class="btn-review">
+                                    👑 Review Now →
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="/Pms/JmdAppraisal?mappingId=@m.MappingId" class="btn-review is-view">
+                                    View Appraisal
+                                </a>
+                            }
+                            <a href="/Pms/PrintAppraisal?mappingId=@m.MappingId" class="btn-sm" target="_blank">📄</a>
+                            <button class="btn-sm" onclick="toggleKpiPreview(@m.MappingId)">KPIs ▾</button>
+                        </div>
+
+                        <!-- KPI PREVIEW PANEL (lazy-loaded via AJAX) -->
+                        <div class="kpi-preview" id="kpiprev-@m.MappingId" data-loaded="false" data-mappingid="@m.MappingId">
+                            <!-- populated by JS on first expand -->
+                        </div>
+
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <script>
+        /* ── GET MAPPING DETAIL URL ── */
+        var GET_DETAIL_URL = '/Pms/GetMappingDetail';
+
+        /* ── FILTER ── */
+        var _filter = 'all';
+        function setFilter(f, btn) {
+            _filter = f;
+            document.querySelectorAll('.filt-btn').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            filterCards();
+        }
+        function filterCards() {
+            var q = (document.getElementById('empSearch').value || '').toLowerCase().trim();
+            document.querySelectorAll('.emp-card').forEach(function(card) {
+                var matchFilter = _filter === 'all' || card.dataset.filter === _filter;
+                var matchSearch = !q || (card.dataset.name || '').indexOf(q) >= 0 || (card.dataset.code || '').indexOf(q) >= 0;
+                card.style.display = (matchFilter && matchSearch) ? '' : 'none';
+            });
+        }
+
+        /* ── KPI PREVIEW (lazy AJAX) ── */
+        function toggleKpiPreview(mappingId) {
+            var panel = document.getElementById('kpiprev-' + mappingId);
+            if (!panel) return;
+
+            // If already open, just close it
+            if (panel.classList.contains('open')) {
+                panel.classList.remove('open');
+                return;
+            }
+
+            panel.classList.add('open');
+
+            // Already loaded — just open
+            if (panel.dataset.loaded === 'true') return;
+
+            // Show spinner
+            panel.innerHTML = '<div class="kpi-loading"><span class="mini-spin"></span>Loading KPI details…</div>';
+
+            fetch(GET_DETAIL_URL + '?mappingId=' + mappingId)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) {
+                        panel.innerHTML = '<div class="kpi-loading" style="color:var(--rose)">⚠ ' + esc(data.error) + '</div>';
+                        return;
+                    }
+                    panel.dataset.loaded = 'true';
+                    renderKpiPreview(panel, data);
+                })
+                .catch(function(e) {
+                    panel.innerHTML = '<div class="kpi-loading" style="color:var(--rose)">⚠ Network error: ' + esc(e.message) + '</div>';
+                });
+        }
+
+        function renderKpiPreview(panel, data) {
+            var rows = data.kpiRows || [];
+            if (!rows.length) {
+                panel.innerHTML = '<div class="kpi-loading">No KPI rows found.</div>';
+                return;
+            }
+
+            // Build HTML
+            var html = '<table class="kpi-mini-tbl"><thead><tr>' +
+                '<th>#</th><th>KPI Name</th><th>Unit</th><th class="tc">Wt%</th><th class="tc">Target</th>' +
+                '<th class="tc">RM Rating</th><th class="tc">HOD Rating</th><th class="tc">UH Rating</th>' +
+                '<th class="tc">⌀ Avg</th></tr></thead><tbody>';
+
+            rows.forEach(function(r, i) {
+                var rmR   = r.rmRating;
+                var hodR  = r.hodRating;
+                var uhR   = r.unitHeadRating;
+                var vals  = [rmR, hodR, uhR].filter(function(v) { return v !== null && v !== undefined; });
+                var avg   = vals.length ? (vals.reduce(function(s,v){return s+v;},0) / vals.length) : null;
+                var avgTxt = avg !== null ? avg.toFixed(2) : '—';
+
+                html += '<tr>' +
+                    '<td style="color:var(--ink4);font-family:var(--mono)">' + (i + 1) + '</td>' +
+                    '<td style="font-weight:500">' + esc(r.kpiName) + '</td>' +
+                    '<td style="font-family:var(--mono);color:var(--ink3)">' + esc(r.unitOfMeasure) + '</td>' +
+                    '<td class="tc" style="font-family:var(--mono)">' + (r.individualWeightage || 0).toFixed(1) + '%</td>' +
+                    '<td class="tc" style="font-family:var(--mono)">' + (r.target || 0) + '</td>' +
+                    '<td class="tc">' + ratingDot(rmR)  + '</td>' +
+                    '<td class="tc">' + ratingDot(hodR) + '</td>' +
+                    '<td class="tc">' + ratingDot(uhR)  + '</td>' +
+                    '<td class="tc avg-cell">' + avgTxt + '</td>' +
+                    '</tr>';
+            });
+
+            html += '</tbody></table>';
+
+            // MC remarks block
+            var mcRemark = (data.kpiRows || []).length > 0 ? null : null; // pulled from ViewBag instead
+            html += '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;font-size:.72rem;color:var(--ink3)">'+
+                '<span>📌 Click <strong>Review Now</strong> to see full details, enter your JMD Overall Rating, and submit.</span>' +
+                '</div>';
+
+            panel.innerHTML = html;
+        }
+
+        function ratingDot(val) {
+            if (val === null || val === undefined) return '<span class="rating-dot rd-null">—</span>';
+            var v = Math.round(val);
+            return '<span class="rating-dot rd-' + v + '">' + v + '</span>';
+        }
+
+        function esc(s) {
+            return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+    </script>
+</body>
+</html>

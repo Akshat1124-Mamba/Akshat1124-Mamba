@@ -1,0 +1,719 @@
+﻿@* Views/PMSBlueCollar/Index.cshtml — FIXED (replaced Url.Action with hardcoded paths) *@
+@model List<vgl.Models.PMSCriteriaModel>
+@{
+    ViewData["Title"] = "PMS Criteria Master";
+    Layout = null;
+
+    int totalMax = Model.Sum(x => x.MaxScore);
+    int totalCount = Model.Count;
+    var groups = Model.GroupBy(x => x.Beh_Pers).ToList();
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>@ViewData["Title"] — VGL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+            :root {
+                --navy: #0f1c3f;
+                --navy2: #1a2d5a;
+                --cobalt: #1e4ed8;
+                --cobalt-lt: #eff4ff;
+                --cobalt-md: #c7d7fd;
+                --gold: #d97706;
+                --gold-lt: #fef3c7;
+                --emerald: #059669;
+                --emerald-lt: #d1fae5;
+                --rose: #e11d48;
+                --rose-lt: #fff1f2;
+                --bg: #f8f9fc;
+                --white: #ffffff;
+                --border: #dde2ed;
+                --border2: #eaeef7;
+                --shadow-sm: 0 1px 3px rgba(15,28,63,.06);
+                --shadow: 0 4px 16px rgba(15,28,63,.08);
+                --shadow-md: 0 8px 32px rgba(15,28,63,.12);
+                --ink: #0f172a;
+                --ink2: #334155;
+                --ink3: #64748b;
+                --ink4: #94a3b8;
+                --font: 'Inter', system-ui, sans-serif;
+                --mono: 'JetBrains Mono', monospace;
+                --serif: 'Instrument Serif', Georgia, serif;
+                --tr: .18s cubic-bezier(.4,0,.2,1);
+            }
+
+            *, *::before, *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: var(--font);
+                background: var(--bg);
+                color: var(--ink);
+                font-size: 13px;
+                min-height: 100vh;
+                -webkit-font-smoothing: antialiased;
+            }
+
+            a {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            .site-header {
+                position: sticky;
+                top: 0;
+                z-index: 500;
+                background: var(--navy);
+                padding: 0 32px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 62px;
+                box-shadow: 0 2px 16px rgba(15,28,63,.25);
+                gap: 16px;
+            }
+
+            .brand {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .brand-icon {
+                width: 36px;
+                height: 36px;
+                background: linear-gradient(135deg,#3b82f6 0%,#4f46e5 100%);
+                border-radius: 9px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: var(--serif);
+                font-size: 17px;
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(79,70,229,.4);
+            }
+
+            .brand-name {
+                font-size: .88rem;
+                font-weight: 600;
+                color: #fff;
+            }
+
+            .brand-sub {
+                font-size: .63rem;
+                color: rgba(255,255,255,.45);
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                display: block;
+                margin-top: 1px;
+            }
+
+            .nav {
+                display: flex;
+                gap: 2px;
+            }
+
+                .nav a {
+                    padding: 6px 14px;
+                    border-radius: 7px;
+                    font-size: .75rem;
+                    font-weight: 600;
+                    color: rgba(255,255,255,.65);
+                    transition: var(--tr);
+                    white-space: nowrap;
+                }
+
+                    .nav a:hover {
+                        color: #fff;
+                        background: rgba(255,255,255,.09);
+                    }
+
+                    .nav a.active {
+                        color: #fff;
+                        background: rgba(255,255,255,.13);
+                    }
+
+            .page-wrap {
+                max-width: 1280px;
+                margin: 0 auto;
+                padding: 28px 32px 80px;
+            }
+
+            .breadcrumb {
+                font-size: 11px;
+                color: var(--ink4);
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+                .breadcrumb a {
+                    color: var(--cobalt);
+                }
+
+            .page-header-top {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-bottom: 22px;
+            }
+
+            .page-title {
+                font-family: var(--serif);
+                font-size: 1.85rem;
+                color: var(--navy);
+                font-style: italic;
+                line-height: 1.2;
+            }
+
+            .page-subtitle {
+                font-size: 12.5px;
+                color: var(--ink3);
+                margin-top: 5px;
+            }
+
+            .alert-success {
+                background: var(--emerald-lt);
+                color: var(--emerald);
+                border-left: 3px solid var(--emerald);
+                border-radius: 9px;
+                padding: 10px 16px;
+                margin-bottom: 18px;
+                font-size: 12.5px;
+                font-weight: 500;
+            }
+
+            .stat-row {
+                display: flex;
+                gap: 14px;
+                margin-bottom: 24px;
+                flex-wrap: wrap;
+            }
+
+            .stat-card {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: 14px;
+                padding: 16px 22px;
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                box-shadow: var(--shadow-sm);
+                min-width: 160px;
+            }
+
+            .stat-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                flex-shrink: 0;
+            }
+
+            .si-blue {
+                background: var(--cobalt-lt);
+            }
+
+            .si-gold {
+                background: var(--gold-lt);
+            }
+
+            .si-navy {
+                background: rgba(15,28,63,.06);
+            }
+
+            .stat-val {
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--navy);
+                font-family: var(--mono);
+                line-height: 1;
+            }
+
+            .stat-label {
+                font-size: 11px;
+                color: var(--ink3);
+                margin-top: 3px;
+            }
+
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                border: none;
+                border-radius: 8px;
+                font-family: var(--font);
+                font-weight: 600;
+                cursor: pointer;
+                transition: var(--tr);
+                text-decoration: none;
+            }
+
+            .btn-md {
+                height: 38px;
+                padding: 0 16px;
+                font-size: .79rem;
+            }
+
+            .btn-xs {
+                height: 27px;
+                padding: 0 9px;
+                font-size: .69rem;
+            }
+
+            .btn-primary {
+                background: var(--cobalt);
+                color: #fff;
+                box-shadow: 0 2px 8px rgba(30,78,216,.28);
+            }
+
+                .btn-primary:hover {
+                    background: #1740bf;
+                }
+
+            .btn-ghost {
+                background: var(--white);
+                color: var(--ink2);
+                border: 1.5px solid var(--border);
+            }
+
+                .btn-ghost:hover {
+                    border-color: var(--cobalt);
+                    color: var(--cobalt);
+                    background: var(--cobalt-lt);
+                }
+
+            .btn-danger {
+                background: var(--rose-lt);
+                color: var(--rose);
+                border: 1.5px solid rgba(225,29,72,.25);
+            }
+
+                .btn-danger:hover {
+                    background: var(--rose);
+                    color: #fff;
+                }
+
+            .table-card {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: 16px;
+                box-shadow: var(--shadow);
+                overflow: hidden;
+            }
+
+            .table-card-header {
+                padding: 16px 22px;
+                border-bottom: 1px solid var(--border2);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .table-card-title {
+                font-size: .88rem;
+                font-weight: 700;
+                color: var(--navy);
+            }
+
+            .table-card-sub {
+                font-size: .72rem;
+                color: var(--ink4);
+                margin-top: 2px;
+            }
+
+            .table-outer {
+                width: 100%;
+                overflow-x: auto;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: .77rem;
+            }
+
+            thead tr {
+                background: var(--navy);
+            }
+
+            thead th {
+                padding: 10px 14px;
+                font-size: .58rem;
+                font-weight: 700;
+                color: rgba(255,255,255,.65);
+                text-transform: uppercase;
+                letter-spacing: .09em;
+                text-align: left;
+                white-space: nowrap;
+                border-right: 1px solid rgba(255,255,255,.07);
+            }
+
+                thead th:last-child {
+                    border-right: none;
+                }
+
+            tbody tr {
+                border-bottom: 1px solid var(--border2);
+                transition: background var(--tr);
+            }
+
+                tbody tr:last-child {
+                    border-bottom: none;
+                }
+
+                tbody tr:hover {
+                    background: var(--cobalt-lt);
+                }
+
+            tbody td {
+                padding: 10px 14px;
+                color: var(--ink2);
+                border-right: 1px solid var(--border2);
+                vertical-align: middle;
+            }
+
+                tbody td:last-child {
+                    border-right: none;
+                }
+
+            .sr-badge {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 26px;
+                height: 26px;
+                border-radius: 6px;
+                background: rgba(30,78,216,.08);
+                color: var(--cobalt);
+                font-family: var(--mono);
+                font-size: .73rem;
+                font-weight: 600;
+            }
+
+            .beh-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 3px 10px;
+                border-radius: 20px;
+                font-size: .62rem;
+                font-weight: 700;
+                background: var(--gold-lt);
+                color: var(--gold);
+                border: 1px solid #fde68a;
+                white-space: nowrap;
+            }
+
+            .max-score {
+                font-family: var(--mono);
+                font-weight: 700;
+                color: var(--navy);
+                font-size: .8rem;
+            }
+
+            .desc-text {
+                color: var(--ink3);
+                font-size: .74rem;
+                max-width: 360px;
+                white-space: normal;
+                line-height: 1.5;
+            }
+
+            .actions {
+                display: flex;
+                gap: 6px;
+            }
+
+            .date-text {
+                font-size: .7rem;
+                color: var(--ink4);
+                font-family: var(--mono);
+            }
+
+            .empty-state {
+                text-align: center;
+                padding: 56px 24px;
+                color: var(--ink4);
+            }
+
+            .empty-icon {
+                font-size: 48px;
+                display: block;
+                margin-bottom: 14px;
+                opacity: .4;
+            }
+
+            .empty-state h3 {
+                font-size: .95rem;
+                color: var(--ink3);
+                margin-bottom: 6px;
+            }
+
+            .empty-state p {
+                font-size: .79rem;
+                margin-bottom: 20px;
+            }
+
+            .rating-card {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: 16px;
+                box-shadow: var(--shadow-sm);
+                padding: 20px 22px;
+                margin-top: 20px;
+            }
+
+            .rating-card-title {
+                font-size: .82rem;
+                font-weight: 700;
+                color: var(--navy);
+                margin-bottom: 14px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .rating-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: .76rem;
+            }
+
+                .rating-table th {
+                    padding: 8px 12px;
+                    background: var(--bg);
+                    font-size: .62rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: .07em;
+                    color: var(--ink4);
+                    text-align: left;
+                    border-bottom: 1px solid var(--border2);
+                }
+
+                .rating-table td {
+                    padding: 8px 12px;
+                    border-bottom: 1px solid var(--border2);
+                    color: var(--ink2);
+                }
+
+                .rating-table tr:last-child td {
+                    border-bottom: none;
+                }
+
+            .rb {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                font-weight: 700;
+                font-size: .77rem;
+            }
+
+            .rb-5 {
+                background: var(--emerald-lt);
+                color: var(--emerald);
+            }
+
+            .rb-4 {
+                background: #e8ecf5;
+                color: var(--navy2);
+            }
+
+            .rb-3 {
+                background: var(--gold-lt);
+                color: var(--gold);
+            }
+
+            .rb-2 {
+                background: #fff7ed;
+                color: #c2410c;
+            }
+
+            .rb-1 {
+                background: var(--rose-lt);
+                color: var(--rose);
+            }
+
+            @@media(max-width:768px) {
+                .page-wrap {
+                    padding: 16px;
+                }
+
+                .stat-row {
+                    gap: 10px;
+                }
+            }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="brand">
+            <div class="brand-icon">V</div>
+            <div>
+                <div class="brand-name">Vandana Global Limited</div>
+                <span class="brand-sub">PMS — Blue Collar</span>
+            </div>
+        </div>
+        <nav class="nav">
+            <a href="/pmsbluecollar/mc-jmd-dashboard">MC / JMD Review</a>
+            <a href="/pmsbluecollar/hr-dashboard" class="active">HR Dashboard</a>
+            <a href="/pmsbluecollar/index">Creteria Master</a>
+            <a href="/pmsbluecollar/tracking">PMS Tracking</a>
+        </nav>
+    </header>
+
+    <main class="page-wrap">
+
+        <div class="breadcrumb">
+            <a href="/pmsbluecollar/hr-dashboard">Home</a>
+            <span>/</span><span>PMS Blue Collar</span>
+            <span>/</span><span>PMS Criteria Master</span>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert-success">✓ @TempData["Success"]</div>
+        }
+
+        <div class="page-header-top">
+            <div>
+                <div class="page-title">PMS Criteria Master</div>
+                <div class="page-subtitle">Define and manage all Performance Management System criteria, descriptions, and max scores.</div>
+            </div>
+            @* FIX 1: was Url.Action("Create","PMSCriteria") → 404 with attribute routing *@
+            <a href="/pmsbluecollar/create" class="btn btn-primary btn-md">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add Criteria
+            </a>
+        </div>
+
+        <!-- STAT CARDS -->
+        <div class="stat-row">
+            <div class="stat-card">
+                <div class="stat-icon si-blue">📋</div>
+                <div><div class="stat-val">@totalCount</div><div class="stat-label">Total Criteria</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon si-gold">🏆</div>
+                <div><div class="stat-val">@totalMax</div><div class="stat-label">Total Max Score</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon si-navy">🗂</div>
+                <div><div class="stat-val">@groups.Count</div><div class="stat-label">Perspectives</div></div>
+            </div>
+        </div>
+
+        <!-- TABLE CARD -->
+        <div class="table-card">
+            <div class="table-card-header">
+                <div>
+                    <div class="table-card-title">All PMS Criteria</div>
+                    <div class="table-card-sub">@totalCount criteria · Combined max score: @totalMax</div>
+                </div>
+            </div>
+
+            @if (Model.Any())
+            {
+                <div class="table-outer">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Main #</th>
+                                <th>Sub #</th>
+                                <th>Category</th>
+                                <th>Criterion</th>
+                                <th>Max Score</th>
+                                <th>Added By</th>
+                                <th>Added On</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td><span class="sr-badge">@item.MainSrNo</span></td>
+                                    <td><span class="sr-badge">@item.SubSrNo</span></td>
+                                    <td><span class="beh-pill">@item.Beh_Pers</span></td>
+                                    <td><div class="desc-text">@item.Description</div></td>
+                                    <td><span class="max-score">@item.MaxScore</span></td>
+                                    <td class="date-text">@item.CreatedBy</td>
+                                    <td class="date-text">@item.CreatedOn.ToString("dd MMM yyyy")</td>
+                                    <td>
+                                        <div class="actions">
+                                            @* FIX 2: was Url.Action("Edit","PMSCriteria",new{id}) → 404 *@
+                                            <a href="/pmsbluecollar/edit/@item.Id" class="btn btn-ghost btn-xs">Edit</a>
+                                            @* FIX 3: was Url.Action("Delete","PMSCriteria",new{id}) → 404 *@
+                                            <a href="/pmsbluecollar/delete/@item.Id"
+                                               class="btn btn-danger btn-xs"
+                                               onclick="return confirm('Delete this criteria? Its Max Score of @item.MaxScore will be removed from the total.')">Delete</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <span class="empty-icon">📭</span>
+                    <h3>No PMS criteria defined yet</h3>
+                    <p>Click <strong>Add Criteria</strong> to get started.</p>
+                    @* FIX 4: empty-state Add button also fixed *@
+                    <a href="/pmscriteria/create" class="btn btn-primary btn-md">Add First Criteria</a>
+                </div>
+            }
+        </div>
+
+        <!-- RATING REFERENCE -->
+        <div class="rating-card">
+            <div class="rating-card-title">
+                📊 Rating Scale Reference
+                <span style="font-size:.7rem;color:var(--ink4);font-weight:400">— Based on % of total max score</span>
+            </div>
+            <table class="rating-table">
+                <thead>
+                    <tr>
+                        <th>Score %</th>
+                        <th>Rating</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>≥ 91%</td><td><span class="rb rb-5">5</span></td><td>Consistently Exceeds Expectations</td></tr>
+                    <tr><td>≥ 76%</td><td><span class="rb rb-4">4</span></td><td>Exceeds Expectations</td></tr>
+                    <tr><td>≥ 61%</td><td><span class="rb rb-3">3</span></td><td>Meets Expectations</td></tr>
+                    <tr><td>≥ 46%</td><td><span class="rb rb-2">2</span></td><td>Below Expectations</td></tr>
+                    <tr><td>&lt; 46%</td><td><span class="rb rb-1">1</span></td><td>Not Meeting Expectations</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+
+</body>
+</html>

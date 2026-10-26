@@ -1,0 +1,944 @@
+﻿@model vgl.Models.ReviewerDashboardVM
+@{
+    Layout = null;
+    string roleColor = "#c2410c";
+    string roleLt = "#fff7ed";
+    string roleBd = "#fdba74";
+    string roleLabel = "Moderation Committee";
+    string roleIcon = "⚖️";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moderation Committee Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --navy: #0f1c3f;
+            --navy2: #1a2d5a;
+            --rc: #c2410c;
+            --rlt: #fff7ed;
+            --rbd: #fdba74;
+            --ink: #0f172a;
+            --ink2: #334155;
+            --ink3: #64748b;
+            --ink4: #94a3b8;
+            --bg: #f8f9fc;
+            --white: #fff;
+            --border: #e2e8f0;
+            --emerald: #059669;
+            --emerald-lt: #d1fae5;
+            --rose: #e11d48;
+            --rose-lt: #fff1f2;
+            --gold: #d97706;
+            --gold-lt: #fef9ee;
+            --cobalt: #1e4ed8;
+            --cobalt-lt: #eff4ff;
+            --violet: #6d28d9;
+            --violet-lt: #f5f3ff;
+            --teal: #0f766e;
+            --teal-lt: #f0fdfa;
+            --font: 'DM Sans', sans-serif;
+            --mono: 'DM Mono', monospace;
+            --rad: 12px;
+            --rad-lg: 18px;
+            --sh: 0 1px 3px rgba(15,28,63,.06), 0 4px 16px rgba(15,28,63,.06);
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--ink);
+            font-size: 13px;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .nav {
+            height: 58px;
+            background: var(--navy);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            position: sticky;
+            top: 0;
+            z-index: 500;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-logo {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg,#3b82f6,#6366f1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            font-family: Georgia, serif;
+            font-style: italic;
+            flex-shrink: 0;
+        }
+
+        .nav-title {
+            font-size: .85rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+            .nav-title span {
+                display: block;
+                font-size: .60rem;
+                color: rgba(255,255,255,.4);
+                text-transform: uppercase;
+                letter-spacing: .1em;
+                margin-top: 1px;
+            }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .role-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: .70rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            background: var(--rlt);
+            color: var(--rc);
+            border: 1px solid var(--rbd);
+        }
+
+        .btn-nav {
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 7px;
+            border: 1px solid rgba(255,255,255,.15);
+            background: rgba(255,255,255,.08);
+            color: rgba(255,255,255,.75);
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            font-family: var(--font);
+            transition: .15s;
+        }
+
+            .btn-nav:hover {
+                background: rgba(255,255,255,.16);
+                color: #fff;
+            }
+
+        .hero {
+            background: linear-gradient(120deg, var(--navy) 0%, var(--navy2) 100%);
+            padding: 28px 32px 24px;
+        }
+
+        .hero-role {
+            font-size: .70rem;
+            font-weight: 600;
+            color: rgba(255,255,255,.45);
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .hero-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .hero-sub {
+            font-size: .78rem;
+            color: rgba(255,255,255,.55);
+            margin-top: 5px;
+        }
+
+        .content {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 28px 28px 80px;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--rad);
+            padding: 16px 20px;
+            box-shadow: var(--sh);
+        }
+
+        .stat-label {
+            font-size: .60rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: var(--ink4);
+            margin-bottom: 6px;
+        }
+
+        .stat-val {
+            font-size: 1.5rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            line-height: 1;
+        }
+
+        .stat-sub {
+            font-size: .70rem;
+            color: var(--ink3);
+            margin-top: 4px;
+        }
+
+        .stat-card.c-role {
+            border-top: 2.5px solid var(--rc);
+        }
+
+        .stat-card.c-amber {
+            border-top: 2.5px solid var(--gold);
+        }
+
+        .stat-card.c-green {
+            border-top: 2.5px solid var(--emerald);
+        }
+
+        .stat-card.c-rose {
+            border-top: 2.5px solid var(--rose);
+        }
+
+        .section-lbl {
+            font-size: .60rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: var(--ink3);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+            .section-lbl::after {
+                content: '';
+                flex: 1;
+                height: 1px;
+                background: var(--border);
+            }
+
+        .filter-bar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filt-btn {
+            height: 30px;
+            padding: 0 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--white);
+            font-size: .70rem;
+            font-weight: 600;
+            color: var(--ink3);
+            cursor: pointer;
+            transition: .15s;
+            font-family: var(--font);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+            .filt-btn:hover {
+                border-color: var(--rc);
+                color: var(--rc);
+                background: var(--rlt);
+            }
+
+            .filt-btn.active {
+                border-color: var(--rc);
+                color: var(--rc);
+                background: var(--rlt);
+            }
+
+        .filt-count {
+            font-family: var(--mono);
+            font-size: .60rem;
+            background: var(--border);
+            padding: 1px 6px;
+            border-radius: 8px;
+        }
+
+        .filt-btn.active .filt-count {
+            background: var(--rc);
+            color: #fff;
+        }
+
+        .search-wrap {
+            position: relative;
+            flex: 1;
+            max-width: 320px;
+            margin-left: auto;
+        }
+
+            .search-wrap input {
+                width: 100%;
+                height: 32px;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px 0 32px;
+                font-size: .78rem;
+                font-family: var(--font);
+                background: var(--white);
+                outline: none;
+            }
+
+                .search-wrap input:focus {
+                    border-color: var(--rc);
+                }
+
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--ink4);
+            font-size: .78rem;
+            pointer-events: none;
+        }
+
+        .emp-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .emp-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--rad-lg);
+            padding: 18px 22px;
+            box-shadow: var(--sh);
+            display: flex;
+            align-items: flex-start;
+            gap: 18px;
+            flex-wrap: wrap;
+            transition: border-color .15s;
+        }
+
+            .emp-card:hover {
+                border-color: var(--rbd);
+            }
+
+            .emp-card.pending {
+                border-left: 3px solid var(--gold);
+            }
+
+            .emp-card.reviewed {
+                border-left: 3px solid var(--emerald);
+            }
+
+            .emp-card.waiting {
+                border-left: 3px solid var(--border);
+            }
+
+        .emp-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--rlt);
+            color: var(--rc);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: .85rem;
+            flex-shrink: 0;
+            border: 1.5px solid var(--rbd);
+            margin-top: 2px;
+        }
+
+        .emp-info {
+            flex: 1;
+            min-width: 160px;
+        }
+
+        .emp-name {
+            font-size: .88rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin-bottom: 2px;
+        }
+
+        .emp-meta {
+            font-size: .70rem;
+            color: var(--ink3);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .cycle-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: .65rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            background: var(--rlt);
+            color: var(--rc);
+            border: 1px solid var(--rbd);
+            white-space: nowrap;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: .62rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            white-space: nowrap;
+        }
+
+        .sb-pending {
+            background: var(--gold-lt);
+            color: var(--gold);
+            border: 1px solid #fde68a;
+        }
+
+        .sb-wait {
+            background: #f1f5f9;
+            color: var(--ink4);
+            border: 1px solid var(--border);
+        }
+
+        .sb-done {
+            background: var(--emerald-lt);
+            color: var(--emerald);
+            border: 1px solid #a7f3d0;
+        }
+
+        .sb-review {
+            background: var(--rlt);
+            color: var(--rc);
+            border: 1px solid var(--rbd);
+        }
+
+        .emp-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .btn-review {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 36px;
+            padding: 0 16px;
+            border-radius: 8px;
+            background: var(--rc);
+            color: #fff;
+            font-size: .76rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            font-family: var(--font);
+            transition: .15s;
+            box-shadow: 0 1px 6px rgba(194,65,12,.22);
+            white-space: nowrap;
+        }
+
+            .btn-review:hover {
+                filter: brightness(1.1);
+            }
+
+            .btn-review.disabled {
+                opacity: .5;
+                cursor: not-allowed;
+                pointer-events: none;
+                background: var(--ink4);
+                box-shadow: none;
+            }
+
+        .btn-view-sm {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 34px;
+            padding: 0 13px;
+            border-radius: 8px;
+            background: var(--white);
+            color: var(--ink2);
+            border: 1px solid var(--border);
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            font-family: var(--font);
+            transition: .15s;
+            white-space: nowrap;
+        }
+
+            .btn-view-sm:hover {
+                border-color: var(--rc);
+                color: var(--rc);
+            }
+
+        .kpi-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: .62rem;
+            font-family: var(--mono);
+            background: #f1f5f9;
+            color: var(--ink3);
+        }
+        /* Score summary inline */
+        .score-summary {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .score-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 8px;
+            font-family: var(--mono);
+            font-size: .70rem;
+            font-weight: 700;
+        }
+
+        .sc-rm {
+            background: var(--cobalt-lt);
+            color: var(--cobalt);
+            border: 1px solid #93c5fd;
+        }
+
+        .sc-hod {
+            background: var(--violet-lt);
+            color: var(--violet);
+            border: 1px solid #c4b5fd;
+        }
+
+        .sc-uh {
+            background: var(--teal-lt);
+            color: var(--teal);
+            border: 1px solid #5eead4;
+        }
+
+        .sc-avg {
+            background: #f0f9ff;
+            color: #0369a1;
+            border: 1px solid #7dd3fc;
+        }
+
+        .kpi-preview {
+            width: 100%;
+            margin-top: 12px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+
+            .kpi-preview.open {
+                display: block;
+            }
+
+        .kpi-mini-tbl {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .76rem;
+        }
+
+            .kpi-mini-tbl thead th {
+                background: #f8faff;
+                color: var(--ink3);
+                padding: 7px 12px;
+                text-align: left;
+                font-size: .58rem;
+                font-weight: 700;
+                letter-spacing: .09em;
+                text-transform: uppercase;
+                border-bottom: 1px solid var(--border);
+                white-space: nowrap;
+            }
+
+            .kpi-mini-tbl tbody tr {
+                border-bottom: 1px solid #eaeef7;
+            }
+
+            .kpi-mini-tbl tbody td {
+                padding: 8px 12px;
+                color: var(--ink2);
+            }
+
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .no-data-icon {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 12px;
+            opacity: .4;
+        }
+
+        .no-data-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--ink2);
+            margin-bottom: 6px;
+        }
+
+        .no-data-sub {
+            font-size: .78rem;
+            color: var(--ink4);
+        }
+
+        .stage-mini {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .sm-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .48rem;
+            font-weight: 700;
+            border: 1.5px solid transparent;
+            flex-shrink: 0;
+        }
+
+            .sm-dot.done {
+                background: var(--emerald);
+                border-color: var(--emerald);
+                color: #fff;
+            }
+
+            .sm-dot.active {
+                background: var(--rc);
+                border-color: var(--rc);
+                color: #fff;
+                box-shadow: 0 0 0 3px rgba(194,65,12,.15);
+            }
+
+            .sm-dot.wait {
+                background: var(--bg);
+                border-color: var(--border);
+                color: var(--ink4);
+            }
+
+        .sm-line {
+            width: 8px;
+            height: 2px;
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+            .sm-line.done {
+                background: var(--emerald);
+            }
+    </style>
+</head>
+<body>
+
+    <nav class="nav">
+        <div class="nav-brand">
+            <div class="nav-logo">V</div>
+            <div class="nav-title">VANDANA GLOBAL LIMITED <span>Performance Management System</span></div>
+        </div>
+        <div class="nav-right">
+            <span class="role-chip">⚖️ @roleLabel</span>
+            <a href="javascript:history.back()" class="btn-nav">← Back</a>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <div class="hero-role">⚖️ Moderation Committee Dashboard</div>
+        <div class="hero-name">@Model.ReviewerName</div>
+        <div class="hero-sub">Moderate appraisals forwarded by Unit Heads. Provide an overall MC rating for each employee.</div>
+    </div>
+
+    <div class="content">
+
+        @{
+            int total = Model.Mappings.Count;
+            int pending = Model.Mappings.Count(m => m.Status == "UnitHeadReview");
+            int reviewed = Model.Mappings.Count(m => new[] { "ModCommitteeReview", "JMDReview", "HRFinalized" }.Contains(m.Status));
+            int waiting = Model.Mappings.Count(m => !new[] { "UnitHeadReview", "ModCommitteeReview", "JMDReview", "HRFinalized" }.Contains(m.Status));
+        }
+
+        <div class="stats-row">
+            <div class="stat-card c-role">
+                <div class="stat-label">Total Assigned</div>
+                <div class="stat-val" style="color:var(--rc)">@total</div>
+                <div class="stat-sub">All employees in committee scope</div>
+            </div>
+            <div class="stat-card c-amber">
+                <div class="stat-label">Pending MC Review</div>
+                <div class="stat-val" style="color:var(--gold)">@pending</div>
+                <div class="stat-sub">UH completed, awaiting moderation</div>
+            </div>
+            <div class="stat-card c-green">
+                <div class="stat-label">MC Reviewed</div>
+                <div class="stat-val" style="color:var(--emerald)">@reviewed</div>
+                <div class="stat-sub">Forwarded to JMD</div>
+            </div>
+            <div class="stat-card c-rose">
+                <div class="stat-label">Waiting Upstream</div>
+                <div class="stat-val" style="color:var(--rose)">@waiting</div>
+                <div class="stat-sub">Not yet at MC stage</div>
+            </div>
+        </div>
+
+        <div class="section-lbl">Employee Appraisals — with RM + HOD + UH Score Summary</div>
+
+        <div class="filter-bar">
+            <button class="filt-btn active" id="f-all" onclick="setFilter('all',this)">All <span class="filt-count">@total</span></button>
+            <button class="filt-btn" id="f-pending" onclick="setFilter('pending',this)">⏳ Pending MC <span class="filt-count">@pending</span></button>
+            <button class="filt-btn" id="f-done" onclick="setFilter('done',this)">✔ MC Reviewed <span class="filt-count">@reviewed</span></button>
+            <button class="filt-btn" id="f-draft" onclick="setFilter('draft',this)">◌ Waiting Upstream <span class="filt-count">@waiting</span></button>
+            <div class="search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="empSearch" placeholder="Search employees…" oninput="filterCards()" />
+            </div>
+        </div>
+
+        @if (!Model.Mappings.Any())
+        {
+            <div class="no-data">
+                <span class="no-data-icon">⚖️</span>
+                <div class="no-data-title">No employees assigned</div>
+                <div class="no-data-sub">No appraisals are currently assigned for moderation committee review.</div>
+            </div>
+        }
+        else
+        {
+            <div class="emp-grid" id="empGrid">
+                @foreach (var m in Model.Mappings.OrderByDescending(x => x.Status == "UnitHeadReview").ThenBy(x => x.EmpName))
+                {
+                    bool canReview = m.Status == "UnitHeadReview";
+                    string cardClass = canReview ? "pending"
+                    : (new[] { "ModCommitteeReview", "JMDReview", "HRFinalized" }.Contains(m.Status) ? "reviewed" : "waiting");
+                    string filterAttr = canReview ? "pending" : (cardClass == "reviewed" ? "done" : "draft");
+                    string initials = string.Join("", (m.EmpName ?? "EE").Split(' ').Take(2).Select(w => w.Length > 0 ? w[0].ToString().ToUpper() : ""));
+
+                    string sbClass, sbText;
+                    switch (m.Status)
+                    {
+                        case "UnitHeadReview": sbClass = "sb-pending"; sbText = "⏳ Awaiting MC Review"; break;
+                        case "ModCommitteeReview": sbClass = "sb-done"; sbText = "✔ MC Reviewed"; break;
+                        case "JMDReview": sbClass = "sb-review"; sbText = "At JMD"; break;
+                        case "HRFinalized": sbClass = "sb-done"; sbText = "✔ HR Finalized"; break;
+                        default: sbClass = "sb-wait"; sbText = m.Status ?? "Pending"; break;
+                    }
+
+                    // Compute RM, HOD, UH avg per row
+                    var rmRatings = m.KpiRows.Where(r => r.RmRating.HasValue).Select(r => r.RmRating!.Value).ToList();
+                    var hodRatings = m.KpiRows.Where(r => r.HodRating.HasValue).Select(r => r.HodRating!.Value).ToList();
+                    var uhRatings = m.KpiRows.Where(r => r.UnitHeadRating.HasValue).Select(r => r.UnitHeadRating!.Value).ToList();
+                    var allRatings = rmRatings.Concat(hodRatings).Concat(uhRatings).ToList();
+
+                    decimal? rmAvg = rmRatings.Any() ? (decimal?)Math.Round(rmRatings.Average(), 2) : null;
+                    decimal? hodAvg = hodRatings.Any() ? (decimal?)Math.Round(hodRatings.Average(), 2) : null;
+                    decimal? uhAvg = uhRatings.Any() ? (decimal?)Math.Round(uhRatings.Average(), 2) : null;
+                    decimal? overallAvg = allRatings.Any() ? (decimal?)Math.Round(allRatings.Average(), 2) : null;
+
+                    bool empDone = m.Status != "Draft";
+                    bool rmDone = new[] { "RMReview", "HODReview", "UnitHeadReview", "ModCommitteeReview", "JMDReview", "HRFinalized" }.Contains(m.Status);
+                    bool hodDone = new[] { "HODReview", "UnitHeadReview", "ModCommitteeReview", "JMDReview", "HRFinalized" }.Contains(m.Status);
+                    bool uhDone = new[] { "UnitHeadReview", "ModCommitteeReview", "JMDReview", "HRFinalized" }.Contains(m.Status);
+                    bool mcDone = new[] { "ModCommitteeReview", "JMDReview", "HRFinalized" }.Contains(m.Status);
+
+                    <div class="emp-card @cardClass" data-filter="@filterAttr" data-name="@m.EmpName.ToLower()" data-code="@m.EmpCode.ToLower()" id="ecard-@m.MappingId">
+                        <div class="emp-avatar">@initials</div>
+                        <div class="emp-info">
+                            <div class="emp-name">@m.EmpName</div>
+                            <div class="emp-meta">
+                                <span>@m.EmpCode</span>
+                                <span>@m.Designation</span>
+                                <span>@m.Department</span>
+                            </div>
+                            <!-- Score summary -->
+                            <div class="score-summary">
+                                @if (rmAvg.HasValue)
+                                {
+                                    <span class="score-chip sc-rm">👔 RM: @rmAvg.Value.ToString("0.00")</span>
+                                }
+                                @if (hodAvg.HasValue)
+                                {
+                                    <span class="score-chip sc-hod">🏛 HOD: @hodAvg.Value.ToString("0.00")</span>
+                                }
+                                @if (uhAvg.HasValue)
+                                {
+                                    <span class="score-chip sc-uh">🏢 UH: @uhAvg.Value.ToString("0.00")</span>
+                                }
+                                @if (overallAvg.HasValue)
+                                {
+                                    <span class="score-chip sc-avg">⌀ Overall: @overallAvg.Value.ToString("0.00")</span>
+                                }
+                            </div>
+                        </div>
+
+                        <span class="cycle-chip">@m.AppraisalCycle @m.AppraisalYear</span>
+                        <span class="kpi-pill">@m.KpiRows.Count KPIs</span>
+
+                        <div class="stage-mini">
+                            <div class="sm-dot @(empDone ? "done" : "wait")" title="Employee">E</div>
+                            <div class="sm-line @(empDone ? "done" : "")"></div>
+                            <div class="sm-dot @(rmDone ? "done" : "wait")" title="RM">R</div>
+                            <div class="sm-line @(rmDone ? "done" : "")"></div>
+                            <div class="sm-dot @(hodDone ? "done" : "wait")" title="HOD">H</div>
+                            <div class="sm-line @(hodDone ? "done" : "")"></div>
+                            <div class="sm-dot @(uhDone ? "done" : "wait")" title="UH">U</div>
+                            <div class="sm-line @(uhDone ? "done" : "")"></div>
+                            <div class="sm-dot @(mcDone ? "done" : m.Status == "UnitHeadReview" ? "active" : "wait")" title="MC">M</div>
+                        </div>
+
+                        <span class="status-badge @sbClass">@sbText</span>
+                        <div class="emp-actions">
+                            @if (canReview)
+                            {
+                                <a href="/Pms/ModCommitteeAppraisal?mappingId=@m.MappingId" class="btn-review">Review Now →</a>
+                            }
+                            else
+                            {
+                                <a href="/Pms/ModCommitteeAppraisal?mappingId=@m.MappingId" class="btn-review disabled">View</a>
+                            }
+                            <a href="/Pms/PrintAppraisal?mappingId=@m.MappingId" class="btn-view-sm" target="_blank">📄</a>
+                            <button class="btn-view-sm" onclick="toggleKpiPreview(@m.MappingId)">KPIs ▾</button>
+                        </div>
+
+                        <div class="kpi-preview" id="kpiprev-@m.MappingId">
+                            @if (m.KpiRows.Any())
+                            {
+                                <table class="kpi-mini-tbl">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>KPI Name</th>
+                                            <th>Wt%</th>
+                                            <th>Target</th>
+                                            <th>Emp Actual</th>
+                                            <th>Emp R.</th>
+                                            <th>RM Actual</th>
+                                            <th>RM R.</th>
+                                            <th>HOD Actual</th>
+                                            <th>HOD R.</th>
+                                            <th>UH Actual</th>
+                                            <th>UH R.</th>
+                                            <th>Avg (RM+HOD+UH)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{
+                                            int ki = 0;
+                                        }
+                                        @foreach (var row in m.KpiRows)
+                                        {
+                                            ki++;
+                                            // Per-row avg
+                                            var perRow = new List<decimal>();
+                                            if (row.RmRating.HasValue) perRow.Add(row.RmRating.Value);
+                                            if (row.HodRating.HasValue) perRow.Add(row.HodRating.Value);
+                                            if (row.UnitHeadRating.HasValue) perRow.Add(row.UnitHeadRating.Value);
+                                            decimal? rowAvg = perRow.Any() ? (decimal?)Math.Round(perRow.Average(), 2) : null;
+                                            <tr>
+                                                <td style="color:var(--ink4);font-family:var(--mono)">@ki</td>
+                                                <td style="font-weight:500">@row.KpiName</td>
+                                                <td style="font-family:var(--mono)">@row.IndividualWeightage.ToString("0.##")%</td>
+                                                <td style="font-family:var(--mono)">@row.Target.ToString("0.##")</td>
+                                                <td style="font-family:var(--mono);color:var(--gold)">@(row.EmpActual.HasValue? row.EmpActual.Value.ToString("0.##") : "—")</td>
+                                                <td style="font-family:var(--mono);font-weight:600;color:#1e4ed8">@(row.EmpRating.HasValue? row.EmpRating.Value.ToString("0") : "—")</td>
+                                                <td style="font-family:var(--mono)">@(row.RmActual.HasValue? row.RmActual.Value.ToString("0.##") : "—")</td>
+                                                <td style="font-family:var(--mono);font-weight:600;color:#1e4ed8">@(row.RmRating.HasValue? row.RmRating.Value.ToString("0") : "—")</td>
+                                                <td style="font-family:var(--mono)">@(row.HodActual.HasValue? row.HodActual.Value.ToString("0.##") : "—")</td>
+                                                <td style="font-family:var(--mono);font-weight:600;color:#6d28d9">@(row.HodRating.HasValue? row.HodRating.Value.ToString("0") : "—")</td>
+                                                <td style="font-family:var(--mono)">@(row.UnitHeadActual.HasValue? row.UnitHeadActual.Value.ToString("0.##") : "—")</td>
+                                                <td style="font-family:var(--mono);font-weight:600;color:#0f766e">@(row.UnitHeadRating.HasValue? row.UnitHeadRating.Value.ToString("0") : "—")</td>
+                                                <td style="font-family:var(--mono);font-weight:700;color:#0369a1">@(rowAvg.HasValue? rowAvg.Value.ToString("0.00") : "—")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <script>
+        var _filter = 'all';
+        function setFilter(f, btn) {
+            _filter = f;
+            document.querySelectorAll('.filt-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            filterCards();
+        }
+        function filterCards() {
+            var q = (document.getElementById('empSearch').value || '').toLowerCase().trim();
+            document.querySelectorAll('.emp-card').forEach(card => {
+                var matchFilter = _filter === 'all' || card.dataset.filter === _filter;
+                var matchSearch = !q || (card.dataset.name || '').includes(q) || (card.dataset.code || '').includes(q);
+                card.style.display = (matchFilter && matchSearch) ? '' : 'none';
+            });
+        }
+        function toggleKpiPreview(id) {
+            var el = document.getElementById('kpiprev-' + id);
+            if (el) el.classList.toggle('open');
+        }
+    </script>
+</body>
+</html>

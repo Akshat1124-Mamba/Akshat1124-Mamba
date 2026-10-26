@@ -1,0 +1,928 @@
+﻿@* Views/PMSBlueCollar/RMForm.cshtml *@
+@model vgl.Models.PMSBCFormModel
+@{
+    ViewData["Title"] = "RM Score Entry";
+    Layout = null;
+    int pmsId = ViewBag.PmsID;
+    int maxTotal = Model.AuditDetails.Sum(d => d.MaxScore);
+
+    // Group by Beh_Pers (category), then order rows by MainSrNo + SubSrNo
+    var groups = Model.AuditDetails
+        .GroupBy(d => d.Beh_Pers)
+        .Select(g => new
+        {
+            CategoryName = g.Key,
+            Rows = g.OrderBy(r => r.MainSrNo).ThenBy(r => r.SubSrNo).ToList()
+        })
+        .ToList();
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@ViewData["Title"] — VGL PMS</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+    <style>
+            :root {
+                --navy: #0B1C3F;
+                --navy-mid: #152b5e;
+                --gold: #C9A84C;
+                --gold-light: #e2c06a;
+                --gold-pale: #fdf6e3;
+                --cream: #F8F5EF;
+                --white: #FFFFFF;
+                --grey-100: #f1eeea;
+                --grey-200: #e2ddd6;
+                --grey-300: #ccc7bf;
+                --grey-400: #a09890;
+                --grey-600: #6b6560;
+                --success: #2d7a4f;
+                --success-bg: #e8f5ee;
+                --warn: #b85c00;
+                --warn-bg: #fff3e0;
+                --danger: #c0392b;
+                --danger-bg: #fdecea;
+                --shadow-sm: 0 1px 4px rgba(11,28,63,.08);
+                --shadow: 0 4px 24px rgba(11,28,63,.10);
+            }
+
+            *, *::before, *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0
+            }
+
+            body {
+                font-family: 'DM Sans', sans-serif;
+                background: var(--cream);
+                color: var(--navy);
+                min-height: 100vh
+            }
+
+            a {
+                text-decoration: none;
+                color: inherit
+            }
+
+            /* HEADER */
+            .site-header {
+                background: var(--navy);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 32px;
+                height: 64px;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                box-shadow: 0 2px 16px rgba(0,0,0,.25);
+            }
+
+            .brand {
+                display: flex;
+                align-items: center;
+                gap: 14px
+            }
+
+            .brand-icon {
+                width: 38px;
+                height: 38px;
+                background: var(--gold);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: 'Playfair Display', serif;
+                font-size: 18px;
+                color: var(--navy);
+                font-weight: 700;
+            }
+
+            .brand-name {
+                font-family: 'Playfair Display', serif;
+                font-size: 17px;
+                font-weight: 600;
+                color: #fff
+            }
+
+            .brand-sub {
+                font-size: 11px;
+                color: var(--gold);
+                letter-spacing: 1px;
+                text-transform: uppercase
+            }
+
+            /* LAYOUT */
+            .page-wrap {
+                padding: 28px 32px 60px;
+                max-width: 1320px;
+                margin: 0 auto
+            }
+
+            .breadcrumb {
+                font-size: 12px;
+                color: var(--grey-400);
+                margin-bottom: 8px
+            }
+
+                .breadcrumb a {
+                    color: var(--gold)
+                }
+
+            .page-header-top {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 16px;
+                margin-bottom: 24px;
+            }
+
+            .page-title {
+                font-family: 'Playfair Display', serif;
+                font-size: 26px;
+                font-weight: 700;
+                color: var(--navy)
+            }
+
+            .page-subtitle {
+                font-size: 13px;
+                color: var(--grey-600);
+                margin-top: 4px
+            }
+
+            /* PROGRESS */
+            .progress-track {
+                display: flex;
+                align-items: center;
+                margin-bottom: 28px;
+                padding-bottom: 4px;
+            }
+
+            .progress-step {
+                display: flex;
+                align-items: center;
+                flex: 1
+            }
+
+            .step-circle {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: var(--grey-200);
+                color: var(--grey-400);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: 700;
+                flex-shrink: 0;
+                position: relative;
+                transition: all .3s;
+            }
+
+                .step-circle.done {
+                    background: var(--success);
+                    color: #fff
+                }
+
+                .step-circle.active {
+                    background: var(--gold);
+                    color: var(--navy);
+                    box-shadow: 0 0 0 4px rgba(201,168,76,.25)
+                }
+
+            .step-line {
+                flex: 1;
+                height: 2px;
+                background: var(--grey-200)
+            }
+
+                .step-line.done {
+                    background: var(--success)
+                }
+
+            .step-label {
+                font-size: 10px;
+                font-weight: 600;
+                color: var(--grey-400);
+                position: absolute;
+                top: 36px;
+                left: 50%;
+                transform: translateX(-50%);
+                white-space: nowrap;
+            }
+
+            .step-circle.active .step-label {
+                color: var(--gold)
+            }
+
+            .step-circle.done .step-label {
+                color: var(--success)
+            }
+
+            /* HERO */
+            .form-hero {
+                background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+                border-radius: 16px;
+                padding: 24px 32px;
+                margin-bottom: 24px;
+                display: flex;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 20px;
+                position: relative;
+                overflow: hidden;
+            }
+
+                .form-hero::before {
+                    content: '';
+                    position: absolute;
+                    top: -40px;
+                    right: -40px;
+                    width: 200px;
+                    height: 200px;
+                    background: rgba(201,168,76,.06);
+                    border-radius: 50%;
+                }
+
+            .emp-info-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+                gap: 16px;
+                flex: 1
+            }
+
+            .emp-field label {
+                font-size: 10px;
+                color: rgba(255,255,255,.5);
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .emp-field p {
+                font-size: 14px;
+                color: #fff;
+                font-weight: 500;
+                margin-top: 3px
+            }
+
+            .emp-score-box {
+                background: rgba(201,168,76,.15);
+                border: 1px solid rgba(201,168,76,.3);
+                border-radius: 12px;
+                padding: 18px 24px;
+                text-align: center;
+                min-width: 150px;
+                flex-shrink: 0;
+            }
+
+            .emp-score-label {
+                font-size: 10px;
+                color: var(--gold);
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 1px
+            }
+
+            .emp-score-val {
+                font-family: 'Playfair Display', serif;
+                font-size: 40px;
+                color: #fff;
+                font-weight: 700;
+                line-height: 1;
+                margin-top: 4px;
+            }
+
+            .emp-score-max {
+                font-size: 12px;
+                color: rgba(255,255,255,.4);
+                margin-top: 2px
+            }
+
+            .emp-rating-box {
+                background: rgba(255,255,255,.07);
+                border: 1px solid rgba(255,255,255,.15);
+                border-radius: 8px;
+                padding: 6px 12px;
+                font-size: 11px;
+                color: rgba(255,255,255,.7);
+                margin-top: 8px;
+                text-align: center;
+            }
+
+                .emp-rating-box span {
+                    color: var(--gold);
+                    font-weight: 700;
+                    display: block;
+                    font-size: 13px;
+                    margin-top: 2px
+                }
+
+            /* CARD / TABLE */
+            .card {
+                background: var(--white);
+                border-radius: 16px;
+                box-shadow: var(--shadow);
+                margin-bottom: 20px
+            }
+
+            .audit-table-wrap {
+                overflow-x: auto;
+                border-radius: 14px;
+                border: 1px solid var(--grey-200)
+            }
+
+            .audit-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+                min-width: 680px
+            }
+
+                .audit-table thead {
+                    background: var(--navy)
+                }
+
+                    .audit-table thead th {
+                        color: #fff;
+                        font-size: 11px;
+                        font-weight: 600;
+                        padding: 12px;
+                        text-align: center;
+                        border: 1px solid rgba(255,255,255,.1);
+                    }
+
+                        .audit-table thead th.left {
+                            text-align: left
+                        }
+
+            /* CATEGORY GROUP HEADER — matches print form style */
+            .cat-header-row td {
+                background: #1e3a6e !important;
+                color: var(--gold) !important;
+                font-weight: 700 !important;
+                font-size: 12px !important;
+                letter-spacing: .5px;
+                text-transform: uppercase;
+                padding: 9px 14px !important;
+                border: 1px solid #162d55 !important;
+            }
+
+            .audit-table tbody tr {
+                border-bottom: 1px solid var(--grey-100);
+                transition: background .15s
+            }
+
+                .audit-table tbody tr:hover {
+                    background: var(--gold-pale)
+                }
+
+            .audit-table tbody td {
+                padding: 9px 12px;
+                vertical-align: middle;
+                border: 1px solid var(--grey-100)
+            }
+
+            .sr-num {
+                font-size: 11px;
+                color: var(--grey-400);
+                text-align: center
+            }
+
+            .criterion-text {
+                font-size: 12.5px;
+                color: var(--navy);
+                line-height: 1.5;
+                min-width: 240px
+            }
+
+            .audit-table tfoot td {
+                background: var(--navy);
+                color: var(--gold);
+                font-weight: 700;
+                padding: 12px;
+                font-size: 13px;
+                text-align: center;
+                border: 1px solid rgba(255,255,255,.1);
+            }
+
+            /* INPUTS */
+            .score-input {
+                width: 68px;
+                border: 1.5px solid var(--grey-200);
+                border-radius: 8px;
+                padding: 7px 8px;
+                font-family: 'DM Sans', sans-serif;
+                font-size: 13px;
+                color: var(--navy);
+                text-align: center;
+                outline: none;
+                transition: border .2s;
+                background: var(--grey-100);
+            }
+
+                .score-input:focus {
+                    border-color: var(--gold);
+                    background: #fff
+                }
+
+                .score-input.val-error {
+                    border-color: var(--danger);
+                    background: var(--danger-bg)
+                }
+
+            .remark-input {
+                width: 150px;
+                border: 1.5px solid var(--grey-200);
+                border-radius: 8px;
+                padding: 6px 8px;
+                font-family: 'DM Sans', sans-serif;
+                font-size: 12px;
+                color: var(--navy);
+                outline: none;
+                transition: border .2s;
+                resize: none;
+                min-height: 36px;
+                background: var(--grey-100);
+            }
+
+                .remark-input:focus {
+                    border-color: var(--gold);
+                    background: #fff
+                }
+
+            .max-badge {
+                display: inline-block;
+                background: var(--grey-100);
+                color: var(--grey-600);
+                border-radius: 8px;
+                padding: 2px 8px;
+                font-size: 11px;
+                font-weight: 700;
+            }
+
+            /* RATING SCALE INFO BOX */
+            .rating-scale-box {
+                background: var(--white);
+                border: 1px solid var(--grey-200);
+                border-left: 3px solid var(--gold);
+                border-radius: 10px;
+                padding: 14px 18px;
+                margin-bottom: 16px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                align-items: center;
+            }
+
+                .rating-scale-box .rs-title {
+                    font-size: 11px;
+                    font-weight: 700;
+                    color: var(--grey-600);
+                    text-transform: uppercase;
+                    letter-spacing: .5px;
+                    width: 100%;
+                    margin-bottom: 4px
+                }
+
+            .rs-item {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: var(--grey-100);
+                border-radius: 6px;
+                padding: 4px 10px;
+                font-size: 11px;
+                color: var(--navy);
+            }
+
+            .rs-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--gold);
+                flex-shrink: 0;
+            }
+
+            /* BUTTONS */
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 7px;
+                padding: 9px 20px;
+                border-radius: 10px;
+                font-family: 'DM Sans', sans-serif;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                border: none;
+                transition: all .2s;
+                white-space: nowrap;
+                text-decoration: none;
+            }
+
+            .btn-primary {
+                background: var(--gold);
+                color: var(--navy);
+                box-shadow: 0 2px 8px rgba(201,168,76,.35);
+            }
+
+                .btn-primary:hover {
+                    background: var(--gold-light)
+                }
+
+                .btn-primary:disabled {
+                    opacity: .6;
+                    cursor: not-allowed
+                }
+
+            .btn-outline {
+                background: transparent;
+                color: var(--navy);
+                border: 1.5px solid var(--grey-200);
+            }
+
+                .btn-outline:hover {
+                    border-color: var(--gold);
+                    color: var(--gold)
+                }
+
+            /* TOAST */
+            .toast {
+                position: fixed;
+                bottom: 28px;
+                right: 28px;
+                z-index: 9999;
+                background: var(--navy);
+                color: #fff;
+                border-radius: 12px;
+                padding: 14px 22px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 13px;
+                font-weight: 500;
+                box-shadow: 0 8px 32px rgba(0,0,0,.2);
+                opacity: 0;
+                transform: translateY(20px);
+                transition: all .3s;
+                pointer-events: none;
+            }
+
+                .toast.show {
+                    opacity: 1;
+                    transform: translateY(0);
+                    pointer-events: auto
+                }
+
+            .toast-success .toast-icon {
+                color: #5de8a0
+            }
+
+            .toast-warn .toast-icon {
+                color: var(--gold)
+            }
+
+            .toast-error .toast-icon {
+                color: var(--danger)
+            }
+
+            @@media (max-width: 768px) {
+                .page-wrap {
+                    padding: 16px
+                }
+
+                .form-hero {
+                    padding: 20px 16px
+                }
+
+                .emp-score-val {
+                    font-size: 30px
+                }
+            }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="brand">
+            <div class="brand-icon">V</div>
+            <div>
+                <div class="brand-name">Vandana Global Limited</div>
+                <div class="brand-sub">PMS — Non Management Cadre</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="page-wrap">
+        <div class="breadcrumb">
+            <a href="/pmsbluecollar/rm-dashboard?rmId=@Model.RMId">RM Dashboard</a> / Score Entry
+        </div>
+
+        <div class="page-header-top">
+            <div>
+                <div class="page-title">Reporting Manager — Score Entry</div>
+                <div class="page-subtitle">Assess each behavioural criterion and enter your score (0 – max per criterion).</div>
+            </div>
+        </div>
+
+        <!-- PROGRESS -->
+        <div class="progress-track" style="padding-bottom:32px">
+            <div class="progress-step">
+                <div class="step-circle active">1<span class="step-label">RM Review</span></div>
+                <div class="step-line"></div>
+            </div>
+            <div class="progress-step">
+                <div class="step-circle">2<span class="step-label">HOD Review</span></div>
+                <div class="step-line"></div>
+            </div>
+            <div class="step-circle">3<span class="step-label">Completed</span></div>
+        </div>
+
+        <!-- HERO -->
+        <div class="form-hero">
+            <div class="emp-info-grid">
+                <div class="emp-field"><label>Appraisee Name</label><p>@Model.Emp_Full_Name</p></div>
+                <div class="emp-field"><label>Emp No</label><p>@Model.Emp_code</p></div>
+                <div class="emp-field"><label>Designation</label><p>@Model.Desig_Name</p></div>
+                <div class="emp-field"><label>Department</label><p>@Model.Dept_Name</p></div>
+                <div class="emp-field"><label>Reporting Manager</label><p>@Model.Manager_Name</p></div>
+                @if (!string.IsNullOrEmpty(Model.HOD_Name))
+                {
+                    <div class="emp-field"><label>HOD</label><p>@Model.HOD_Name</p></div>
+                }
+            </div>
+            <div class="emp-score-box">
+                <div class="emp-score-label">RM Score</div>
+                <div class="emp-score-val" id="totalScoreDisplay">—</div>
+                <div class="emp-score-max">out of @maxTotal</div>
+                <div class="emp-rating-box">
+                    Rating
+                    <span id="liveRatingLabel">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RATING SCALE REFERENCE -->
+        <div class="rating-scale-box">
+            <div class="rs-title">Rating Scale Reference</div>
+            <div class="rs-item"><div class="rs-dot" style="background:#2d7a4f"></div>5 — Consistently Exceeds Expectations (86-100%)</div>
+            <div class="rs-item"><div class="rs-dot" style="background:#3b82f6"></div>4 — Exceeds Expectations (71-85%)</div>
+            <div class="rs-item"><div class="rs-dot" style="background:#f59e0b"></div>3 — Meets Expectations (51-70%)</div>
+            <div class="rs-item"><div class="rs-dot" style="background:#f97316"></div>2 — Below Expectations (31-50%)</div>
+            <div class="rs-item"><div class="rs-dot" style="background:#c0392b"></div>1 — Not Meeting Expectations (0-30%)</div>
+        </div>
+
+        <!-- AUDIT TABLE -->
+        <div class="card" style="padding:0">
+            <div class="audit-table-wrap">
+                <table class="audit-table">
+                    <thead>
+                        <tr>
+                            <th class="left" style="width:42px">Sr.</th>
+                            <th class="left" style="min-width:260px">Criterion / Description</th>
+                            <th style="width:60px">Max</th>
+                            <th style="width:90px">RM Score</th>
+                            <th style="width:170px">Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            int globalSr = 0;
+                        }
+                        @foreach (var grp in groups)
+                        {
+                            <!-- CATEGORY HEADER ROW (Beh_Pers) — matches print form -->
+                            <tr class="cat-header-row">
+                                <td colspan="5">@grp.CategoryName</td>
+                            </tr>
+
+                            @foreach (var row in grp.Rows)
+                            {
+                                globalSr++;
+                                <tr>
+                                    <td class="sr-num">@globalSr</td>
+                                    <!-- Description is the criterion text (matching print form) -->
+                                    <td class="criterion-text">@row.Description</td>
+                                    <td style="text-align:center">
+                                        <span class="max-badge">@row.MaxScore</span>
+                                    </td>
+                                    <td style="text-align:center">
+                                        <input type="number"
+                                               class="score-input score-entry"
+                                               data-criteria="@row.CriteriaID"
+                                               data-max="@row.MaxScore"
+                                               min="0" max="@row.MaxScore" step="1"
+                                               value="@(row.RM_Score.HasValue ? row.RM_Score.ToString() : "")"
+                                               oninput="recalcTotal()" />
+                                    </td>
+                                    <td>
+                                        <textarea class="remark-input remark-entry"
+                                                  data-criteria="@row.CriteriaID"
+                                                  rows="1">@row.RM_Remark</textarea>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="text-align:right;color:var(--gold)">
+                                Score Obtained &nbsp;(out of @maxTotal)
+                            </td>
+                            <td>@maxTotal</td>
+                            <td id="footerTotal">—</td>
+                            <td id="footerRating" style="font-size:11px;color:rgba(255,255,255,.75)">—</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px">
+            <a href="/pmsbluecollar/rm-dashboard?rmId=@Model.RMId" class="btn btn-outline">← Back</a>
+            <button class="btn btn-primary" id="saveBtn" onclick="submitScores(@pmsId,'RM',this)">
+                ✓ Save &amp; Submit Score
+            </button>
+        </div>
+    </main>
+
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon">✓</span>
+        <span id="toastMsg"></span>
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    <script>
+            const MAX_TOTAL = @maxTotal;
+
+            function getRatingNum(score, maxScore) {
+                if (maxScore <= 0) return '';
+                const pct = (score / maxScore) * 100;
+                if (pct >= 85) return '5';
+                if (pct >= 71) return '4';
+                if (pct >= 51) return '3';
+                if (pct >= 31) return '2';
+                return '1';
+            }
+
+            function getRatingLabel(num) {
+                const map = {
+                    '5': 'Consistently Exceeds Expectations',
+                    '4': 'Exceeds Expectations',
+                    '3': 'Meets Expectations',
+                    '2': 'Below Expectations',
+                    '1': 'Not Meeting Expectations'
+                };
+                return map[num] || '—';
+            }
+
+            function getRatingColor(num) {
+                return { '5':'#2d7a4f', '4':'#3b82f6', '3':'#f59e0b', '2':'#f97316', '1':'#c0392b' }[num] || '#fff';
+            }
+
+                    function recalcTotal() {
+            let sum = 0;
+            document.querySelectorAll('.score-entry').forEach(inp => {
+                const max = parseInt(inp.dataset.max);
+                let v = Math.floor(parseFloat(inp.value)); // floor to strip decimals
+                if (!isNaN(v)) {
+                    if (v > max) v = max;
+                    if (v < 0)   v = 0;
+                    inp.value = v; // write back the cleaned value
+                }
+                inp.classList.remove('val-error');
+                if (!isNaN(v)) sum += v;
+            });
+
+                const ratingNum   = getRatingNum(sum, MAX_TOTAL);
+                const ratingLabel = getRatingLabel(ratingNum);
+                const color       = getRatingColor(ratingNum);
+
+                document.getElementById('totalScoreDisplay').textContent = sum;
+                document.getElementById('footerTotal').textContent       = sum;
+                document.getElementById('liveRatingLabel').textContent   = ratingNum ? `${ratingNum} — ${ratingLabel}` : '—';
+                document.getElementById('liveRatingLabel').style.color   = color;
+
+                // ── Fix 2: show full rating description in footer ──
+                const footerRating = document.getElementById('footerRating');
+                if (ratingNum) {
+                    footerRating.innerHTML = `<span style="color:${color};font-weight:700">Rating ${ratingNum}</span> <span style="font-size:10px;color:rgba(255,255,255,.7)">${ratingLabel}</span>`;
+                } else {
+                    footerRating.textContent = '—';
+                }
+            }
+
+            async function submitScores(pmsId, stage, btn) {
+                const scores = [];
+                let firstError = null;
+
+                document.querySelectorAll('.score-entry').forEach(inp => {
+                    const v   = parseInt(inp.value);
+                    const max = parseInt(inp.dataset.max);
+
+                    // ── Fix 3: track first missing/invalid field ──
+                    if (inp.value === '' || isNaN(v) || v < 0 || v > max) {
+                        inp.classList.add('val-error');
+                        if (!firstError) firstError = inp;
+                    }
+
+                    scores.push({
+                        CriteriaID: parseInt(inp.dataset.criteria),
+                        Score:  isNaN(v) ? 0 : v,
+                        Remark: document.querySelector(`.remark-entry[data-criteria="${inp.dataset.criteria}"]`)?.value ?? ''
+                    });
+                });
+
+                if (firstError) {
+                    showToast('Please fill all scores correctly (0 – max).', 'warn');
+                    // ── Fix 3: scroll AND focus the first invalid input ──
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => {
+                        firstError.focus();
+                        firstError.select();
+                    }, 400); // slight delay to let scroll finish
+                    return;
+                }
+
+                const totalScore = scores.reduce((acc, s) => acc + s.Score, 0);
+                const ratingNum  = getRatingNum(totalScore, MAX_TOTAL);
+
+                btn.disabled = true;
+                btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .8s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Saving…';
+
+                try {
+                    const res = await fetch('/pmsbluecollar/submit-score', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? ''
+                        },
+                        body: JSON.stringify({
+                            PmsID:         pmsId,
+                            Stage:         stage,
+                            Scores:        scores,
+                            SubmittedByID: '@Model.RMId',
+                            Rating:        ratingNum
+                        })
+                    });
+
+                    const ct = res.headers.get('content-type') || '';
+                    if (!ct.includes('application/json')) {
+                        if (res.status === 401 || res.status === 302) {
+                            showToast('Session expired — please log in again.', 'error');
+                            setTimeout(() => window.location.href = '/Identity/Account/Login', 1500);
+                        } else {
+                            showToast('Server error (' + res.status + ').', 'error');
+                        }
+                        btn.disabled = false;
+                        btn.innerHTML = '✓ Save &amp; Submit Score';
+                        return;
+                    }
+
+                    const data = await res.json();
+
+                    if (data.redirectUrl && data.sessionExpired) {
+                        window.location.href = data.redirectUrl;
+                        return;
+                    }
+
+                    if (data.success) {
+                        showToast('RM scores submitted successfully!', 'success');
+                        setTimeout(() => {
+                            window.location.href = data.redirectUrl || '/pmsbluecollar/rm-dashboard?rmId=@Model.RMId';
+                        }, 1400);
+                    } else {
+                        showToast(data.message || 'Save failed. Please try again.', 'error');
+                        btn.disabled = false;
+                        btn.innerHTML = '✓ Save &amp; Submit Score';
+                    }
+                } catch (e) {
+                    showToast('Network error: ' + e.message, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '✓ Save &amp; Submit Score';
+                }
+            }
+
+            function showToast(msg, type = 'success') {
+                const t = document.getElementById('toast');
+                t.className = 'toast toast-' + type;
+                document.getElementById('toastIcon').textContent = type === 'success' ? '✓' : type === 'warn' ? '!' : '✕';
+                document.getElementById('toastMsg').textContent  = msg;
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 3500);
+            }
+
+            const styleEl = document.createElement('style');
+            styleEl.textContent = '@@keyframes spin { to { transform: rotate(360deg) } }';
+            document.head.appendChild(styleEl);
+
+            document.addEventListener('DOMContentLoaded', recalcTotal);
+    </script>
+</body>
+</html>

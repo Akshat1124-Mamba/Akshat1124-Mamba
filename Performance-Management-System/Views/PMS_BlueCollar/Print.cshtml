@@ -1,0 +1,625 @@
+﻿@* Views/PMSBlueCollar/Print.cshtml *@
+@model vgl.Models.PMSBCPrintModel
+
+@{
+    Layout = null;
+    ViewData["Title"] = "Performance Management System";
+    int pmsId = Model.PmsID;
+
+    Func<int?, string> GetRating = (score) =>
+{
+    if (!score.HasValue || score <= 0) return "";
+    // Uses same scale as CalculateRating() in controller
+    // But score here is raw total; we need % of TotalMaxScore
+    if (Model.TotalMaxScore <= 0) return "";
+    decimal pct = ((decimal)score.Value / Model.TotalMaxScore) * 100m;
+    if (pct >= 85) return "5";
+    if (pct >= 71) return "4";
+    if (pct >= 51) return "3";
+    if (pct >= 31) return "2";
+    return "1";
+};
+
+    Func<string, string> GetRatingText = (rating) =>
+{
+    return rating switch
+    {
+        "5" => "Consistently Exceeds Expectations",
+        "4" => "Exceeds Expectations",
+        "3" => "Meets Expectations",
+        "2" => "Below Expectations",
+        "1" => "Not Meeting Expectations",
+        _ => ""
+    };
+};
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>@ViewData["Title"]</title>
+
+    <style>
+
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            html {
+                background: #dcdcdc;
+            }
+
+            body {
+                font-family: Arial, Helvetica, sans-serif;
+                background: #dcdcdc;
+                padding: 15px;
+                color: #000;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .print-btn {
+                width: 140px;
+                height: 42px;
+                border: none;
+                background: #0d4b2f;
+                color: #fff;
+                border-radius: 5px;
+                font-size: 15px;
+                font-weight: 600;
+                cursor: pointer;
+                margin-bottom: 15px;
+            }
+
+            .page {
+                width: 100%;
+                max-width: 205mm;
+                min-height: 292mm;
+                height: 287mm;
+                margin: 0 auto;
+                background: #fff;
+                padding: 2mm;
+                border: 2px solid #000;
+                overflow: hidden;
+                box-sizing: border-box;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+            }
+
+            .top-header td {
+                border: 1px solid #666;
+            }
+
+            .main-table td,
+            .main-table th {
+                border: 1px solid #666;
+                padding: 3px;
+                font-size: 8px;
+                vertical-align: middle;
+                word-break: break-word;
+            }
+
+            tbody tr {
+                height: 24px;
+            }
+
+            /* HEADER */
+
+            .logo-cell {
+                width: 65px;
+                text-align: center;
+                vertical-align: middle;
+                padding: 0;
+            }
+
+                .logo-cell img {
+                    width: 38px;
+                    height: auto;
+                    display: block;
+                    margin: auto;
+                }
+
+            .title-box {
+                text-align: center;
+                vertical-align: middle;
+                font-size: 15px;
+                font-weight: 700;
+                line-height: 18px;
+                letter-spacing: .3px;
+                padding: 4px;
+            }
+
+            .page-box {
+                width: 60px;
+                text-align: center;
+                vertical-align: middle;
+                font-size: 9px;
+                font-weight: bold;
+            }
+
+            .top-header tr {
+                height: 48px;
+            }
+
+            .main-table,
+            .top-header,
+            .bottom-wrapper,
+            .rating-scale,
+            .rating-summary {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            /* EMPLOYEE INFO */
+
+            .label {
+                width: 130px;
+                font-weight: bold;
+                background: #f7f7f7;
+            }
+
+            /* MAIN TABLE HEADER */
+
+            .green-head {
+                background: #2d702f;
+                color: #fff;
+                text-align: center;
+                font-weight: bold;
+            }
+
+                .green-head th {
+                    font-size: 9px;
+                    padding: 5px 3px;
+                    line-height: 11px;
+                }
+
+            .center {
+                text-align: center;
+            }
+
+            /* CATEGORY */
+
+            .category-cell {
+                text-align: left;
+                font-weight: bold;
+                font-size: 8px;
+                line-height: 11px;
+                padding: 3px !important;
+                background: #fafafa;
+            }
+
+            /* CRITERIA */
+
+            .criteria-cell {
+                font-size: 8px;
+                line-height: 12px;
+                padding: 4px !important;
+            }
+
+            /* SCORE */
+
+            .score-cell {
+                text-align: center;
+                font-weight: bold;
+                font-size: 9px;
+            }
+
+            .remarks-cell {
+                font-size: 8px;
+                line-height: 10px;
+            }
+
+            /* TOTAL */
+
+            .total-row td {
+                height: 32px;
+                font-weight: bold;
+                background: #f3f3f3;
+            }
+
+            /* BOTTOM SECTION */
+
+            .bottom-wrapper {
+                margin-top: 70px;
+                display: flex;
+                gap: 8px;
+            }
+
+            .rating-scale {
+                width: 60%;
+            }
+
+            .rating-summary {
+                width: 40%;
+            }
+
+                .rating-scale table td,
+                .rating-summary table td {
+                    border: 1px solid #666;
+                    padding: 4px;
+                    font-size: 8px;
+                }
+
+            .green-title {
+                background: #2d702f;
+                color: #fff;
+                text-align: center;
+                font-weight: bold;
+                font-size: 9px;
+            }
+
+            .summary-label {
+                font-weight: bold;
+                width: 70%;
+            }
+
+            .summary-value {
+                text-align: center;
+                font-weight: bold;
+            }
+
+            /* PRINT */
+
+           @@page {
+    size: A4 portrait;
+    margin: 5mm;
+}
+
+@@media print {
+
+    html,
+    body {
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .print-btn {
+        display: none !important;
+    }
+
+    .page {
+        width: 200mm !important;
+        height: 287mm !important;
+        margin: 0 auto !important;
+        padding: 2mm !important;
+        border: 1px solid #000 !important;
+        overflow: hidden !important;
+        box-shadow: none !important;
+    }
+
+    table {
+        width: 100%;
+    }
+}
+
+    </style>
+</head>
+
+<body>
+
+    <button class="print-btn" onclick="window.print()">
+        Print Form
+    </button>
+
+    <div class="page">
+
+        <!-- HEADER -->
+
+        <table class="top-header">
+
+            <tr>
+
+                <td class="logo-cell">
+                    <img src="/admin/assets/images/logo.png"
+                         alt="Vandana Global" />
+                </td>
+
+                <td class="title-box">
+                    PERFORMANCE MANAGEMENT SYSTEM – NON MANAGEMENT CADRE
+                </td>
+
+                <td class="page-box">
+                    Page : 1 of 1
+                </td>
+
+            </tr>
+
+        </table>
+
+        <!-- EMPLOYEE DETAILS -->
+
+        <table class="main-table">
+
+            <tr>
+                <td class="label">Appraisee Name:</td>
+                <td>@Model.EmpName</td>
+
+                <td class="label">Emp No:</td>
+                <td>@Model.EmpCode</td>
+            </tr>
+
+            <tr>
+                <td class="label">Designation:</td>
+                <td>@Model.Designation</td>
+
+                <td class="label">Grade:</td>
+                <td>@Model.Grade</td>
+            </tr>
+
+            <tr>
+                <td class="label">Unit:</td>
+                <td>@Model.Unit</td>
+
+                <td class="label">Department:</td>
+                <td>@Model.Department</td>
+            </tr>
+
+            <tr>
+                <td class="label">Reporting Manager Name:</td>
+                <td>@Model.RMName</td>
+
+                <td class="label">Appraisal Date:</td>
+                <td>
+                    @(Model.AppraisalDate.HasValue
+                        ? Model.AppraisalDate.Value.ToString("dd/MM/yyyy")
+                        : "")
+                </td>
+            </tr>
+
+            <tr>
+                <td class="label">HOD Name:</td>
+                <td>@Model.HODName</td>
+
+                <td class="label">Appraisal Date:</td>
+                <td>
+                    @(Model.AppraisalDate.HasValue
+                        ? Model.AppraisalDate.Value.ToString("dd/MM/yyyy")
+                        : "")
+                </td>
+            </tr>
+
+        </table>
+
+        <!-- MAIN TABLE -->
+
+        <table class="main-table">
+
+            <thead class="green-head">
+
+                <tr>
+
+                    <th style="width:35px;">M<br>Sr<br>No</th>
+
+                    <th style="width:35px;">Sr<br>No</th>
+
+                    <th style="width:115px;">Category</th>
+
+                    <th>Criterion</th>
+
+                    <th style="width:70px;">
+                        Reporting<br>
+                        Mgr Score<br>
+                        (1-5)
+                    </th>
+
+                    <th style="width:80px;">
+                        Remarks
+                    </th>
+
+                    <th style="width:70px;">
+                        HOD<br>
+                        Score<br>
+                        (1-5)
+                    </th>
+
+                    <th style="width:80px;">
+                        Remarks
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @foreach (var cat in Model.Categories)
+                {
+                    bool firstRow = true;
+
+                    foreach (var row in cat.Rows)
+                    {
+                        <tr>
+
+                            <td class="center">
+                                @row.MainSrNo
+                            </td>
+
+                            <td class="center">
+                                @row.SubSrNo
+                            </td>
+
+                            @if (firstRow)
+                            {
+                                <td rowspan="@cat.Rows.Count"
+                                    class="category-cell">
+
+                                    @cat.CategoryName
+
+                                </td>
+
+                                firstRow = false;
+                            }
+
+                            <td class="criteria-cell">
+                                @row.Description
+                            </td>
+
+                            <td class="score-cell">
+                                @(row.RM_Score.HasValue
+                                    ? row.RM_Score.ToString()
+                                    : "")
+                            </td>
+
+                            <td class="remarks-cell">
+                                @row.RM_Remark
+                            </td>
+
+                            <td class="score-cell">
+                                @(row.HOD_Score.HasValue
+                                    ? row.HOD_Score.ToString()
+                                    : "")
+                            </td>
+
+                            <td class="remarks-cell">
+                                @row.HOD_Remark
+                            </td>
+
+                        </tr>
+                    }
+                }
+
+                <tr class="total-row">
+
+                    <td colspan="4" class="center">
+                        Score (Out of 100)
+                    </td>
+
+                    <td class="center">
+                        @(Model.RM_TotalScore > 0 ? Model.RM_TotalScore.ToString() : "")
+                    </td>
+
+
+                    <td></td>
+
+                    <td class="center">
+                        @(Model.HOD_TotalScore > 0 ? Model.HOD_TotalScore.ToString() : "")
+                    </td>
+
+                    <td></td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+        <!-- BOTTOM SECTION -->
+
+        <div class="bottom-wrapper">
+
+            <div class="rating-scale">
+
+                <table>
+
+                    <tr>
+                        <td colspan="3" class="green-title">
+                            Rating Scale
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><b>Score (Out of 100)</b></td>
+                        <td><b>Rating</b></td>
+                        <td><b>Description</b></td>
+                    </tr>
+
+                    <tr>
+                        <td>85-100</td>
+                        <td class="center">5</td>
+                        <td>Consistently Exceeds Expectations</td>
+                    </tr>
+
+                    <tr>
+                        <td>71-85</td>
+                        <td class="center">4</td>
+                        <td>Exceeds Expectations</td>
+                    </tr>
+
+                    <tr>
+                        <td>51-70</td>
+                        <td class="center">3</td>
+                        <td>Meets Expectations</td>
+                    </tr>
+
+                    <tr>
+                        <td>31-50</td>
+                        <td class="center">2</td>
+                        <td>Below Expectations</td>
+                    </tr>
+
+                    <tr>
+                        <td>0-30</td>
+                        <td class="center">1</td>
+                        <td>Not Meeting Expectations</td>
+                    </tr>
+
+                </table>
+
+            </div>
+
+            <div class="rating-summary">
+                <table>
+                    <tr>
+                        <td colspan="2" class="green-title">Rating Summary</td>
+                    </tr>
+                    <tr>
+                        <td class="summary-label">Reporting Manager</td>
+                        <td class="summary-value">
+                            @{
+                                var rmRating = (Model.RM_TotalScore > 0) ? GetRating(Model.RM_TotalScore) : "";
+                            }
+                            @(string.IsNullOrEmpty(rmRating) ? "" : $"{rmRating} - {GetRatingText(rmRating)}")
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="summary-label">HOD</td>
+                        <td class="summary-value">
+                            @{
+                                var hodRating = (Model.HOD_TotalScore > 0) ? GetRating(Model.HOD_TotalScore) : "";
+                            }
+                            @(string.IsNullOrEmpty(hodRating) ? "" : $"{hodRating} - {GetRatingText(hodRating)}")
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="summary-label">Moderation Committee</td>
+                        <td class="summary-value">
+                            @(string.Equals(Model.CycleType, "Annual", StringComparison.OrdinalIgnoreCase)
+                                ? Model.ModCommitteeRating : "")
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="summary-label">JMD</td>
+                        <td class="summary-value">
+                            @(string.Equals(Model.CycleType, "Annual", StringComparison.OrdinalIgnoreCase)
+                                ? Model.JMDRating : "")
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="summary-label">Final Rating</td>
+                        <td class="summary-value">@Model.FinalRating</td>
+                    </tr>
+                </table>
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

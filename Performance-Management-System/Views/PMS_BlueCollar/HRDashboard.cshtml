@@ -1,0 +1,2502 @@
+﻿@* Views/PMSBlueCollar/HRDashboard.cshtml *@
+@model List<vgl.Models.PMSBCDashboardModel>
+@{
+    ViewData["Title"] = "PMS Blue Collar — HR Dashboard";
+    Layout = null;
+    var depts = ViewBag.DepartmentList as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+    var units = ViewBag.UnitList as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+    var rms = ViewBag.RMList as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+    var hods = ViewBag.HODList as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+
+    int total = Model.Count;
+    int completed = Model.Count(m => m.AuditStatus == "Completed");
+    int inProg = Model.Count(m => m.PmsID > 0 && m.AuditStatus != "Completed");
+    int notStarted = total - completed - inProg;
+
+    var rmJson = System.Text.Json.JsonSerializer.Serialize(rms.Select(r => new { val = r.Value, name = r.Text }));
+    var hodJson = System.Text.Json.JsonSerializer.Serialize(hods.Select(h => new { val = h.Value, name = h.Text }));
+
+    int currentYear = DateTime.Today.Year;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+            :root {
+                --navy: #0f1c3f;
+                --navy2: #1a2d5a;
+                --navy3: #253d75;
+                --cobalt: #1e4ed8;
+                --cobalt-lt: #eff4ff;
+                --cobalt-md: #c7d7fd;
+                --indigo: #4f46e5;
+                --sky: #0ea5e9;
+                --teal: #0d9488;
+                --teal-lt: #f0fdfa;
+                --gold: #d97706;
+                --gold-lt: #fef3c7;
+                --emerald: #059669;
+                --emerald-lt: #d1fae5;
+                --rose: #e11d48;
+                --rose-lt: #fff1f2;
+                --amber: #b45309;
+                --violet: #7c3aed;
+                --violet-lt: #ede9fe;
+                --bg: #f8f9fc;
+                --bg2: #f1f4f9;
+                --white: #ffffff;
+                --border: #dde2ed;
+                --border2: #eaeef7;
+                --shadow-sm: 0 1px 3px rgba(15,28,63,.06), 0 1px 2px rgba(15,28,63,.04);
+                --shadow: 0 4px 16px rgba(15,28,63,.08), 0 1px 4px rgba(15,28,63,.05);
+                --shadow-md: 0 8px 32px rgba(15,28,63,.12), 0 2px 8px rgba(15,28,63,.06);
+                --shadow-lg: 0 20px 60px rgba(15,28,63,.18), 0 4px 16px rgba(15,28,63,.08);
+                --ink: #0f172a;
+                --ink2: #334155;
+                --ink3: #64748b;
+                --ink4: #94a3b8;
+                --font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+                --mono: 'JetBrains Mono', 'Courier New', monospace;
+                --serif: 'Instrument Serif', Georgia, serif;
+                --radius: 10px;
+                --radius-lg: 16px;
+                --radius-xl: 20px;
+                --tr: .18s cubic-bezier(.4,0,.2,1);
+            }
+
+            *, *::before, *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: var(--font);
+                background: var(--bg);
+                color: var(--ink);
+                font-size: 13px;
+                min-height: 100vh;
+                overflow-x: hidden;
+                -webkit-font-smoothing: antialiased;
+                line-height: 1.5;
+            }
+
+            a {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            /* ── HEADER ── */
+            .site-header {
+                position: sticky;
+                top: 0;
+                z-index: 500;
+                background: var(--navy);
+                padding: 0 32px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 62px;
+                box-shadow: 0 2px 16px rgba(15,28,63,.25);
+                gap: 16px;
+            }
+
+            .brand {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-shrink: 0;
+            }
+
+            .brand-icon {
+                width: 36px;
+                height: 36px;
+                background: linear-gradient(135deg,#3b82f6 0%,var(--indigo) 100%);
+                border-radius: 9px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: var(--serif);
+                font-size: 17px;
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(79,70,229,.4);
+                flex-shrink: 0;
+            }
+
+            .brand-name {
+                font-size: .88rem;
+                font-weight: 600;
+                color: #fff;
+                letter-spacing: .01em;
+                line-height: 1.2;
+            }
+
+            .brand-sub {
+                font-size: .63rem;
+                color: rgba(255,255,255,.45);
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                display: block;
+                margin-top: 1px;
+            }
+
+            .nav {
+                display: flex;
+                gap: 2px;
+                flex-shrink: 0;
+            }
+
+                .nav a {
+                    padding: 6px 14px;
+                    border-radius: 7px;
+                    font-size: .75rem;
+                    font-weight: 600;
+                    color: rgba(255,255,255,.65);
+                    transition: var(--tr);
+                    white-space: nowrap;
+                }
+
+                    .nav a:hover {
+                        color: #fff;
+                        background: rgba(255,255,255,.09);
+                    }
+
+                    .nav a.active {
+                        color: #fff;
+                        background: rgba(255,255,255,.13);
+                    }
+
+            /* ── PAGE WRAP ── */
+            .page-wrap {
+                max-width: 1440px;
+                margin: 0 auto;
+                padding: 28px 32px 80px;
+            }
+
+            /* ── BREADCRUMB ── */
+            .breadcrumb {
+                font-size: 11px;
+                color: var(--ink4);
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                flex-wrap: wrap;
+            }
+
+                .breadcrumb a {
+                    color: var(--cobalt);
+                }
+
+            /* ── PAGE HEADER ── */
+            .page-header-top {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-bottom: 22px;
+            }
+
+            .page-title {
+                font-family: var(--serif);
+                font-size: 1.85rem;
+                color: var(--navy);
+                font-style: italic;
+                line-height: 1.2;
+            }
+
+            .page-subtitle {
+                font-size: 12.5px;
+                color: var(--ink3);
+                margin-top: 5px;
+                line-height: 1.6;
+            }
+
+            /* ── STAT CARDS ── */
+            .stat-row {
+                display: grid;
+                grid-template-columns: repeat(4,1fr);
+                gap: 14px;
+                margin-bottom: 22px;
+            }
+
+            .stat-card {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: var(--radius-lg);
+                padding: 16px 20px;
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                box-shadow: var(--shadow-sm);
+                transition: border-color var(--tr), box-shadow var(--tr);
+            }
+
+                .stat-card:hover {
+                    border-color: var(--cobalt-md);
+                    box-shadow: var(--shadow);
+                }
+
+            .stat-icon {
+                width: 42px;
+                height: 42px;
+                border-radius: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 19px;
+                flex-shrink: 0;
+            }
+
+            .si-blue {
+                background: var(--cobalt-lt);
+            }
+
+            .si-green {
+                background: var(--emerald-lt);
+            }
+
+            .si-gold {
+                background: var(--gold-lt);
+            }
+
+            .si-rose {
+                background: var(--rose-lt);
+            }
+
+            .stat-val {
+                font-size: 21px;
+                font-weight: 700;
+                color: var(--navy);
+                font-family: var(--mono);
+                line-height: 1;
+            }
+
+            .stat-label {
+                font-size: 11px;
+                color: var(--ink3);
+                margin-top: 3px;
+            }
+
+            /* ── STEP CARDS ── */
+            .step-card {
+                background: var(--white);
+                border: 1.5px solid var(--border);
+                border-radius: var(--radius-lg);
+                padding: 20px 24px;
+                box-shadow: var(--shadow-sm);
+                margin-bottom: 16px;
+                transition: border-color var(--tr), box-shadow var(--tr);
+            }
+
+                .step-card.active-step {
+                    border-color: var(--cobalt-md);
+                    box-shadow: var(--shadow);
+                }
+
+                .step-card.step-locked {
+                    opacity: .55;
+                    pointer-events: none;
+                }
+
+            .step-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 18px;
+            }
+
+            .step-num {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: var(--cobalt);
+                color: #fff;
+                font-size: .75rem;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                font-family: var(--mono);
+            }
+
+            .step-card.step-done .step-num {
+                background: var(--emerald);
+            }
+
+            .step-title {
+                font-size: .88rem;
+                font-weight: 700;
+                color: var(--navy);
+            }
+
+            .step-desc {
+                font-size: .74rem;
+                color: var(--ink3);
+                margin-top: 1px;
+            }
+
+            /* ── CYCLE CONFIG ── */
+            .cycle-body {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .cycle-prev-banner {
+                background: var(--gold-lt);
+                border: 1px solid #fde68a;
+                border-left: 3px solid var(--gold);
+                border-radius: 8px;
+                padding: 10px 14px;
+                font-size: .78rem;
+                color: var(--amber);
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+                .cycle-prev-banner strong {
+                    color: var(--gold);
+                }
+
+                .cycle-prev-banner .badge-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    background: rgba(217,119,6,.15);
+                    color: var(--gold);
+                    border: 1px solid rgba(217,119,6,.3);
+                    border-radius: 20px;
+                    padding: 1px 9px;
+                    font-size: .65rem;
+                    font-weight: 700;
+                    white-space: nowrap;
+                    font-family: var(--mono);
+                }
+
+                    .cycle-prev-banner .badge-pill::before {
+                        content: '✓ ';
+                        font-size: .6rem;
+                    }
+
+            .cycle-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+                align-items: flex-start;
+            }
+
+            .cycle-field {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+                .cycle-field label {
+                    font-size: .70rem;
+                    font-weight: 700;
+                    letter-spacing: .06em;
+                    text-transform: uppercase;
+                    color: var(--ink3);
+                }
+
+                    .cycle-field label .req {
+                        color: var(--rose);
+                        margin-left: 2px;
+                    }
+
+            .cycle-year-input {
+                height: 40px;
+                width: 110px;
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px;
+                font-family: var(--mono);
+                font-size: .88rem;
+                color: var(--ink);
+                background: var(--bg);
+                outline: none;
+                transition: border-color var(--tr);
+            }
+
+                .cycle-year-input:focus {
+                    border-color: var(--cobalt);
+                    background: var(--white);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1);
+                }
+
+            .cycle-presets {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .cycle-preset-btn {
+                height: 38px;
+                padding: 0 16px;
+                border-radius: 20px;
+                border: 1.5px solid var(--border);
+                background: var(--bg);
+                font-family: var(--font);
+                font-size: .76rem;
+                font-weight: 600;
+                color: var(--ink3);
+                cursor: pointer;
+                transition: var(--tr);
+                white-space: nowrap;
+            }
+
+                .cycle-preset-btn:hover {
+                    border-color: var(--cobalt);
+                    color: var(--cobalt);
+                    background: var(--cobalt-lt);
+                }
+
+                .cycle-preset-btn.active {
+                    border-color: var(--cobalt);
+                    background: var(--cobalt);
+                    color: #fff;
+                    box-shadow: 0 2px 8px rgba(30,78,216,.28);
+                }
+
+            .cycle-date-range {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                background: var(--cobalt-lt);
+                border: 1.5px solid var(--cobalt-md);
+                border-radius: 10px;
+                padding: 10px 16px;
+                flex-wrap: wrap;
+            }
+
+                .cycle-date-range .icon {
+                    font-size: 16px;
+                    flex-shrink: 0;
+                }
+
+                .cycle-date-range .cycle-type-badge {
+                    font-size: .68rem;
+                    font-weight: 700;
+                    letter-spacing: .08em;
+                    text-transform: uppercase;
+                    background: var(--cobalt);
+                    color: #fff;
+                    border-radius: 20px;
+                    padding: 2px 10px;
+                    font-family: var(--mono);
+                }
+
+                .cycle-date-range .range-text {
+                    font-size: .82rem;
+                    font-weight: 600;
+                    color: var(--cobalt);
+                    font-family: var(--mono);
+                }
+
+                .cycle-date-range .range-label {
+                    font-size: .72rem;
+                    color: var(--ink3);
+                    margin-left: 4px;
+                }
+
+            #cycleDateRangeWrap {
+                display: none;
+                margin-top: 8px;
+            }
+
+            .custom-dates-row {
+                display: none;
+                gap: 12px;
+                flex-wrap: wrap;
+                align-items: flex-end;
+                margin-top: 8px;
+            }
+
+                .custom-dates-row.visible {
+                    display: flex;
+                }
+
+            .cycle-date-input {
+                height: 40px;
+                width: 170px;
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px;
+                font-family: var(--mono);
+                font-size: .82rem;
+                color: var(--ink);
+                background: var(--bg);
+                outline: none;
+                transition: border-color var(--tr);
+            }
+
+                .cycle-date-input:focus {
+                    border-color: var(--cobalt);
+                    background: var(--white);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1);
+                }
+
+            /* ── TOOLBAR ── */
+            .toolbar {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                align-items: center;
+                margin-bottom: 14px;
+            }
+
+            .search-box {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: var(--bg);
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px;
+                flex: 1;
+                min-width: 200px;
+                max-width: 340px;
+                height: 38px;
+                transition: border-color var(--tr), background var(--tr);
+            }
+
+                .search-box:focus-within {
+                    border-color: var(--cobalt);
+                    background: var(--white);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1);
+                }
+
+                .search-box svg {
+                    color: var(--ink4);
+                    flex-shrink: 0;
+                }
+
+                .search-box input {
+                    border: none;
+                    background: transparent;
+                    font-family: var(--font);
+                    font-size: .82rem;
+                    color: var(--ink);
+                    outline: none;
+                    width: 100%;
+                }
+
+                    .search-box input::placeholder {
+                        color: var(--ink4);
+                    }
+
+            /* ── SD DROPDOWNS ── */
+            .sd-wrap {
+                position: relative;
+                min-width: 140px;
+            }
+
+            .sd-trigger {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 6px;
+                background: var(--bg);
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px;
+                height: 38px;
+                font-family: var(--font);
+                font-size: .78rem;
+                color: var(--ink2);
+                cursor: pointer;
+                user-select: none;
+                white-space: nowrap;
+                transition: var(--tr);
+            }
+
+                .sd-trigger:hover, .sd-wrap.open .sd-trigger {
+                    border-color: var(--cobalt);
+                    background: var(--white);
+                }
+
+                .sd-trigger svg {
+                    flex-shrink: 0;
+                    transition: transform .2s;
+                    color: var(--ink4);
+                }
+
+            .sd-wrap.open .sd-trigger svg {
+                transform: rotate(180deg);
+            }
+
+            .sd-panel {
+                display: none;
+                position: absolute;
+                top: calc(100% + 4px);
+                left: 0;
+                min-width: 220px;
+                background: var(--white);
+                border: 1.5px solid var(--cobalt-md);
+                border-radius: var(--radius);
+                box-shadow: var(--shadow-lg);
+                z-index: 600;
+                overflow: hidden;
+            }
+
+            .sd-wrap.open .sd-panel {
+                display: block;
+            }
+
+            .sd-search {
+                padding: 9px 10px;
+                border-bottom: 1px solid var(--border2);
+            }
+
+                .sd-search input {
+                    width: 100%;
+                    border: 1.5px solid var(--border);
+                    border-radius: 7px;
+                    padding: 6px 9px;
+                    font-family: var(--font);
+                    font-size: .76rem;
+                    color: var(--ink);
+                    outline: none;
+                }
+
+                    .sd-search input:focus {
+                        border-color: var(--cobalt);
+                    }
+
+            .sd-list {
+                max-height: 210px;
+                overflow-y: auto;
+            }
+
+            .sd-option {
+                padding: 8px 13px;
+                font-size: .78rem;
+                color: var(--ink2);
+                cursor: pointer;
+                transition: background var(--tr);
+                border-bottom: 1px solid var(--border2);
+            }
+
+                .sd-option:last-child {
+                    border-bottom: none;
+                }
+
+                .sd-option:hover {
+                    background: var(--cobalt-lt);
+                    color: var(--cobalt);
+                }
+
+                .sd-option.selected {
+                    background: var(--cobalt-lt);
+                    color: var(--cobalt);
+                    font-weight: 600;
+                }
+
+                .sd-option.hidden {
+                    display: none;
+                }
+
+            /* ── FILTER PROMPT (Change 5) ── */
+            #tableSection {
+                display: none;
+            }
+
+                #tableSection.visible {
+                    display: block;
+                }
+
+            .filter-prompt {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 56px 24px;
+                color: var(--ink4);
+                text-align: center;
+                gap: 10px;
+            }
+
+            .filter-prompt-icon {
+                font-size: 36px;
+                margin-bottom: 4px;
+            }
+
+            .filter-prompt h3 {
+                font-size: .92rem;
+                font-weight: 600;
+                color: var(--ink3);
+            }
+
+            .filter-prompt p {
+                font-size: .78rem;
+                max-width: 360px;
+                line-height: 1.6;
+            }
+
+            /* ── SELECTED PANEL ── */
+            .selected-panel {
+                display: none;
+                background: var(--navy);
+                border: 1.5px solid var(--navy2);
+                border-left: 3px solid var(--cobalt);
+                border-radius: var(--radius-lg);
+                padding: 14px 18px;
+                margin-bottom: 14px;
+                animation: fadeUp .2s ease;
+            }
+
+                .selected-panel.visible {
+                    display: block;
+                }
+
+            @@keyframes fadeUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(8px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: none;
+                }
+            }
+
+            .selected-panel-header {
+                font-size: .67rem;
+                font-weight: 700;
+                color: rgba(255,255,255,.55);
+                text-transform: uppercase;
+                letter-spacing: .1em;
+                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .selected-chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 7px;
+            }
+
+            .sel-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                background: rgba(255,255,255,.07);
+                border: 1px solid rgba(255,255,255,.15);
+                border-radius: 20px;
+                padding: 4px 9px 4px 11px;
+                font-size: .71rem;
+                color: rgba(255,255,255,.85);
+                white-space: nowrap;
+            }
+
+                .sel-chip.re-audit {
+                    border-color: rgba(201,168,76,.4);
+                    background: rgba(217,119,6,.12);
+                }
+
+            .chip-name {
+                font-weight: 600;
+                color: #fff;
+            }
+
+            .chip-code {
+                font-size: .61rem;
+                color: rgba(255,255,255,.45);
+            }
+
+            .chip-badge {
+                font-size: .57rem;
+                font-weight: 700;
+                background: var(--gold);
+                color: var(--navy);
+                border-radius: 10px;
+                padding: 2px 6px;
+                text-transform: uppercase;
+                letter-spacing: .5px;
+            }
+
+            .chip-remove {
+                cursor: pointer;
+                color: rgba(255,255,255,.35);
+                font-size: 14px;
+                line-height: 1;
+                margin-left: 2px;
+                transition: color .15s;
+                flex-shrink: 0;
+            }
+
+                .chip-remove:hover {
+                    color: #fff;
+                }
+
+            /* ── SELECTION BAR ── */
+            .selection-bar {
+                display: none;
+                background: var(--navy);
+                border: 1.5px solid var(--navy2);
+                border-radius: var(--radius);
+                padding: 11px 16px;
+                margin-bottom: 12px;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+                .selection-bar.visible {
+                    display: flex;
+                }
+
+            .sel-count {
+                font-size: .79rem;
+                color: rgba(255,255,255,.75);
+                font-weight: 500;
+            }
+
+                .sel-count strong {
+                    color: rgba(255,255,255,.95);
+                }
+
+            /* ── BUTTONS ── */
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                border: none;
+                border-radius: 8px;
+                font-family: var(--font);
+                font-weight: 600;
+                cursor: pointer;
+                white-space: nowrap;
+                transition: var(--tr);
+                text-decoration: none;
+                letter-spacing: .01em;
+            }
+
+                .btn:active {
+                    transform: scale(.97);
+                }
+
+            .btn-md {
+                height: 38px;
+                padding: 0 16px;
+                font-size: .79rem;
+            }
+
+            .btn-sm {
+                height: 32px;
+                padding: 0 12px;
+                font-size: .74rem;
+            }
+
+            .btn-xs {
+                height: 27px;
+                padding: 0 9px;
+                font-size: .69rem;
+            }
+
+            .btn-primary {
+                background: var(--cobalt);
+                color: #fff;
+                box-shadow: 0 2px 8px rgba(30,78,216,.28);
+            }
+
+                .btn-primary:hover {
+                    background: #1740bf;
+                    box-shadow: 0 4px 14px rgba(30,78,216,.4);
+                }
+
+                .btn-primary:disabled {
+                    opacity: .6;
+                    cursor: not-allowed;
+                    transform: none;
+                    box-shadow: none;
+                }
+
+            .btn-ghost {
+                background: var(--white);
+                color: var(--ink2);
+                border: 1.5px solid var(--border);
+            }
+
+                .btn-ghost:hover {
+                    border-color: var(--cobalt);
+                    color: var(--cobalt);
+                    background: var(--cobalt-lt);
+                }
+
+            .btn-outline {
+                background: transparent;
+                color: var(--ink2);
+                border: 1.5px solid var(--border);
+            }
+
+                .btn-outline:hover {
+                    border-color: var(--cobalt);
+                    color: var(--cobalt);
+                    background: var(--cobalt-lt);
+                }
+
+            .btn-success {
+                background: var(--emerald);
+                color: #fff;
+            }
+
+                .btn-success:hover {
+                    background: #047857;
+                }
+
+            /* ── SCROLL HINT ── */
+            .scroll-hint {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                font-size: .67rem;
+                color: var(--ink4);
+                padding: 4px 11px;
+                background: var(--bg2);
+                border: 1px solid var(--border2);
+                border-radius: 20px;
+                margin-bottom: 9px;
+                width: fit-content;
+            }
+
+                .scroll-hint svg {
+                    color: var(--cobalt);
+                }
+
+            /* ── TABLE ── */
+            .table-outer {
+                width: 100%;
+                overflow-x: auto;
+                overflow-y: auto;
+                max-height: calc(100vh - 420px);
+                border-radius: var(--radius);
+                border: 1.5px solid var(--border);
+                scrollbar-width: thin;
+                scrollbar-color: var(--border) transparent;
+            }
+
+                .table-outer::-webkit-scrollbar {
+                    height: 6px;
+                    width: 6px;
+                }
+
+                .table-outer::-webkit-scrollbar-thumb {
+                    background: var(--border);
+                    border-radius: 3px;
+                }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: .77rem;
+                min-width: 1180px;
+                table-layout: fixed;
+            }
+
+            thead {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+            }
+
+                thead tr {
+                    background: var(--navy);
+                }
+
+                thead th {
+                    padding: 10px 13px;
+                    font-size: .59rem;
+                    font-weight: 700;
+                    color: rgba(255,255,255,.65);
+                    text-transform: uppercase;
+                    letter-spacing: .09em;
+                    text-align: left;
+                    white-space: nowrap;
+                    border-right: 1px solid rgba(255,255,255,.08);
+                    border-bottom: none;
+                }
+
+                    thead th:last-child {
+                        border-right: none;
+                    }
+
+            table colgroup col:nth-child(1) {
+                width: 40px;
+            }
+
+            table colgroup col:nth-child(2) {
+                width: 80px;
+            }
+
+            table colgroup col:nth-child(3) {
+                width: 160px;
+            }
+
+            table colgroup col:nth-child(4) {
+                width: 120px;
+            }
+
+            table colgroup col:nth-child(5) {
+                width: 135px;
+            }
+
+            table colgroup col:nth-child(6) {
+                width: 115px;
+            }
+
+            table colgroup col:nth-child(7) {
+                width: 95px;
+            }
+
+            table colgroup col:nth-child(8) {
+                width: 165px;
+            }
+
+            table colgroup col:nth-child(9) {
+                width: 165px;
+            }
+
+            table colgroup col:nth-child(10) {
+                width: 105px;
+            }
+
+            table colgroup col:nth-child(11) {
+                width: 80px;
+            }
+
+            tbody tr {
+                border-bottom: 1px solid var(--border2);
+                transition: background var(--tr);
+            }
+
+                tbody tr:last-child {
+                    border-bottom: none;
+                }
+
+                tbody tr:hover {
+                    background: var(--cobalt-lt);
+                }
+
+            tbody td {
+                padding: 10px 13px;
+                color: var(--ink2);
+                border-right: 1px solid var(--border2);
+                vertical-align: middle;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+                tbody td:last-child {
+                    border-right: none;
+                }
+
+            tbody tr.row-selected {
+                background: rgba(30,78,216,.04);
+            }
+
+                tbody tr.row-selected td:first-child {
+                    border-left: 3px solid var(--cobalt);
+                }
+
+            .checkbox-cell {
+                width: 40px;
+                text-align: center;
+            }
+
+            input[type="checkbox"] {
+                width: 15px;
+                height: 15px;
+                cursor: pointer;
+                accent-color: var(--cobalt);
+            }
+
+            .emp-name {
+                font-weight: 600;
+                color: var(--navy);
+                font-size: .79rem;
+            }
+
+            .emp-code {
+                font-size: .69rem;
+                color: var(--ink3);
+                font-family: var(--mono);
+            }
+
+            /* ── PILLS ── */
+            .pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 3px 10px;
+                border-radius: 20px;
+                font-size: .61rem;
+                font-weight: 700;
+                letter-spacing: .04em;
+                font-family: var(--mono);
+                white-space: nowrap;
+            }
+
+                .pill::before {
+                    content: '';
+                    width: 5px;
+                    height: 5px;
+                    border-radius: 50%;
+                    background: currentColor;
+                }
+
+            .pill-pending {
+                background: var(--gold-lt);
+                color: var(--gold);
+                border: 1px solid #fde68a;
+            }
+
+            .pill-inprogress {
+                background: var(--cobalt-lt);
+                color: var(--cobalt);
+                border: 1px solid var(--cobalt-md);
+            }
+
+            .pill-completed {
+                background: var(--emerald-lt);
+                color: var(--emerald);
+                border: 1px solid #a7f3d0;
+            }
+
+            .pill-reaudit {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                background: var(--gold-lt);
+                color: var(--gold);
+                border: 1px solid #fde68a;
+                padding: 2px 7px;
+                border-radius: 20px;
+                font-size: .59rem;
+                font-weight: 700;
+                margin-left: 4px;
+                white-space: nowrap;
+                font-family: var(--mono);
+            }
+
+            /* ── INLINE SELECT TRIGGER (RM / HOD) ── */
+            .isd-trigger {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 4px;
+                border: 1.5px solid var(--border);
+                border-radius: 7px;
+                padding: 5px 9px;
+                font-size: .74rem;
+                font-family: var(--font);
+                color: var(--ink2);
+                cursor: pointer;
+                background: var(--white);
+                min-width: 125px;
+                user-select: none;
+                transition: border-color var(--tr), background var(--tr), box-shadow var(--tr);
+            }
+
+                .isd-trigger:hover {
+                    border-color: var(--cobalt);
+                    background: var(--cobalt-lt);
+                }
+
+                .isd-trigger.active {
+                    border-color: var(--cobalt);
+                    background: var(--cobalt-lt);
+                    box-shadow: 0 0 0 3px rgba(30,78,216,.1);
+                }
+
+                .isd-trigger .isd-label {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    flex: 1;
+                }
+
+                .isd-trigger.assigned .isd-label {
+                    color: var(--ink);
+                    font-weight: 500;
+                }
+
+                .isd-trigger:not(.assigned) .isd-label {
+                    color: var(--ink4);
+                }
+
+                .isd-trigger svg {
+                    flex-shrink: 0;
+                    color: var(--ink4);
+                }
+
+            /* ── SHARED FLOATING PANEL ── */
+            .shared-isd-panel {
+                display: none;
+                position: fixed;
+                min-width: 240px;
+                max-width: 300px;
+                background: var(--white);
+                border: 1.5px solid var(--cobalt-md);
+                border-radius: var(--radius);
+                box-shadow: var(--shadow-lg);
+                z-index: 9000;
+                overflow: hidden;
+            }
+
+                .shared-isd-panel.open {
+                    display: block;
+                }
+
+            .sisd-search {
+                padding: 9px 10px;
+                border-bottom: 1px solid var(--border2);
+            }
+
+                .sisd-search input {
+                    width: 100%;
+                    border: 1.5px solid var(--border);
+                    border-radius: 7px;
+                    padding: 6px 9px;
+                    font-family: var(--font);
+                    font-size: .77rem;
+                    color: var(--ink);
+                    outline: none;
+                }
+
+                    .sisd-search input:focus {
+                        border-color: var(--cobalt);
+                        box-shadow: 0 0 0 3px rgba(30,78,216,.1);
+                    }
+
+            .sisd-list {
+                max-height: 210px;
+                overflow-y: auto;
+            }
+
+            .sisd-option {
+                padding: 8px 13px;
+                font-size: .77rem;
+                cursor: pointer;
+                transition: background var(--tr);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                color: var(--ink2);
+                border-bottom: 1px solid var(--border2);
+            }
+
+                .sisd-option:last-child {
+                    border-bottom: none;
+                }
+
+                .sisd-option:hover {
+                    background: var(--cobalt-lt);
+                    color: var(--cobalt);
+                }
+
+                .sisd-option.kd-focused {
+                    background: var(--cobalt-lt);
+                    color: var(--cobalt);
+                    outline: 2px solid var(--cobalt);
+                    outline-offset: -2px;
+                }
+
+                .sisd-option.selected {
+                    background: var(--cobalt-lt);
+                    color: var(--cobalt);
+                    font-weight: 600;
+                }
+
+                .sisd-option.hidden {
+                    display: none;
+                }
+
+            .sisd-empty {
+                padding: 12px 13px;
+                font-size: .77rem;
+                color: var(--ink4);
+                text-align: center;
+                display: none;
+            }
+
+            /* ── TABLE FOOTER ── */
+            .table-footer {
+                padding: 9px 2px 2px;
+                font-size: .71rem;
+                color: var(--ink4);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            /* ── EMPTY STATE ── */
+            .empty-state {
+                text-align: center;
+                padding: 48px 24px;
+                color: var(--ink4);
+            }
+
+                .empty-state svg {
+                    display: block;
+                    margin: 0 auto 14px;
+                    opacity: .25;
+                }
+
+                .empty-state h3 {
+                    font-size: .88rem;
+                    font-weight: 600;
+                    color: var(--ink3);
+                    margin-bottom: 5px;
+                }
+
+                .empty-state p {
+                    font-size: .77rem;
+                }
+
+            /* ── CYCLE DONE ROWS ── */
+            tr.cycle-done {
+                background: #f8f9fc !important;
+                opacity: 0.6;
+            }
+
+                tr.cycle-done td {
+                    color: var(--ink4);
+                }
+
+            .cycle-badge {
+                display: none;
+                padding: 2px 8px;
+                border-radius: 20px;
+                font-size: .60rem;
+                font-weight: 700;
+                font-family: var(--mono);
+                background: var(--gold-lt);
+                color: var(--gold);
+                border: 1px solid #fde68a;
+                margin-left: 6px;
+            }
+
+            /* ── TOAST ── */
+            .toast-wrap {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 9998;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .toast {
+                background: var(--navy);
+                border-radius: 9px;
+                padding: 11px 15px;
+                font-size: .80rem;
+                font-weight: 500;
+                color: rgba(255,255,255,.9);
+                min-width: 240px;
+                box-shadow: var(--shadow-md);
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                opacity: 0;
+                transform: translateX(18px);
+                transition: opacity .25s, transform .25s;
+                pointer-events: none;
+            }
+
+                .toast.show {
+                    opacity: 1;
+                    transform: none;
+                    pointer-events: auto;
+                }
+
+                .toast.ok {
+                    border-left: 3px solid #34d399;
+                }
+
+                .toast.err {
+                    border-left: 3px solid var(--rose);
+                }
+
+                .toast.warn {
+                    border-left: 3px solid var(--gold);
+                }
+
+                .toast.match {
+                    border-left: 3px solid var(--indigo);
+                }
+
+            @@keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            @@media (max-width:1200px) {
+                .stat-row {
+                    grid-template-columns: repeat(2,1fr);
+                }
+            }
+
+            @@media (max-width:900px) {
+                .site-header, .page-wrap {
+                    padding-left: 16px;
+                    padding-right: 16px;
+                }
+
+                .stat-row {
+                    grid-template-columns: repeat(2,1fr);
+                    gap: 10px;
+                }
+
+                .page-title {
+                    font-size: 1.5rem;
+                }
+            }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="brand">
+            <div class="brand-icon">V</div>
+            <div>
+                <div class="brand-name">Vandana Global Limited</div>
+                <span class="brand-sub">PMS — Blue Collar</span>
+            </div>
+        </div>
+        <nav class="nav">
+            <a href="/pmsbluecollar/mc-jmd-dashboard">MC / JMD Review</a>
+            <a href="/pmsbluecollar/hr-dashboard" class="active">HR Dashboard</a>
+            <a href="/pmsbluecollar/index">Creteria Master</a>
+            <a href="/pmsbluecollar/tracking">PMS Tracking</a>
+        </nav>
+    </header>
+
+    <main class="page-wrap">
+
+        <div class="breadcrumb">
+            <a href="/pmsbluecollar/hr-dashboard">Home</a><span>/</span>
+            <span>PMS Blue Collar</span><span>/</span>
+            <span>HR Dashboard</span>
+        </div>
+
+        <div class="page-header-top">
+            <div>
+                <div class="page-title">PMS Blue Collar — HR Dashboard</div>
+                <div class="page-subtitle">Configure the appraisal cycle, select employees, assign RM / HOD, then initiate the PMS workflow.</div>
+            </div>
+            <a href="/pmsbluecollar/tracking" class="btn btn-outline btn-md">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                PMS Tracking
+            </a>
+        </div>
+
+        <!-- STAT CARDS -->
+        <div class="stat-row">
+            <div class="stat-card">
+                <div class="stat-icon si-blue">👥</div>
+                <div><div class="stat-val">@total</div><div class="stat-label">Total Employees</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon si-green">✅</div>
+                <div><div class="stat-val">@completed</div><div class="stat-label">Completed</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon si-gold">⏳</div>
+                <div><div class="stat-val">@inProg</div><div class="stat-label">In Progress</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon si-rose">🔔</div>
+                <div><div class="stat-val">@notStarted</div><div class="stat-label">Not Started</div></div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         STEP 1 — APPRAISAL CYCLE CONFIGURATION
+         ══════════════════════════════════════ -->
+        <div class="step-card active-step" id="stepCycleCard">
+            <div class="step-header">
+                <div class="step-num" id="stepCycleNum">1</div>
+                <div>
+                    <div class="step-title">Appraisal Cycle Configuration</div>
+                    <div class="step-desc">Select the appraisal period and cycle type</div>
+                </div>
+            </div>
+
+            <div class="cycle-body">
+                <!-- Previous cycle banner -->
+                <div class="cycle-prev-banner" id="prevCycleBanner" style="display:none">
+                    <span style="font-size:16px;flex-shrink:0">📌</span>
+                    <span id="prevCycleBannerText"></span>
+                </div>
+
+                <div class="cycle-row">
+                    <!-- Year -->
+                    <div class="cycle-field">
+                        <label>Year <span class="req">★</span></label>
+                        <input type="number" id="cycleYear" class="cycle-year-input"
+                               value="@currentYear" min="2020" max="2099"
+                               oninput="onYearChange()" />
+                    </div>
+
+                    <!-- Preset buttons -->
+                    <div class="cycle-field">
+                        <label>Cycle Preset</label>
+                        <div class="cycle-presets">
+                            <button type="button" class="cycle-preset-btn" data-cycle="Annual" onclick="selectCycle('Annual')">Annual</button>
+                            <button type="button" class="cycle-preset-btn" data-cycle="Mid-Year" onclick="selectCycle('Mid-Year')">Mid-Year</button>
+                            <button type="button" class="cycle-preset-btn" data-cycle="Q1" onclick="selectCycle('Q1')">Q1</button>
+                            <button type="button" class="cycle-preset-btn" data-cycle="Q2" onclick="selectCycle('Q2')">Q2</button>
+                            <button type="button" class="cycle-preset-btn" data-cycle="Q3" onclick="selectCycle('Q3')">Q3</button>
+                            <button type="button" class="cycle-preset-btn" data-cycle="Q4" onclick="selectCycle('Q4')">Q4</button>
+                            <button type="button" class="cycle-preset-btn" data-cycle="Custom" onclick="selectCycle('Custom')">Custom</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom date pickers -->
+                <div class="custom-dates-row" id="customDatesRow">
+                    <div class="cycle-field">
+                        <label>From Date <span class="req">★</span></label>
+                        <input type="date" id="customFromDate" class="cycle-date-input" oninput="onCustomDateChange()" />
+                    </div>
+                    <div class="cycle-field">
+                        <label>To Date <span class="req">★</span></label>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <input type="date" id="customToDate" class="cycle-date-input" oninput="onCustomDateChange()" />
+                            <button type="button" id="fixDateBtn" class="btn btn-primary btn-sm"
+                                    onclick="fixAndMatchCycle()" title="Fix dates and apply cycle restrictions"
+                                    style="white-space:nowrap;flex-shrink:0">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path d="M5 13l4 4L19 7" />
+                                </svg>
+                                Fix &amp; Match
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date range display -->
+                <div id="cycleDateRangeWrap">
+                    <div class="cycle-date-range">
+                        <span class="icon">🗓</span>
+                        <span class="cycle-type-badge" id="cycleTypeBadge"></span>
+                        <span class="range-text" id="cycleRangeText"></span>
+                        <span class="range-label" id="cycleRangeLabel"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         STEP 2 — EMPLOYEE SELECTION
+         ══════════════════════════════════════ -->
+        <div class="step-card" id="stepEmpCard">
+            <div class="step-header">
+                <div class="step-num" id="stepEmpNum">2</div>
+                <div>
+                    <div class="step-title">Employee Selection</div>
+                    <div class="step-desc">Select employees, assign RM / HOD, then save &amp; initiate</div>
+                </div>
+            </div>
+
+            <!-- TOOLBAR -->
+            <div class="toolbar">
+                <div class="search-box">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input type="text" id="hrSearch" placeholder="Search by Emp Code or Name…"
+                           oninput="onSearchInput()" autocomplete="off" />
+                </div>
+
+                <!-- Status filter -->
+                <div class="sd-wrap" id="sd-status">
+                    <div class="sd-trigger" onclick="toggleSD('sd-status')">
+                        <span id="sd-status-label">All Statuses</span>
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
+                    </div>
+                    <div class="sd-panel">
+                        <div class="sd-list" id="sd-status-list">
+                            <div class="sd-option selected" data-val="" onclick="pickStatus('','All Statuses')">All Statuses</div>
+                            <div class="sd-option" data-val="Not Started" onclick="pickStatus('Not Started','Not Started')">Not Started</div>
+                            <div class="sd-option" data-val="Pending at RM" onclick="pickStatus('Pending at RM','Pending at RM')">Pending at RM</div>
+                            <div class="sd-option" data-val="Pending at HOD" onclick="pickStatus('Pending at HOD','Pending at HOD')">Pending at HOD</div>
+                            <div class="sd-option" data-val="In Progress" onclick="pickStatus('In Progress','In Progress')">In Progress (All)</div>
+                            <div class="sd-option" data-val="Completed" onclick="pickStatus('Completed','Completed')">Completed</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Unit filter -->
+                <div class="sd-wrap" id="sd-unit">
+                    <div class="sd-trigger" onclick="toggleSD('sd-unit')">
+                        <span id="sd-unit-label">All Units</span>
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
+                    </div>
+                    <div class="sd-panel">
+                        <div class="sd-search"><input type="text" placeholder="Search unit…" oninput="searchSD('sd-unit',this.value)" /></div>
+                        <div class="sd-list" id="sd-unit-list">
+                            <div class="sd-option selected" data-val="" onclick="pickSD('sd-unit','','All Units')">All Units</div>
+                            @foreach (var u in units)
+                            {
+                                <div class="sd-option" data-val="@u.Value" onclick="pickSD('sd-unit','@u.Value','@u.Text')">@u.Text</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Department filter -->
+                <div class="sd-wrap" id="sd-dept">
+                    <div class="sd-trigger" onclick="toggleSD('sd-dept')">
+                        <span id="sd-dept-label">All Departments</span>
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
+                    </div>
+                    <div class="sd-panel">
+                        <div class="sd-search"><input type="text" placeholder="Search dept…" oninput="searchSD('sd-dept',this.value)" /></div>
+                        <div class="sd-list" id="sd-dept-list">
+                            <div class="sd-option selected" data-val="" onclick="pickSD('sd-dept','','All Departments')">All Departments</div>
+                            @foreach (var d in depts)
+                            {
+                                <div class="sd-option" data-val="@d.Value" onclick="pickSD('sd-dept','@d.Value','@d.Text')">@d.Text</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" id="clearFiltersBtn" class="btn btn-outline btn-sm"
+                        style="display:none" onclick="clearAllFilters()">
+                    ✕ Clear
+                </button>
+            </div>
+
+            <!-- Selected chips panel -->
+            <div class="selected-panel" id="selectedPanel">
+                <div class="selected-panel-header">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Selected employees
+                    <span id="selectedCount"
+                          style="background:rgba(201,168,76,.25);color:var(--gold);border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700"></span>
+                </div>
+                <div class="selected-chips" id="selectedChips"></div>
+            </div>
+
+            <!-- Selection action bar -->
+            <div class="selection-bar" id="selBar">
+                <div class="sel-count">
+                    ✓ <strong id="selNum">0</strong> employees selected
+                    <span id="reAuditCountLabel" style="display:none;margin-left:10px;font-size:11px;color:var(--gold);">
+                        (<span id="reAuditCount">0</span> re-PMS)
+                    </span>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <button type="button" class="btn btn-outline btn-sm"
+                            style="color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.25)"
+                            onclick="clearAll()">
+                        Clear selection
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="saveBtn" onclick="savePms()">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                            <polyline points="17 21 17 13 7 13 7 21" />
+                            <polyline points="7 3 7 8 15 8" />
+                        </svg>
+                        Save &amp; Initiate PMS
+                    </button>
+                </div>
+            </div>
+
+            <!-- Change 5: filter prompt shown when no filter is active -->
+            <div id="filterPrompt" class="filter-prompt">
+                <div class="filter-prompt-icon">🔍</div>
+                <h3>Search or filter to load employees</h3>
+                <p>Use the search box above or select a Unit / Department to load the employee list.</p>
+            </div>
+
+            <div class="scroll-hint">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M8 7h8M8 12h8M8 17h4" />
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                </svg>
+                Scroll right to see all columns
+            </div>
+
+            <!-- TABLE (hidden until a filter is active — Change 5) -->
+            <div id="tableSection">
+                <div class="table-outer" id="tableOuter">
+                    <table id="empTable">
+                        <colgroup><col /><col /><col /><col /><col /><col /><col /><col /><col /><col /><col /></colgroup>
+                        <thead>
+                            <tr>
+                                <th class="checkbox-cell">
+                                    <input type="checkbox" id="selectAll" onchange="toggleAll(this)" title="Select all visible" />
+                                </th>
+                                <th>Emp Code</th>
+                                <th>Employee Name</th>
+                                <th>Designation</th>
+                                <th>Department</th>
+                                <th>Sub-Dept</th>
+                                <th>Unit</th>
+                                <th>Reporting Manager</th>
+                                <th>HOD</th>
+                                <th>PMS Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="empTableBody">
+                            @foreach (var emp in Model)
+                            {
+                                string rowStatus = emp.PmsID > 0 ? emp.AuditStatus : "Not Started";
+                                string pillClass = rowStatus == "Completed" ? "pill-completed"
+                                                 : emp.PmsID > 0 ? "pill-inprogress"
+                                                 : "pill-pending";
+                                string rmLabel = string.IsNullOrEmpty(emp.ReportingManager) ? "— Select RM —" : emp.ReportingManager;
+                                string hodLabel = string.IsNullOrEmpty(emp.HOD) ? "— Select HOD —" : emp.HOD;
+                                bool rmAssigned = !string.IsNullOrEmpty(emp.ReportingManager);
+                                bool hodAssigned = !string.IsNullOrEmpty(emp.HOD);
+
+                                <tr data-empid="@emp.EmpID"
+                                    data-empcode="@emp.EmpCode?.ToLower()"
+                                    data-empname="@emp.EmpName?.ToLower()"
+                                    data-empcode-display="@emp.EmpCode"
+                                    data-empname-display="@emp.EmpName"
+                                    data-desig="@emp.Designation"
+                                    data-dept="@emp.DepartmentName"
+                                    data-deptid="@emp.DepartmentID"
+                                    data-subdept="@emp.SubDepartment"
+                                    data-unit="@emp.UnitName"
+                                    data-unitid="@emp.UnitID"
+                                    data-pmsid="@emp.PmsID"
+                                    data-rmid="@emp.RMID"
+                                    data-rmname="@emp.ReportingManager"
+                                    data-hodid="@emp.HODID"
+                                    data-hodname="@emp.HOD"
+                                    data-status="@rowStatus">
+                                    <td class="checkbox-cell">
+                                        <input type="checkbox" class="row-check" onchange="onRowCheck(this)" />
+                                    </td>
+                                    <td><span class="emp-code">@emp.EmpCode</span></td>
+                                    <td title="@emp.EmpName"><span class="emp-name">@emp.EmpName</span></td>
+                                    <td title="@emp.Designation">@emp.Designation</td>
+                                    <td title="@emp.DepartmentName">@emp.DepartmentName</td>
+                                    <td title="@emp.SubDepartment">@emp.SubDepartment</td>
+                                    <td title="@emp.UnitName">@emp.UnitName</td>
+                                    <td>
+                                        <div class="isd-trigger @(rmAssigned ? "assigned" : "")"
+                                             onclick="openSharedPanel('rm',this,@emp.EmpID)"
+                                             id="rm-trigger-@emp.EmpID">
+                                            <span class="isd-label">@rmLabel</span>
+                                            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path d="M6 9l6 6 6-6" />
+                                            </svg>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="isd-trigger @(hodAssigned ? "assigned" : "")"
+                                             onclick="openSharedPanel('hod',this,@emp.EmpID)"
+                                             id="hod-trigger-@emp.EmpID">
+                                            <span class="isd-label">@hodLabel</span>
+                                            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path d="M6 9l6 6 6-6" />
+                                            </svg>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="pill @pillClass">@rowStatus</span>
+                                        @if (rowStatus == "Completed")
+                                        {
+                                            <span class="pill-reaudit" title="Re-PMS">↺ Re-PMS</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (emp.PmsID > 0)
+                                        {
+                                            <a href="/pmsbluecollar/print?id=@emp.PmsID" target="_blank"
+                                               class="btn btn-outline btn-xs">View</a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer">
+                    <span id="tableCount">Showing 0 records</span>
+                    <span>Click RM / HOD cells to assign</span>
+                </div>
+            </div>
+
+        </div><!-- /step-card empCard -->
+
+    </main>
+
+    <!-- SHARED FLOATING PANELS (RM & HOD) -->
+    @foreach (var pt in new[] { "rm", "hod" })
+    {
+        string ph = pt == "hod" ? "Search HOD…" : "Search RM…";
+        <div class="shared-isd-panel" id="shared-@(pt)-panel">
+            <div class="sisd-search">
+                <input type="text" id="@(pt)-search-input" placeholder="@ph"
+                       oninput="filterSharedPanel('@pt',this.value)" />
+            </div>
+            <div class="sisd-list" id="@(pt)-panel-list"></div>
+            <div class="sisd-empty" id="@(pt)-panel-empty">No results</div>
+        </div>
+    }
+
+    <div class="toast-wrap">
+        <div class="toast" id="toast">
+            <span id="toastIcon">✓</span>
+            <span id="toastMsg"></span>
+        </div>
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    <script>
+            // ── DATA ──────────────────────────────────────────────────────────────────────
+            const RM_OPTIONS  = [{val:'', name:'— Select RM —'},  ...@Html.Raw(rmJson)];
+            const HOD_OPTIONS = [{val:'', name:'— Select HOD —'}, ...@Html.Raw(hodJson)];
+            const completedCycles = @Html.Raw(ViewBag.CompletedCyclesJson ?? "{}");
+
+            const URL_SAVE_PMS   = '/pmsbluecollar/save-pms';
+            const URL_TRACKING   = '/pmsbluecollar/tracking';
+            const URL_PREV_CYCLE = '/pmsbluecollar/get-previous-cycle';
+
+            // ── CHANGE 5: show/hide table based on active filters ─────────────────────────
+            function maybeShowTable() {
+                const q      = (document.getElementById('hrSearch')?.value || '').trim();
+                const active = q || _statusFilter || _deptFilter || _unitFilter;
+                const ts     = document.getElementById('tableSection');
+                const fp     = document.getElementById('filterPrompt');
+                if (active) {
+                    if (ts) ts.classList.add('visible');
+                    if (fp) fp.style.display = 'none';
+                } else {
+                    if (ts) ts.classList.remove('visible');
+                    if (fp) fp.style.display = '';
+                }
+            }
+
+            // ── CYCLE STATE ───────────────────────────────────────────────────────────────
+            let _selectedCycle = '';
+            let _cycleFromDate = '';
+            let _cycleToDate   = '';
+            let _cycleLabel    = '';
+
+            function calcCycleDates(cycle, year) {
+                const y = parseInt(year) || new Date().getFullYear();
+                const fmt  = d => {
+                    const mm = String(d.getMonth()+1).padStart(2,'0');
+                    const dd = String(d.getDate()).padStart(2,'0');
+                    return `${d.getFullYear()}-${mm}-${dd}`;
+                };
+                const disp = d => d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+                let f, t, label;
+                switch (cycle.toUpperCase()) {
+                    case 'ANNUAL':   f = new Date(y,3,1);  t = new Date(y+1,2,31); label=`Annual ${y} (${disp(f)} → ${disp(t)})`;   break;
+                    case 'MID-YEAR': f = new Date(y,3,1);  t = new Date(y,8,30);   label=`Mid-Year ${y} (${disp(f)} → ${disp(t)})`; break;
+                    case 'Q1':       f = new Date(y,3,1);  t = new Date(y,5,30);   label=`Q1 ${y} (${disp(f)} → ${disp(t)})`;       break;
+                    case 'Q2':       f = new Date(y,6,1);  t = new Date(y,8,30);   label=`Q2 ${y} (${disp(f)} → ${disp(t)})`;       break;
+                    case 'Q3':       f = new Date(y,9,1);  t = new Date(y,11,31);  label=`Q3 ${y} (${disp(f)} → ${disp(t)})`;       break;
+                    case 'Q4':       f = new Date(y,0,1);  t = new Date(y,2,31);   label=`Q4 ${y} (${disp(f)} → ${disp(t)})`;       break;
+                    default: return null;
+                }
+                return { from: fmt(f), to: fmt(t), label, dispFrom: disp(f), dispTo: disp(t) };
+            }
+
+            function resolveEffectiveCycleType(type, year, fromDate, toDate) {
+                if (type !== 'Custom' || !fromDate || !toDate) return type;
+                for (const p of ['Annual','Mid-Year','Q1','Q2','Q3','Q4']) {
+                    const d = calcCycleDates(p, year);
+                    if (d && d.from === fromDate && d.to === toDate) return p;
+                }
+                return type;
+            }
+
+            function selectCycle(cycle) {
+                _selectedCycle = cycle;
+                document.querySelectorAll('.cycle-preset-btn').forEach(b =>
+                    b.classList.toggle('active', b.dataset.cycle === cycle));
+
+                const customRow = document.getElementById('customDatesRow');
+                const rangeWrap = document.getElementById('cycleDateRangeWrap');
+
+                if (cycle === 'Custom') {
+                    customRow.classList.add('visible');
+                    rangeWrap.style.display = 'none';
+                    _cycleFromDate = '';
+                    _cycleToDate   = '';
+                    _cycleLabel    = '';
+                } else {
+                    customRow.classList.remove('visible');
+                    const year  = parseInt(document.getElementById('cycleYear').value) || new Date().getFullYear();
+                    const dates = calcCycleDates(cycle, year);
+                    if (dates) {
+                        _cycleFromDate = dates.from;
+                        _cycleToDate   = dates.to;
+                        _cycleLabel    = dates.label;
+                        document.getElementById('cycleTypeBadge').textContent  = cycle;
+                        document.getElementById('cycleRangeText').textContent  = `${dates.dispFrom} → ${dates.dispTo}`;
+                        document.getElementById('cycleRangeLabel').textContent = dates.label;
+                        rangeWrap.style.display = 'block';
+                    }
+                }
+
+                const sc = document.getElementById('stepCycleCard');
+                sc.querySelector('.step-num').textContent = cycle ? '✓' : '1';
+                sc.classList.toggle('step-done', !!cycle);
+
+                updateCheckboxStates();
+            }
+
+            function onYearChange() {
+                if (_selectedCycle && _selectedCycle !== 'Custom') selectCycle(_selectedCycle);
+                const year = parseInt(document.getElementById('cycleYear').value);
+                if (year > 2000) fetchPrevCycle(year);
+                updateCheckboxStates();
+            }
+
+            function onCustomDateChange() {
+                const f    = document.getElementById('customFromDate').value;
+                const t    = document.getElementById('customToDate').value;
+                const year = parseInt(document.getElementById('cycleYear').value) || new Date().getFullYear();
+                if (f && t) {
+                    _cycleFromDate = f;
+                    _cycleToDate   = t;
+                    const fmtD = s => { const d = new Date(s); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); };
+                    _cycleLabel = `Custom ${year} (${fmtD(f)} → ${fmtD(t)})`;
+                    document.getElementById('cycleTypeBadge').textContent  = 'Custom';
+                    document.getElementById('cycleRangeText').textContent  = `${fmtD(f)} → ${fmtD(t)}`;
+                    document.getElementById('cycleRangeLabel').textContent = _cycleLabel;
+                    document.getElementById('cycleDateRangeWrap').style.display = 'block';
+                }
+                updateCheckboxStates();
+            }
+
+            function fixAndMatchCycle() {
+                const f = document.getElementById('customFromDate').value;
+                const t = document.getElementById('customToDate').value;
+                if (!f || !t) { showToast('Please fill in both From Date and To Date first.', 'warn'); return; }
+                const year = parseInt(document.getElementById('cycleYear').value) || new Date().getFullYear();
+
+                let matchedCycle = null;
+                for (const p of ['Annual','Mid-Year','Q1','Q2','Q3','Q4']) {
+                    const d = calcCycleDates(p, year);
+                    if (d && d.from === f && d.to === t) { matchedCycle = p; break; }
+                }
+
+                _cycleFromDate = f;
+                _cycleToDate   = t;
+                const fmtD = s => { const d = new Date(s); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); };
+
+                if (matchedCycle) {
+                    _cycleLabel = `${matchedCycle} ${year} (${fmtD(f)} → ${fmtD(t)})`;
+                    document.getElementById('cycleTypeBadge').textContent  = matchedCycle;
+                    document.getElementById('cycleRangeText').textContent  = `${fmtD(f)} → ${fmtD(t)}`;
+                    document.getElementById('cycleRangeLabel').textContent = _cycleLabel;
+                    document.getElementById('cycleDateRangeWrap').style.display = 'block';
+
+                    const btn = document.getElementById('fixDateBtn');
+                    btn.style.background = 'var(--emerald)';
+                    btn.innerHTML = '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Matched: ' + matchedCycle;
+                    setTimeout(() => {
+                        btn.style.background = '';
+                        btn.innerHTML = '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Fix &amp; Match';
+                    }, 2800);
+                    showToast(`Dates match ${matchedCycle} ${year} — restrictions applied!`, 'ok');
+                } else {
+                    _cycleLabel = `Custom ${year} (${fmtD(f)} → ${fmtD(t)})`;
+                    document.getElementById('cycleTypeBadge').textContent  = 'Custom';
+                    document.getElementById('cycleRangeText').textContent  = `${fmtD(f)} → ${fmtD(t)}`;
+                    document.getElementById('cycleRangeLabel').textContent = _cycleLabel;
+                    document.getElementById('cycleDateRangeWrap').style.display = 'block';
+
+                    const btn = document.getElementById('fixDateBtn');
+                    btn.style.background = 'var(--gold)';
+                    btn.innerHTML = '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Fixed (Custom)';
+                    setTimeout(() => {
+                        btn.style.background = '';
+                        btn.innerHTML = '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Fix &amp; Match';
+                    }, 2800);
+                    showToast('Dates fixed as Custom — no standard cycle match found.', 'warn');
+                }
+
+                updateCheckboxStates();
+            }
+
+            async function fetchPrevCycle(year) {
+                try {
+                    const res  = await fetch(`${URL_PREV_CYCLE}?year=${year}`);
+                    const data = await res.json();
+                    const banner     = document.getElementById('prevCycleBanner');
+                    const bannerText = document.getElementById('prevCycleBannerText');
+                    if (data.found) {
+                        bannerText.innerHTML = `Previous Appraisal Cycle for This Year — Already assigned for <strong>${year}</strong>: <span class="badge-pill">${data.cycleType}</span> <span class="badge-pill">${data.fromDate} → ${data.toDate}</span>`;
+                        banner.style.display = 'flex';
+                    } else {
+                        banner.style.display = 'none';
+                    }
+                } catch (_) { }
+            }
+
+            // ── CHECKBOX STATE (cycle-done enforcement) ───────────────────────────────────
+            function updateCheckboxStates() {
+                const cycleType = _selectedCycle;
+                const cycleYear = parseInt(document.getElementById('cycleYear')?.value) || 0;
+                if (!cycleType || !cycleYear) return;
+
+                const effectiveType = resolveEffectiveCycleType(cycleType, cycleYear, _cycleFromDate, _cycleToDate);
+                const key = `${effectiveType}-${cycleYear}`;
+
+                document.querySelectorAll('#empTableBody tr').forEach(row => {
+                    const empId = parseInt(row.dataset.empid);
+                    const chk   = row.querySelector('.row-check');
+                    if (!chk) return;
+
+                    const done = completedCycles[empId] ?? [];
+                    if (done.includes(key)) {
+                        chk.checked  = false;
+                        chk.disabled = true;
+                        _selections.delete(String(empId));
+                        row.classList.add('cycle-done');
+                        row.classList.remove('row-selected');
+
+                        let badge = row.querySelector('.cycle-badge');
+                        if (!badge) {
+                            badge = document.createElement('span');
+                            badge.className = 'cycle-badge';
+                            const statusCell = row.querySelector('td:nth-child(10)');
+                            if (statusCell) statusCell.appendChild(badge);
+                        }
+                        badge.textContent   = `${effectiveType} Done`;
+                        badge.style.display = 'inline-flex';
+                    } else {
+                        chk.disabled = false;
+                        row.classList.remove('cycle-done');
+                        const badge = row.querySelector('.cycle-badge');
+                        if (badge) badge.style.display = 'none';
+                    }
+                });
+
+                updateSelBar();
+            }
+
+            // ── FILTERS ───────────────────────────────────────────────────────────────────
+            let _statusFilter = '', _deptFilter = '', _unitFilter = '';
+            let _filterTimer  = null;
+
+            // Change 5: call maybeShowTable() after every filter action
+            function onSearchInput() {
+                clearTimeout(_filterTimer);
+                _filterTimer = setTimeout(function () {
+                    applyAllFilters();
+                    maybeShowTable();
+                }, 80);
+            }
+
+            function applyAllFilters() {
+                const q = (document.getElementById('hrSearch').value || '').toLowerCase().trim();
+                const cfBtn = document.getElementById('clearFiltersBtn');
+                if (cfBtn) cfBtn.style.display = (_statusFilter || _deptFilter || _unitFilter) ? '' : 'none';
+
+                const rows = document.querySelectorAll('#empTableBody tr');
+                let shown = 0;
+                rows.forEach(row => {
+                    const eid = row.dataset.empid;
+                    if (_selections.has(eid)) { row.style.display = ''; shown++; return; }
+                    const matchQ    = !q || (row.dataset.empcode||'').includes(q) || (row.dataset.empname||'').includes(q);
+                    const rowSt     = row.dataset.status || '';
+                    const matchSt   = !_statusFilter ||
+                        (_statusFilter === 'In Progress'
+                            ? (rowSt === 'Pending at RM' || rowSt === 'Pending at HOD')
+                            : rowSt === _statusFilter);
+                    const matchDept = !_deptFilter || (row.dataset.deptid||'') === _deptFilter;
+                    const matchUnit = !_unitFilter || (row.dataset.unitid||'') === _unitFilter;
+                    const show = matchQ && matchSt && matchDept && matchUnit;
+                    row.style.display = show ? '' : 'none';
+                    if (show) shown++;
+                });
+                document.getElementById('tableCount').textContent = `Showing ${shown} records`;
+                syncCheckboxesToSelections();
+            }
+
+            function toggleSD(id) {
+                const w = document.getElementById(id);
+                const was = w.classList.contains('open');
+                document.querySelectorAll('.sd-wrap.open').forEach(x => x.classList.remove('open'));
+                if (!was) w.classList.add('open');
+            }
+
+            function searchSD(id, q) {
+                document.getElementById(id+'-list').querySelectorAll('.sd-option').forEach(o =>
+                    o.classList.toggle('hidden', !o.textContent.trim().toLowerCase().includes(q.toLowerCase())));
+            }
+
+            function pickSD(wid, val, label) {
+                document.getElementById(wid+'-label').textContent = label;
+                document.querySelectorAll('#'+wid+' .sd-option').forEach(o => o.classList.toggle('selected', o.dataset.val === val));
+                document.getElementById(wid).classList.remove('open');
+                if (wid === 'sd-dept') _deptFilter = val;
+                if (wid === 'sd-unit') _unitFilter = val;
+                applyAllFilters();
+                maybeShowTable(); // Change 5
+            }
+
+            function pickStatus(val, label) {
+                _statusFilter = val;
+                document.getElementById('sd-status-label').textContent = label;
+                document.querySelectorAll('#sd-status-list .sd-option').forEach(o => o.classList.toggle('selected', o.dataset.val === val));
+                document.getElementById('sd-status').classList.remove('open');
+                applyAllFilters();
+                maybeShowTable(); // Change 5
+            }
+
+            function clearAllFilters() {
+                _statusFilter = ''; _deptFilter = ''; _unitFilter = '';
+                document.getElementById('hrSearch').value = '';
+                document.getElementById('sd-status-label').textContent = 'All Statuses';
+                document.getElementById('sd-dept-label').textContent   = 'All Departments';
+                document.getElementById('sd-unit-label').textContent   = 'All Units';
+                ['sd-status','sd-dept','sd-unit'].forEach(id =>
+                    document.querySelectorAll('#'+id+' .sd-option').forEach((o,i) => o.classList.toggle('selected', i===0)));
+                applyAllFilters();
+                maybeShowTable(); // Change 5
+            }
+
+            // ── SELECTION ─────────────────────────────────────────────────────────────────
+            const _selections = new Map();
+
+            function readRow(row) {
+                return {
+                    rmId:    (row.dataset.rmid   || '').trim(),
+                    rmName:  (row.dataset.rmname || '').trim(),
+                    hodId:   (row.dataset.hodid  || '').trim(),
+                    hodName: (row.dataset.hodname|| '').trim()
+                };
+            }
+
+            function snapshotRow(row) {
+                const a = readRow(row);
+                return {
+                    empId:   row.dataset.empid,
+                    empCode: row.dataset['empcodeDisplay'] || row.dataset.empcode || '',
+                    empName: row.dataset['empnameDisplay'] || row.dataset.empname || '',
+                    desig:   row.dataset.desig   || '',
+                    dept:    row.dataset.dept    || '',
+                    deptId:  row.dataset.deptid  || '',
+                    subdept: row.dataset.subdept || '',
+                    unit:    row.dataset.unit    || '',
+                    unitId:  row.dataset.unitid  || '',
+                    rmId:    a.rmId, rmName: a.rmName,
+                    hodId:   a.hodId, hodName: a.hodName,
+                    status:  row.dataset.status  || ''
+                };
+            }
+
+            function syncCheckboxesToSelections() {
+                document.querySelectorAll('#empTableBody tr').forEach(row => {
+                    const cb = row.querySelector('.row-check'); if (!cb) return;
+                    const sel = _selections.has(row.dataset.empid);
+                    cb.checked = sel; row.classList.toggle('row-selected', sel);
+                });
+                updateSelBar();
+            }
+
+            function onRowCheck(cb) {
+                const row = cb.closest('tr'); const eid = row.dataset.empid;
+                if (cb.checked) _selections.set(eid, snapshotRow(row));
+                else _selections.delete(eid);
+                row.classList.toggle('row-selected', cb.checked);
+                updateSelBar();
+            }
+
+            function toggleAll(cb) {
+                document.querySelectorAll('#empTableBody tr').forEach(row => {
+                    if (row.style.display === 'none') return;
+                    const rcb = row.querySelector('.row-check'); if (!rcb || rcb.disabled) return;
+                    const eid = row.dataset.empid;
+                    rcb.checked = cb.checked;
+                    row.classList.toggle('row-selected', cb.checked);
+                    if (cb.checked) _selections.set(eid, snapshotRow(row));
+                    else _selections.delete(eid);
+                });
+                updateSelBar();
+            }
+
+            function clearAll() {
+                _selections.clear();
+                document.querySelectorAll('.row-check').forEach(c => { c.checked = false; c.closest('tr').classList.remove('row-selected'); });
+                const sa = document.getElementById('selectAll'); if (sa) { sa.checked = false; sa.indeterminate = false; }
+                updateSelBar();
+            }
+
+            function removeChip(eid) {
+                _selections.delete(eid);
+                const row = document.querySelector(`tr[data-empid="${CSS.escape(eid)}"]`);
+                if (row) { const cb = row.querySelector('.row-check'); if (cb) cb.checked = false; row.classList.remove('row-selected'); }
+                updateSelBar();
+            }
+
+            function updateSelBar() {
+                const count = _selections.size;
+                const reAuditCnt = [..._selections.values()].filter(s => s.status === 'Completed').length;
+                document.getElementById('selNum').textContent = count;
+                document.getElementById('selBar').classList.toggle('visible', count > 0);
+                const ral = document.getElementById('reAuditCountLabel');
+                document.getElementById('reAuditCount').textContent = reAuditCnt;
+                if (ral) ral.style.display = reAuditCnt > 0 ? '' : 'none';
+
+                const panel = document.getElementById('selectedPanel');
+                const chips = document.getElementById('selectedChips');
+                const badge = document.getElementById('selectedCount');
+                if (!panel || !chips) return;
+                panel.classList.toggle('visible', count > 0);
+                if (badge) badge.textContent = count > 0 ? count : '';
+                chips.innerHTML = '';
+                _selections.forEach(s => {
+                    const isRe = s.status === 'Completed';
+                    const chip = document.createElement('span');
+                    chip.className = 'sel-chip' + (isRe ? ' re-audit' : '');
+                    chip.dataset.empid = s.empId;
+                    chip.innerHTML = `<span class="chip-name">${s.empName}</span><span class="chip-code">${s.empCode}</span>${isRe?'<span class="chip-badge">↺ Re-PMS</span>':''}<span class="chip-remove" onclick="removeChip('${s.empId}')" title="Remove">×</span>`;
+                    chips.appendChild(chip);
+                });
+                const visible = [...document.querySelectorAll('#empTableBody tr')].filter(r => r.style.display !== 'none');
+                const allChk  = visible.length > 0 && visible.every(r => _selections.has(r.dataset.empid));
+                const anyChk  = visible.some(r => _selections.has(r.dataset.empid));
+                const sa = document.getElementById('selectAll');
+                if (sa) { sa.checked = allChk; sa.indeterminate = anyChk && !allChk; }
+            }
+
+            // ── SHARED FLOATING PANEL (RM / HOD) ─────────────────────────────────────────
+            let _activePanel = null, _activeEmpID = null;
+
+            function optionsForType(t) { return t === 'hod' ? HOD_OPTIONS : RM_OPTIONS; }
+
+            function buildSharedPanel(t) {
+                const opts = optionsForType(t);
+                const list = document.getElementById(t+'-panel-list'); if (!list) return;
+                list.innerHTML = '';
+                opts.forEach(o => {
+                    const div = document.createElement('div');
+                    div.className = 'sisd-option'; div.dataset.val = o.val; div.dataset.name = o.name;
+                    div.textContent = o.name;
+                    div.addEventListener('click', () => pickSharedOption(t, o.val, o.name));
+                    list.appendChild(div);
+                });
+            }
+
+            function openSharedPanel(t, triggerEl, empID) {
+                event.stopPropagation();
+                const panel = document.getElementById('shared-'+t+'-panel');
+                if (_activePanel === t && _activeEmpID === empID && panel.classList.contains('open')) { closeAllPanels(); return; }
+                closeAllPanels();
+                _activePanel = t; _activeEmpID = empID;
+                const row = document.querySelector(`tr[data-empid="${CSS.escape(String(empID))}"]`);
+                const cur = row ? (t === 'hod' ? row.dataset.hodid : row.dataset.rmid) : '';
+                panel.querySelectorAll('.sisd-option').forEach(o => o.classList.toggle('selected', o.dataset.val === cur));
+                triggerEl.classList.add('active');
+                const rect = triggerEl.getBoundingClientRect();
+                const pw = 260, ph = 290, vw = window.innerWidth, vh = window.innerHeight;
+                let top = rect.bottom + 4, left = rect.left;
+                if (left + pw > vw - 8) left = Math.max(8, rect.right - pw);
+                if (top  + ph > vh - 8) top  = Math.max(8, rect.top  - ph - 4);
+                panel.style.top = top+'px'; panel.style.left = left+'px';
+                panel.classList.add('open');
+                const inp = document.getElementById(t+'-search-input');
+                if (inp) { inp.value = ''; filterSharedPanel(t,''); setTimeout(() => inp.focus(), 60); }
+                if (inp && !inp._kb) {
+                    inp._kb = true;
+                    inp.addEventListener('keydown', e => {
+                        const list = document.getElementById(t+'-panel-list');
+                        const opts = [...list.querySelectorAll('.sisd-option:not(.hidden)')];
+                        const idx  = opts.findIndex(o => o.classList.contains('kd-focused'));
+                        if (e.key==='ArrowDown'){e.preventDefault();if(idx>=0)opts[idx].classList.remove('kd-focused');const nx=opts[Math.min(idx+1,opts.length-1)];if(nx){nx.classList.add('kd-focused');nx.scrollIntoView({block:'nearest'});}}
+                        else if(e.key==='ArrowUp'){e.preventDefault();if(idx>=0)opts[idx].classList.remove('kd-focused');if(idx<=0)return;const pv=opts[idx-1];if(pv){pv.classList.add('kd-focused');pv.scrollIntoView({block:'nearest'});}}
+                        else if(e.key==='Enter'){e.preventDefault();const f=list.querySelector('.sisd-option.kd-focused');if(f)f.click();}
+                        else if(e.key==='Escape'){e.preventDefault();closeAllPanels();}
+                    });
+                    inp.addEventListener('input', () => document.getElementById(t+'-panel-list').querySelectorAll('.sisd-option').forEach(o => o.classList.remove('kd-focused')));
+                }
+            }
+
+            function pickSharedOption(t, val, name) {
+                if (_activeEmpID === null) return;
+                const eid = String(_activeEmpID);
+                const row = document.querySelector(`tr[data-empid="${CSS.escape(eid)}"]`); if (!row) return;
+                const ph  = { rm:'— Select RM —', hod:'— Select HOD —' };
+                const disp = val ? name : ph[t];
+                const tid  = t+'-trigger-'+eid;
+                if (t==='rm') { row.dataset.rmid=val||''; row.dataset.rmname=val?name:''; updateTrigger(tid,disp,!!val); }
+                else          { row.dataset.hodid=val||''; row.dataset.hodname=val?name:''; updateTrigger(tid,disp,!!val); }
+                if (_selections.has(eid)) _selections.set(eid, snapshotRow(row));
+                closeAllPanels();
+                showToast(`${disp} assigned.`, 'ok');
+            }
+
+            function updateTrigger(id, label, assigned) {
+                const el = document.getElementById(id); if (!el) return;
+                el.querySelector('.isd-label').textContent = label;
+                el.classList.toggle('assigned', assigned);
+            }
+
+            function filterSharedPanel(t, q) {
+                const list  = document.getElementById(t+'-panel-list');
+                const empty = document.getElementById(t+'-panel-empty');
+                const lq = (q||'').toLowerCase(); let any = false;
+                if (list) list.querySelectorAll('.sisd-option').forEach(o => { const m=o.dataset.name.toLowerCase().includes(lq); o.classList.toggle('hidden',!m); if(m) any=true; });
+                if (empty) empty.style.display = any ? 'none' : 'block';
+            }
+
+            function closeAllPanels() {
+                document.querySelectorAll('.shared-isd-panel.open').forEach(p => {
+                    p.classList.remove('open');
+                    p.querySelectorAll('.sisd-option.kd-focused').forEach(o => o.classList.remove('kd-focused'));
+                });
+                document.querySelectorAll('.isd-trigger.active').forEach(t => t.classList.remove('active'));
+                _activePanel = null; _activeEmpID = null;
+            }
+
+            document.addEventListener('click', e => {
+                if (!e.target.closest('.shared-isd-panel') && !e.target.closest('.isd-trigger')) closeAllPanels();
+                if (!e.target.closest('.sd-wrap')) document.querySelectorAll('.sd-wrap.open').forEach(w => w.classList.remove('open'));
+            });
+            window.addEventListener('scroll', closeAllPanels, { passive:true, capture:true });
+            window.addEventListener('resize', closeAllPanels, { passive:true });
+
+            // ── SAVE PMS ──────────────────────────────────────────────────────────────────
+            async function savePms() {
+                if (!_selectedCycle) {
+                    showToast('Please select an appraisal cycle in Step 1.', 'warn');
+                    document.getElementById('stepCycleCard').scrollIntoView({ behavior:'smooth', block:'start' });
+                    return;
+                }
+                if (_selectedCycle === 'Custom' && (!_cycleFromDate || !_cycleToDate)) {
+                    showToast('Please set custom From and To dates.', 'warn');
+                    return;
+                }
+                if (_selections.size === 0) { showToast('Select at least one employee.', 'warn'); return; }
+
+                const rows = [];
+                for (const s of _selections.values()) {
+                    const row = document.querySelector(`tr[data-empid="${CSS.escape(s.empId)}"]`);
+                    const a   = readRow(row);
+                    if (!a.rmId) { showToast(`Assign RM for ${s.empName} before saving.`, 'warn'); return; }
+                    rows.push({
+                        EmpID:         parseInt(s.empId) || 0,
+                        EmpCode:       s.empCode  || '',
+                        EmpName:       s.empName  || '',
+                        Designation:   s.desig    || '',
+                        Department:    s.dept     || '',
+                        DepartmentID:  parseInt(s.deptId) || 0,
+                        SubDepartment: s.subdept  || '',
+                        UnitID:        parseInt(s.unitId) || 0,
+                        RMID:          a.rmId,
+                        RMName:        a.rmName,
+                        HODID:         a.hodId,
+                        HODName:       a.hodName
+                    });
+                }
+
+                const reAudit = [..._selections.values()].filter(s => s.status === 'Completed').map(s => s.empName);
+                if (reAudit.length > 0) {
+                    const names = reAudit.slice(0,3).join(', ') + (reAudit.length > 3 ? ` +${reAudit.length-3} more` : '');
+                    if (!confirm(`${reAudit.length} employee(s) have a completed PMS:\n\n${names}\n\nA fresh PMS will be started under cycle: ${_cycleLabel}\n\nContinue?`)) return;
+                }
+
+                const year = parseInt(document.getElementById('cycleYear').value) || new Date().getFullYear();
+                const payload = {
+                    CycleType:      _selectedCycle,
+                    CycleYear:      year,
+                    CustomFromDate: _selectedCycle === 'Custom' ? _cycleFromDate : null,
+                    CustomToDate:   _selectedCycle === 'Custom' ? _cycleToDate   : null,
+                    Employees:      rows
+                };
+
+                const btn  = document.getElementById('saveBtn');
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .8s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Saving…';
+                btn.disabled = true;
+
+                try {
+                    const res = await fetch(URL_SAVE_PMS, {
+                        method: 'POST',
+                        headers: { 'Content-Type':'application/json', 'RequestVerificationToken': getToken() },
+                        body: JSON.stringify(payload)
+                    });
+                    const ct = res.headers.get('content-type') || '';
+                    if (!ct.includes('application/json')) {
+                        const text = await res.text();
+                        console.error('Non-JSON response:', res.status, text.substring(0,300));
+                        showToast(res.status===401||res.status===302 ? 'Session expired — please log in again.' : 'Server error ('+res.status+').', 'err');
+                        return;
+                    }
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast('PMS initiated! Redirecting…', 'ok');
+                        setTimeout(() => window.location.href = URL_TRACKING, 1600);
+                    } else {
+                        showToast(data.message || 'Save failed.', 'err');
+                    }
+                } catch (e) {
+                    showToast('Network error: ' + e.message, 'err');
+                } finally {
+                    btn.innerHTML = orig; btn.disabled = false;
+                }
+            }
+
+            // ── UTILS ─────────────────────────────────────────────────────────────────────
+            function getToken() {
+                const el = document.querySelector('input[name="__RequestVerificationToken"]');
+                return el ? el.value : '';
+            }
+
+            let _toastTimer = null;
+            function showToast(msg, type='ok') {
+                const t = document.getElementById('toast');
+                t.className = 'toast ' + type;
+                document.getElementById('toastIcon').textContent = type==='ok' ? '✓' : type==='warn' ? '⚠' : '✕';
+                document.getElementById('toastMsg').textContent  = msg;
+                t.classList.add('show');
+                clearTimeout(_toastTimer);
+                _toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+            }
+
+            // ── INIT ──────────────────────────────────────────────────────────────────────
+            document.addEventListener('DOMContentLoaded', () => {
+                ['rm','hod'].forEach(t => buildSharedPanel(t));
+                // Change 5: hide all rows initially; table revealed only on filter/search
+                document.querySelectorAll('#empTableBody tr').forEach(r => r.style.display = 'none');
+                document.getElementById('tableCount').textContent = 'Showing 0 records';
+                fetchPrevCycle(@currentYear);
+                maybeShowTable();
+            });
+    </script>
+</body>
+</html>
